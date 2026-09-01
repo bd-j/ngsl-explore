@@ -1,0 +1,107 @@
+Revived STIS: I.  
+Improved Calibra4on of the STIS 
+Next Genera4on Spectral Library. 
+Don Lindler,  Sigma Space Corpora-on 
+Sara Heap,  NASA/Goddard Space Flight Center. 
+Abstract 
+The Space Telescope Imaging Spectrograph (STIS) Next Generation Spectral 
+Library (NGSL) contains UV-optical spectra (0.2 to 1.0 microns) of 374 stars 
+having a wide range in temperature, luminosity, and metallicity (http://
+archive.stsci.edu/prepds/stisngsl/). These spectra were obtained without 
+centering the star in the 0.2 arcsecond slit. Mis-centering resulted in up to 10% 
+errors in the calibrated flux. With the recent repair of STIS, we were able to 
+obtain calibration data to characterize the wavelength-dependent throughput of 
+the 0.2” slit versus the target’s position within the slit. To apply this information, 
+we first determined the amount by which each NGSL star is mis-centered using 
+the location of fringes in the long wavelength (G750L) spectra (compared to the 
+fringes in a reference tungsten flat). We were then able to derive the absolute flux 
+distribution of each NGSL star. 
+Support for Program numbers HST-AR-11755 and HST-GO-11652 was provided 
+by NASA through a grant from the Space Telescope Science Institute, which is 
+operated by the Association of Universities for Research in Astronomy, 
+Incorporated, under NASA contract NAS5-26555. 
+Reduc.on of the NGSL spectral 
+ Improvements over the Standard ST ScI Pipeline Calibration 
+1. New spectral trace files were produced using the average spectral 
+y-position versus x-position for the 52X0.2E1 aperture for all of the 
+NGSL stars.  CALSTIS adjust the trace by a constant offset for 
+each individual observation. 
+2. Improved background subtraction.  ST ScI pipeline uses only a 
+lower background taken 300 pixels below the spectrum.  We use 
+both an upper and lower background taken much closer to the 
+spectrum (30 pixels). 
+3. Larger extraction slit height (11 instead of 7) to improve overall 
+photometric at the cost of some loss in S/N.  
+4. Custom wavelength dispersion coefficients created for the E1 
+aperture position. 
+5. Custom sensitivity curves were created for the 52X0.2E1 aperture 
+using observations of BD+75D325 centered in the aperture. 
+6. Correction for mis-centering of the target within the slit using the 
+G750L fringe flat to determine the target’s position. 
+7. Zero-point wavelength correction using stellar lines.  (no Wavecals 
+were taken with the observations) 
+Measurement of the posi.on of the target within the 
+52X0.2 aperture 
+Fig. 2: Cross‐correla.on oﬀset between 
+fringes in the tungsten ﬂat with the 
+fringes in the stellar spectra vs oﬀset of 
+the target from the center of the slit. 
+Figure 2 illustrates that we can accurately measure the mis-centering of the target 
+within the slit using the long wavelength fringes (Figure 1) in a tungsten lamp 
+flat field exposure. 
+Fig. 1: Tungsten Lamp ﬂat ﬁeld 
+taken in the 52X0.2 aperture 
+with the G750L gra.ng. 
+
+Correc.ng the Long Wavelength G750L Fringes 
+Fig. 3: Correc.on of the fringes in a stellar 
+observa.on. 
+Once the offset of the 
+fringes have been 
+determined, the can be 
+removed from the stellar 
+spectrum (Figure 3). 
+Aperture Throughput Correc.on 
+Fig. 4: Rela.ve aperture throughput versus posi.on of the target in the 52X0.2 slit 
+Figure 4 shows the rela.ve throughput of the 52X0.2 aperture using calibra.on 
+observa.ons of BD+75D325 placed at diﬀerent posi.ons within the slit.  Note that 
+the point spread func.on is asymmetrical.  Mis‐centering in the +x direc.on can 
+increase the throughput at the longer wavelengths. 
+Fig. 5: Map of the rela.ve aperture throughput of the 52X0.2 slit versus wavelength 
+and oﬀset from the center of the slit. 
+Wavelength Zero Points 
+Fig. 6: Interac.ve tool for determining the 
+Wavelength zero points. 
+The NGSL Spectra were taken 
+without wavelength 
+calibra.on lamp exposures.   
+We use stellar features to 
+determine the wavelength 
+zero points for each of the 
+three gra.ngs.  As a result, 
+the ﬁnal wavelength scales 
+are in the rest frame of the 
+star .  
+Correc.on of the G230LB in‐order gra.ng 
+sca\er 
+Fig. 7:  The G230LB has a signiﬁcant in‐order gra.ng sca\er .  We have constructed a 
+model to remove this sca\er using the reddest stars.  The ﬁgure shows that a]er 
+correc.on the G230LB ﬂux levels match an E230M observa.on.  
+The stellar parameters (Lbol,  Teﬀ, ilog g, logZ, α, E(B‐V) ) 
+are derived from NGSL spectra and distances  
+via Castelli’s (2004)/Marcs (2008) model spectra and the Bas. evolu.onary 
+isochrones.        
+•  Make χ2 ﬁt to spectrum (Δλ=0.20 ‐1.00 
+µ) for Teﬀ, logZ, and E(B‐V) 
+•  Determine Lv range corresponding to V, 
+π, eπ  
+•  Calculate Lbol from BC(Teﬀ, log Z, E(B‐V))  
+•  Determine range in distance (using new 
+reduc.on of Hipparcos data, 2007, and a 
+two sigma error for the parallax. 
+• Derive allowed range in ilogg via 
+comparison with Bas. evolu.onary 
+models 
+•  Make χ2 ﬁt to spectrum for best ilog g 
+Allowed LogL Range 
+Allowed LogG values 

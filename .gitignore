@@ -1,0 +1,11 @@
+# Bulk data downloaded from MAST — regenerate with scripts/fetch_ngsl.sh
+data/spectra/
+data/stis_ngsl_v2.zip
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store

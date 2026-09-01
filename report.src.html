@@ -1,0 +1,392 @@
+<title>The NGSL Spectral Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#f5f6fa; --panel:#ffffff; --panel-2:#eceef6;
+  --ink:#161a26; --ink-2:#454c63; --ink-3:#727a94;
+  --rule:#d8dbe8; --rule-2:#e8eaf2;
+  --uv:#4a3fb5; --uv-soft:#ebe9fa;
+  --teal:#0f6d75; --teal-soft:#e2f0f1;
+  --amber:#8a6108; --amber-soft:#faf1da; --amber-rule:#d9b45a;
+  --measure:68ch;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1119; --panel:#161b27; --panel-2:#1d2331;
+    --ink:#e8eaf2; --ink-2:#b0b6cb; --ink-3:#7d859f;
+    --rule:#2b3244; --rule-2:#222839;
+    --uv:#a79cf5; --uv-soft:#22203f;
+    --teal:#5fc4cd; --teal-soft:#0f2a2d;
+    --amber:#e0b256; --amber-soft:#2a2213; --amber-rule:#6d5417;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1119; --panel:#161b27; --panel-2:#1d2331;
+  --ink:#e8eaf2; --ink-2:#b0b6cb; --ink-3:#7d859f;
+  --rule:#2b3244; --rule-2:#222839;
+  --uv:#a79cf5; --uv-soft:#22203f;
+  --teal:#5fc4cd; --teal-soft:#0f2a2d;
+  --amber:#e0b256; --amber-soft:#2a2213; --amber-rule:#6d5417;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.65; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px 96px}
+.col{max-width:var(--measure)}
+h1,h2,h3{font-family:Spectral,Georgia,"Times New Roman",serif;text-wrap:balance;margin:0}
+p{margin:0}
+a{color:var(--uv)}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.num{font-variant-numeric:tabular-nums}
+
+/* masthead */
+header{padding:64px 0 40px;border-bottom:1px solid var(--rule)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--uv);margin-bottom:20px;
+}
+h1{font-size:clamp(38px,6vw,60px);line-height:1.04;font-weight:700;letter-spacing:-.02em}
+.standfirst{
+  font-family:Spectral,Georgia,serif;font-size:20px;line-height:1.55;
+  color:var(--ink-2);margin-top:20px;max-width:60ch;
+}
+.byline{
+  margin-top:26px;font-family:"IBM Plex Mono",monospace;font-size:12px;
+  color:var(--ink-3);line-height:1.9;
+}
+.byline a{color:var(--ink-3)}
+
+/* fact strip */
+.facts{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);
+  margin:40px 0 0;border-radius:2px;overflow:hidden;
+}
+.fact{background:var(--panel);padding:16px 18px}
+.fact dt{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 7px;
+}
+.fact dd{margin:0;font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.fact dd small{display:block;font-size:11.5px;font-weight:400;color:var(--ink-3);margin-top:4px;letter-spacing:0}
+
+/* sections */
+section{padding-top:60px}
+.sechead{display:flex;gap:18px;align-items:baseline;margin-bottom:8px}
+.secnum{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--uv);letter-spacing:.08em;padding-top:6px;flex:none;
+}
+h2{font-size:clamp(26px,3.4vw,34px);font-weight:600;letter-spacing:-.015em;line-height:1.18}
+.q{
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-3);
+  margin:0 0 26px 44px;padding-left:14px;border-left:2px solid var(--rule);
+}
+section > .col, section > p, section > .note{margin-left:44px}
+@media (max-width:640px){
+  .sechead{gap:12px}
+  section > .col, section > p, section > .note, .q{margin-left:0}
+  .q{margin-left:0}
+}
+.col p + p{margin-top:16px}
+h3{
+  font-size:16px;font-weight:600;margin:34px 0 10px;letter-spacing:-.005em;
+  font-family:"IBM Plex Sans",sans-serif;
+}
+
+/* tables */
+.tablewrap{overflow-x:auto;margin:26px 0 0;border:1px solid var(--rule);border-radius:2px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 15px;text-align:right;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:500;
+  border-bottom:1px solid var(--rule);background:var(--panel-2);
+}
+tbody tr:last-child td{border-bottom:none}
+td.g{font-family:"IBM Plex Mono",monospace;font-weight:500}
+tr.pick td{background:var(--amber-soft)}
+tr.pick td:first-child{box-shadow:inset 3px 0 0 var(--amber-rule)}
+.cap{font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:78ch;line-height:1.6}
+
+/* figures */
+figure{margin:30px 0 0}
+figure img{display:block;width:100%;border:1px solid var(--rule);border-radius:2px;background:#fff}
+figcaption{font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:78ch;line-height:1.6}
+
+/* notes */
+.note{
+  border-left:2px solid var(--teal);background:var(--teal-soft);
+  padding:15px 18px;margin:26px 0 0;font-size:14px;color:var(--ink-2);border-radius:0 2px 2px 0;
+}
+.note strong{color:var(--ink)}
+.note.warn{border-left-color:var(--amber-rule);background:var(--amber-soft)}
+
+/* recommendation */
+.rec{
+  border:1px solid var(--rule);border-top:3px solid var(--amber-rule);
+  background:var(--panel);padding:28px 30px;margin:30px 0 0;border-radius:2px;
+}
+.rec .label{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--amber);margin-bottom:12px;
+}
+.rec .star{
+  font-family:Spectral,Georgia,serif;font-size:40px;font-weight:700;
+  letter-spacing:-.02em;line-height:1;margin-bottom:6px;
+}
+.rec .sub{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-2);margin-bottom:20px}
+.rec ul{margin:0;padding-left:19px;font-size:14.5px;color:var(--ink-2);line-height:1.75}
+.rec li::marker{color:var(--amber-rule)}
+.rec li strong{color:var(--ink);font-weight:600}
+
+/* chain */
+ol.chain{counter-reset:s;list-style:none;margin:26px 0 0;padding:0;max-width:var(--measure)}
+ol.chain li{
+  counter-increment:s;position:relative;padding:0 0 20px 46px;
+  border-left:1px solid var(--rule);margin-left:13px;
+}
+ol.chain li:last-child{border-left-color:transparent;padding-bottom:0}
+ol.chain li::before{
+  content:counter(s);position:absolute;left:-13px;top:0;
+  width:26px;height:26px;border-radius:50%;background:var(--uv-soft);
+  color:var(--uv);border:1px solid var(--uv);
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+ol.chain b{display:block;font-size:14.5px;font-weight:600;margin-bottom:3px}
+ol.chain span{font-size:14px;color:var(--ink-2)}
+
+/* files */
+.files{margin:26px 0 0;font-size:13.5px}
+.files div{
+  display:flex;gap:16px;padding:9px 0;border-bottom:1px solid var(--rule-2);
+  align-items:baseline;flex-wrap:wrap;
+}
+.files div:last-child{border-bottom:none}
+.files code{color:var(--uv);font-size:12.5px;flex:none;min-width:250px}
+.files span{color:var(--ink-2)}
+footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);max-width:78ch;line-height:1.7}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">HST / STIS &middot; MAST High-Level Science Product</div>
+  <h1>The NGSL Spectral Library</h1>
+  <p class="standfirst">A survey of the Next Generation Spectral Library &mdash; what it covers, how well it is calibrated, how far its error bars can be trusted, and which star in it is the right one for testing the Balmer break.</p>
+  <p class="byline">
+    Source &middot; <a href="https://archive.stsci.edu/prepds/stisngsl/">archive.stsci.edu/prepds/stisngsl</a><br>
+    Library &middot; Version 2, March 2010 &mdash; Heap &amp; Lindler (AR 11755, GO 11652)<br>
+    Every number below measured from the delivered files or read from the delivery documentation.
+  </p>
+  <dl class="facts">
+    <div class="fact"><dt>Spectra</dt><dd>379<small>FITS files in v2</small></dd></div>
+    <div class="fact"><dt>Coverage</dt><dd>1675&ndash;10198<small>&Aring;, one merged spectrum</small></dd></div>
+    <div class="fact"><dt>Gratings</dt><dd>3<small>G230LB / G430L / G750L</small></dd></div>
+    <div class="fact"><dt>Resolving power</dt><dd>560&ndash;1110<small>2-pixel element</small></dd></div>
+    <div class="fact"><dt>True S/N</dt><dd>~100<small>per pixel, optical</small></dd></div>
+    <div class="fact"><dt>T<sub>eff</sub> range</dt><dd>3540&ndash;14200<small>K, 324 stars fitted</small></dd></div>
+    <div class="fact"><dt>[M/H] range</dt><dd>&minus;2.0 to +0.5<small>scaled-solar, 107 &alpha;-enh</small></dd></div>
+  </dl>
+</header>
+
+<section>
+  <div class="sechead"><div class="secnum">01</div><h2>Wavelength coverage and resolution</h2></div>
+  <p class="q">Summarize the wavelength coverage and resolution by each grating.</p>
+  <div class="col">
+    <p>Every NGSL target was observed identically: three STIS CCD low-dispersion gratings through the <code>52X0.2E1</code> slit, spliced into one continuous spectrum per star. The delivered product hides the seams &mdash; there is a single wavelength array &mdash; but the native sampling of each grating survives in it, so the segments can be recovered by differencing the wavelength column.</p>
+    <p>The three dispersions below are measured from the delivered grid, not quoted from the instrument handbook. The splice points fall inside the overlap regions the pipeline averaged across: 2990&ndash;3060 &Aring; for G230LB/G430L and 5500&ndash;5650 &Aring; for G430L/G750L.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Grating</th><th>Range (&Aring;)</th><th>Dispersion (&Aring;/px)</th><th>Pixels</th><th>Res. element (&Aring;)</th><th>R (blue&rarr;red)</th></tr></thead>
+      <tbody>
+        <tr><td class="g">G230LB</td><td>1675&ndash;3058</td><td>1.373</td><td>1008</td><td>2.75</td><td>610 &rarr; 1114</td></tr>
+        <tr><td class="g">G430L</td><td>3058&ndash;5647</td><td>2.744</td><td>945</td><td>5.49</td><td>557 &rarr; 1029</td></tr>
+        <tr><td class="g">G750L</td><td>5647&ndash;10198</td><td>4.877</td><td>933</td><td>5.79 &rarr; 1046</td><td>579 &rarr; 1046</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Measured from <code>h_stis_ngsl_hd194453_v2.fits</code>; identical to within 0.001 &Aring;/px across the library. 2887 pixels per spectrum.</p>
+  <div class="note">
+    <strong>&ldquo;R ~ 1000&rdquo; is the ceiling, not the typical value.</strong> Because each grating has fixed linear dispersion, resolving power climbs across every segment and then drops sharply at each splice. R is near 1000&ndash;1100 only at the red end of each grating; it falls to ~560&ndash;610 at each blue end. At the Balmer break (3646 &Aring;), which sits just redward of the G430L splice, <strong>R &asymp; 665</strong> &mdash; the worst-resolved part of the optical range. This matters for model comparison: the break region is the least resolved place in the spectrum, and models must be convolved with a wavelength-dependent kernel, not a single R.
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">02</div><h2>Signal to noise</h2></div>
+  <p class="q">Summarize the typical signal to noise.</p>
+  <div class="col">
+    <p>This is the one place where the delivered files will mislead you if taken at face value. The <code>STATERR</code> column contains <em>propagated counting statistics only</em>. Measured against the actual pixel-to-pixel scatter in a smooth continuum window, it is optimistic by a factor of roughly three.</p>
+    <p>I measured S/N three ways across all 379 spectra. In the 3250&ndash;3600 &Aring; continuum of the four A-type finalists &mdash; a region genuinely free of strong features &mdash; <code>STATERR</code> claims S/N &asymp; 306&ndash;345, while the scatter about a smooth fit gives 82&ndash;124. The ratio runs 2.5&ndash;4.0.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Star</th><th>S/N from STATERR</th><th>S/N from real scatter</th><th>Ratio</th></tr></thead>
+      <tbody>
+        <tr><td class="g">HD194453</td><td>326</td><td>82</td><td>3.97</td></tr>
+        <tr><td class="g">HD040573</td><td>345</td><td>119</td><td>2.89</td></tr>
+        <tr><td class="g">HD147550</td><td>316</td><td>91</td><td>3.48</td></tr>
+        <tr><td class="g">HD143459</td><td>306</td><td>124</td><td>2.47</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Measured in 3250&ndash;3600 &Aring;, residuals about a cubic fit. The gap is not counting noise: it is flat-field residuals, co-addition and resampling correlations, and scattered-light subtraction &mdash; none of which propagate into <code>STATERR</code>.</p>
+  <figure>
+    <img src="{{FIG_SNR}}" alt="Signal-to-noise per pixel versus wavelength for the NGSL library, showing the formal STATERR estimate as an upper envelope and the DER_SNR estimate as a lower envelope, bracketing a true value near 100 per pixel.">
+    <figcaption>Median and 16th&ndash;84th percentile S/N across 379 spectra. The two curves bracket the truth rather than competing: <span style="color:var(--ink);font-weight:500">formal STATERR</span> is an upper bound, and DER_SNR is a lower bound because it reads real absorption lines as noise &mdash; which is why it collapses in the line-dense blue and in the Balmer-break window specifically.</figcaption>
+  </figure>
+  <div class="note warn">
+    <strong>Practical figure to use.</strong> Optical continuum (4000&ndash;9000 &Aring;), typical target: <strong>S/N &asymp; 100&ndash;200 per pixel</strong>. Near the Balmer break for a bright A star: <strong>S/N &asymp; 100 per pixel</strong>. Below 2500 &Aring; the library degrades steeply and becomes star-dependent &mdash; cool stars have almost no flux there, and the 16th-percentile formal S/N in 2000&ndash;2500 &Aring; is only 8. If you need a &chi;&sup2; that means anything, inflate <code>STATERR</code> by ~3, or renormalize it against the local scatter in a line-free window.
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">03</div><h2>Stellar parameter coverage</h2></div>
+  <p class="q">Summarize the stellar parameter coverage of the library.</p>
+  <div class="col">
+    <p>The v2 FITS headers carry no stellar parameters &mdash; a regression from v1, which shipped <code>TEFF</code>, <code>LOG_G</code>, <code>LOG_Z</code>, <code>EBMV</code> and <code>DPC</code> keywords plus dereddened and 10-parsec flux columns. Version 2 files contain three columns and no fit keywords at all.</p>
+    <p>The parameters are not lost, though: section 4 of the delivery readme tabulates them for every star. They come from fitting Castelli (2004) models restricted to Victoria-Regina isochrones (VandenBerg et al. 2006), with surface gravity constrained so the implied distance sits within 2&sigma; of the Hipparcos parallax. I parsed that table back into machine-readable form &mdash; 324 of 379 stars have a fit.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Quantity</th><th>Minimum</th><th>Median</th><th>Maximum</th><th>Stars</th></tr></thead>
+      <tbody>
+        <tr><td class="g">T<sub>eff</sub> (K)</td><td>3536</td><td>5504</td><td>14204</td><td>324</td></tr>
+        <tr><td class="g">log g</td><td>0.40</td><td>3.60</td><td>4.90</td><td>324</td></tr>
+        <tr><td class="g">[M/H]</td><td>&minus;2.00</td><td>&minus;0.40</td><td>+0.50</td><td>324</td></tr>
+        <tr><td class="g">V (mag)</td><td>1.51</td><td>6.53</td><td>12.18</td><td>378</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Spectral types: O&nbsp;7 &middot; B&nbsp;43 &middot; A&nbsp;54 &middot; F&nbsp;57 &middot; G&nbsp;83 &middot; K&nbsp;103 &middot; M&nbsp;14. Data quality: 344 &ldquo;good&rdquo;, 35 &ldquo;suspect&rdquo;.</p>
+  <figure>
+    <img src="{{FIG_COV}}" alt="Three panels: a Kiel diagram of log g against effective temperature coloured by metallicity, showing a well-populated giant branch and main sequence; a metallicity against temperature scatter plot; and a histogram of effective temperature peaking between 4000 and 6000 K.">
+    <figcaption>Parameter coverage of the 324 fitted stars. The library is built for modelling integrated galaxy light, and the sampling shows it: a dense cool giant branch and main sequence, metallicity spanning &minus;2.0 to +0.5, and a thin but usable hot tail. The shaded band in the right panel marks the 9500&ndash;10500 K window of interest.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>The metallicity is [M/H], not [Fe/H]</h3>
+    <p>Worth being precise about, because it changes how the numbers should be used. NGSL reports <code>LOG_Z</code>, documented as &ldquo;log abundance with respect to solar&rdquo; &mdash; a scaled-solar <em>total</em> metallicity taken from the Castelli model grid, not a measured iron abundance. It comes with a separate boolean &alpha;-enhancement flag: <strong>107 of the 324 fitted stars are flagged &alpha;-enhanced</strong>, the other 217 solar-scaled. The abundance information is therefore two-valued &mdash; [M/H] plus a discrete &alpha; switch &mdash; rather than the [Fe/H] and continuous [&alpha;/Fe] a spectroscopic analysis would give.</p>
+    <p>The scale is nonetheless sound. Against MILES [Fe/H] over the 129 shared stars, NGSL [M/H] sits at a median offset of <strong>&minus;0.03 dex with 0.23 dex scatter</strong> &mdash; no meaningful systematic, though the scatter is wide enough that individual values should not be trusted much better than ~0.25 dex. Where a real [Fe/H] is needed, take it from MILES for the 145 overlap stars.</p>
+  </div>
+  <div class="note">
+    <strong>The hot end is sparse.</strong> Only 22 stars exceed 10000 K and none exceed 14204 K, so the library cannot constrain models hotter than mid-B. Coverage is also strongly correlated: nearly all metal-poor stars are warm subgiants and dwarfs, so [M/H] and T<sub>eff</sub> cannot be varied independently across much of the grid.
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">04</div><h2>How the spectra are flux calibrated</h2></div>
+  <p class="q">Summarize the way the spectra are flux calibrated.</p>
+  <div class="col">
+    <p>NGSL does not use standard CALSTIS products. The calibration is a custom chain, and its defining problem is that <strong>most targets were not centred in the slit</strong>. The slit is 0.2&Prime; wide &mdash; only 4 pixels &mdash; so a mis-centred star loses a wavelength-dependent fraction of its light. Correcting that is what separates v2 from v1 and what sets the library's real accuracy floor.</p>
+  </div>
+  <ol class="chain">
+    <li><b>Custom pipeline extraction</b><span>New spectral traces averaged over all NGSL stars; per-visit fringe flats for G750L; background taken 30 px above <em>and</em> below rather than the standard 300 px below; an 11-pixel extraction height instead of 7, trading some S/N for photometric stability; custom dispersion coefficients for the E1 aperture position.</span></li>
+    <li><b>Custom sensitivity curves</b><span>Built specifically for this background-subtraction method, from observations of the standard star BD+75D325 centred in the 52X0.2E1 aperture. This is the absolute flux anchor of the whole library.</span></li>
+    <li><b>Zero-point wavelength correction</b><span>No wavecals were taken with the stellar exposures, so offsets were derived from the positions of strong stellar features.</span></li>
+    <li><b>Co-addition and merging</b><span>Two exposures per grating at different slit positions, combined with cosmic-ray and hot-pixel rejection, then the three gratings averaged together across the 2990&ndash;3060 &Aring; and 5500&ndash;5650 &Aring; overlaps.</span></li>
+    <li><b>G230LB scattered-light subtraction</b><span>In-order grating scatter, severe for cool stars, modelled as SC = C<sub>0</sub>(1 + 0.0024x) in the extracted net spectrum. C<sub>0</sub> is predicted by integrating the count rate divided by &lambda;&sup3; from 2000 to 10000 &Aring; and scaling by 5523 &mdash; calibrated on 103 red library stars with B&minus;V &gt; 1.1 that were themselves well centred.</span></li>
+    <li><b>Slit-throughput correction</b><span>The offset of each star within the slit is measured from the G750L fringe flats, by correlating fringes in the flat against fringes in the stellar spectrum. In v2 the correction is empirical, derived from post-SM4 observations of BD+75D325 stepped across the slit. Below 5700 &Aring; the flux is scaled by a linear-in-wavelength factor normalized to 1.0 at 5300 &Aring;, tuned to drive the spectroscopic B&minus;V onto the Tycho-2 value; above 5700 &Aring; the correction comes from spline fits to NGSL/model flux ratios in 400 &Aring; bins as a function of offset.</span></li>
+  </ol>
+  <div class="note">
+    <strong>Accuracy achieved.</strong> The authors validate against the ground-based MILES library: after correction, agreement is ~3% from 3600 to 7300 &Aring;, and the slit correction itself is good to a couple of percent. The correction is only reliable for offsets under <strong>0.9 pixels</strong> &mdash; beyond that the fringe-flat method saturates, because it starts correlating with the wings of the PSF rather than the core, and the offset can even appear to shrink. Those 35 stars are flagged <code>DATAQUAL = 'suspect'</code>, as are stars whose spectroscopic V differs from Tycho-2 by more than 0.1 mag or B&minus;V by more than 0.3. <strong>Treat <code>OFFSETPX</code> as a systematic-error proxy</strong>, and read it before trusting any spectral shape.
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">05</div><h2>A star for testing the Balmer break</h2></div>
+  <p class="q">Find a star at around 10000 K that would be good for testing stellar spectral models of the Balmer break shape (~3600 &Aring;).</p>
+  <div class="col">
+    <p>17 library stars fall between 9000 and 11500 K. Ranking them for this specific purpose means weighting the flux calibration above everything else: the Balmer break is a <em>continuum shape</em> spanning the 3646 &Aring; limit, so a wavelength-dependent throughput error is indistinguishable from the signal being measured. Slit offset is therefore the dominant criterion, ahead of brightness or even S/N.</p>
+    <p>Applying that, plus rejecting chemically peculiar stars, known binaries and evolved objects: <strong>HD205811</strong> is a double-star component (ADS 15147 A); <strong>HD072968</strong> and <strong>HD170973</strong> are spectrum-peculiar (A1spe, A0sp); <strong>HD143459</strong> is a horizontal-branch star with E(B&minus;V) = 0.106 and a 1000 K disagreement between the NGSL and MILES temperatures. All are excluded.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Star</th><th>Type</th><th>T<sub>eff</sub></th><th>log g</th><th>[M/H]</th><th>&alpha;</th><th>MILES [Fe/H]</th><th>V</th><th>B&minus;V</th><th>Offset (px)</th><th>D<sub>Balmer</sub></th></tr></thead>
+      <tbody>
+        <tr class="pick"><td class="g">HD194453</td><td>A0</td><td>10241</td><td>3.9</td><td>+0.0</td><td>solar</td><td>&mdash;</td><td>6.75</td><td>&minus;0.01</td><td>0.00</td><td>1.023</td></tr>
+        <tr><td class="g">HD040573</td><td>B9.5V</td><td>10200</td><td>4.2</td><td>&minus;0.4</td><td>solar</td><td>&mdash;</td><td>7.46</td><td>+0.01</td><td>0.36</td><td>1.026</td></tr>
+        <tr><td class="g">HD147550</td><td>B9V</td><td>10074</td><td>3.9</td><td>&minus;0.0</td><td>solar</td><td>&mdash;</td><td>6.25</td><td>+0.05</td><td>0.24</td><td>1.102</td></tr>
+        <tr><td class="g">HD128801</td><td>B9</td><td>10123</td><td>3.7</td><td>&minus;1.9</td><td>enh.</td><td>&minus;1.20</td><td>8.73</td><td>&minus;0.04</td><td>0.58</td><td>1.090</td></tr>
+        <tr><td class="g">HD143459</td><td>A0Vs</td><td>9878</td><td>3.6</td><td>&minus;0.6</td><td>solar</td><td>&minus;1.26</td><td>5.53</td><td>+0.04</td><td>0.09</td><td>1.146</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">All five are <code>DATAQUAL = good</code>. D<sub>Balmer</sub> = 2.5&nbsp;log<sub>10</sub>(F<sub>red</sub>/F<sub>blue</sub>) at 3646 &Aring;, with the red continuum taken from the upper envelope between Balmer lines over 3700&ndash;4150 &Aring; and extrapolated to the limit &mdash; measuring the peaks, not the line cores. NGSL [M/H] is scaled-solar total metallicity with a separate &alpha; flag; MILES [Fe/H] is a genuine iron abundance, listed where the star is in MILES. This table is also delivered as <code>data/balmer_candidates.csv</code>, with both spectral-type scales, S/N on both error scales, coordinates and per-star notes.</p>
+
+  <div class="rec">
+    <div class="label">Recommended test star</div>
+    <div class="star">HD 194453</div>
+    <div class="sub">HIP 100734 &middot; A0 &middot; T<sub>eff</sub> 10241 K &middot; log g 3.9 &middot; [M/H] 0.0 &middot; V = 6.75<br><code>data/spectra/h_stis_ngsl_hd194453_v2.fits</code></div>
+    <ul>
+      <li><strong>Slit offset 0.00 px.</strong> The single best-centred star in the temperature range. The wavelength-dependent throughput correction &mdash; the dominant systematic on break shape &mdash; is essentially null, so the measured continuum slope across 3646 &Aring; is as close to raw instrument calibration as the library gets.</li>
+      <li><strong>Effectively unreddened.</strong> B&minus;V = &minus;0.01 against an intrinsic 0.00 for A0, so extinction cannot masquerade as break curvature.</li>
+      <li><strong>Solar metallicity, no &alpha;-enhancement.</strong> [M/H] = +0.0 with the &alpha; flag off and fit quality 1, so a scaled-solar model grid applies directly &mdash; no abundance-pattern mismatch folded into the continuum. This is what disqualifies HD128801, at [M/H] = &minus;1.9 and &alpha;-enhanced.</li>
+      <li><strong>No multiplicity or peculiarity flags</strong> in SIMBAD, unlike three others in the window.</li>
+      <li><strong>S/N &asymp; 100 per pixel</strong> at the break on the corrected scale, from a well-exposed V = 6.75 target.</li>
+    </ul>
+  </div>
+
+  <div class="note warn" style="margin-left:0">
+    <strong>One caveat to carry into the fit.</strong> The luminosity class is not settled: SIMBAD types HD194453 as A0<span class="mono">III</span> (giant), while the NGSL model fit returns log g = 3.9, which is subgiant-to-dwarf. Since the Balmer break is <em>gravity-sensitive</em> &mdash; that is much of why it is worth testing &mdash; log g should be a free parameter here rather than fixed from the spectral type. If you need a star whose classification and gravity already agree, use <strong>HD040573</strong> (B9.5V, log g 4.2, offset 0.36 px, identical D<sub>Balmer</sub> to within 0.003 mag); if you want one with fully independent published parameters, use <strong>HD128801</strong>, which is in MILES at 10250 K against NGSL's 10123 K with E(B&minus;V) = 0.026 &mdash; though the two catalogs disagree by 0.7 dex on its abundance ([M/H] = &minus;1.9 &alpha;-enhanced vs [Fe/H] = &minus;1.20), making it the weakest of the three on composition.
+  </div>
+
+  <figure>
+    <img src="{{FIG_BALMER}}" alt="Four spectra plotted from 3200 to 4200 Angstroms, each showing a flat continuum shortward of the dashed 3646 Angstrom Balmer limit that rises sharply into a series of deep, well-resolved Balmer absorption lines converging on the limit.">
+    <figcaption>The Balmer break region for the four finalists, with &plusmn;1&sigma; <code>STATERR</code> shading. The higher Balmer series is cleanly resolved converging on the limit in all four, and the break is sampled by roughly 25 pixels across 3500&ndash;3700 &Aring; &mdash; enough to constrain shape, not merely amplitude.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">06</div><h2>Overlap with MILES and MaStar</h2></div>
+  <div class="col">
+    <p>Cross-matching all 379 NGSL positions against both libraries within 5&Prime; gives a sharply split answer.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Library</th><th>Reference</th><th>Coverage</th><th>Catalog size</th><th>NGSL overlap</th></tr></thead>
+      <tbody>
+        <tr><td class="g">MILES</td><td>S&aacute;nchez-Bl&aacute;zquez+ 2006</td><td>3525&ndash;7500 &Aring;, FWHM 2.5 &Aring;</td><td>985</td><td><strong>145 / 379</strong></td></tr>
+        <tr><td class="g">MaStar</td><td>Yan+ 2019 (first release)</td><td>3622&ndash;10354 &Aring;, R ~ 1800</td><td>3326</td><td><strong>0 / 379</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Vizier catalogs J/MNRAS/371/703 and J/ApJ/883/175, matched on J2000 positions from the v2 FITS headers.</p>
+  <div class="col">
+    <h3>MILES: 145 stars in common, and they validate each other</h3>
+    <p>This overlap is not incidental &mdash; Lindler &amp; Heap used MILES to verify the v2 slit correction in the first place. It also provides an independent parameter check that the delivery documentation does not: over the 129 overlap stars with temperatures in both catalogs, T<sub>eff</sub>(NGSL) &minus; T<sub>eff</sub>(MILES) has a median of <strong>+59 K</strong> with 102 K scatter. Metallicity agrees comparably well: NGSL [M/H] minus MILES [Fe/H] has a median of &minus;0.03 dex with 0.23 dex scatter. Two independently derived scales agreeing that closely is a genuine endorsement of both. MILES also supplies E(B&minus;V) and a true [Fe/H] per star, neither of which v2 provides.</p>
+    <p>The practical value is that MILES covers 3525&ndash;7500 &Aring; at FWHM 2.5 &Aring; &mdash; higher resolution than NGSL at the break, and reaching just blueward of it. For any of the 145 shared stars you can cross-check the break against a ground-based, independently calibrated spectrum. None of my top three picks are in MILES, but <strong>HD128801 is</strong>, which is the strongest argument for it as a secondary target.</p>
+    <h3>MaStar: zero overlap, and the reason is structural</h3>
+    <p>The null result is real, not a matching failure &mdash; the closest NGSL star to any MaStar target is 1.4&prime; away, with a median separation of 7.4&deg;. The cause is selection: MaStar observed stars through SDSS fibres in the MaNGA footprint, targeting r &asymp; 12&ndash;17, while NGSL stars run V = 1.5&ndash;12.2 with a median of 6.5. NGSL targets would saturate the BOSS spectrographs outright. The two libraries were built for the same science from opposite ends of the brightness range and do not meet.</p>
+    <p>One qualification: the Vizier table is the Yan et al. (2019) first release of 3326 stars. Full MaStar in SDSS DR17 holds roughly 24000 stars, so a DR17 match could in principle turn up a handful. The brightness argument makes it unlikely to be more than that.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">07</div><h2>What was built</h2></div>
+  <div class="col"><p>Everything is reproducible from the archive. Data and documentation are gitignored; the scripts regenerate them.</p></div>
+  <div class="files">
+    <div><code>scripts/fetch_ngsl.sh</code><span>Downloads the 5 documentation PDFs and the 18.3 MB spectra archive from MAST</span></div>
+    <div><code>scripts/build_catalog.py</code><span>Merges v2 FITS headers, the readme model-fit table and the SIMBAD magnitude table &rarr; <code>ngsl_catalog.csv</code>, 379 rows</span></div>
+    <div><code>scripts/measure_snr.py</code><span>Per-star S/N in 9 wavelength bands, both estimators &rarr; <code>ngsl_snr.csv</code></span></div>
+    <div><code>scripts/crossmatch_libraries.py</code><span>Positional match against MILES and MaStar &rarr; <code>ngsl_crossmatch.csv</code></span></div>
+    <div><code>scripts/coverage.py</code><span>Parameter-coverage and S/N figures</span></div>
+    <div><code>scripts/balmer_candidates.py</code><span>Break-region plots and D<sub>Balmer</sub> measurement</span></div>
+    <div><code>scripts/candidate_table.py</code><span>The five-candidate comparison above &rarr; <code>balmer_candidates.csv</code>, joining NGSL fits, measured spectra, MILES parameters and live SIMBAD types</span></div>
+  </div>
+  <div class="note">
+    <strong>Recovered along the way.</strong> The stellar parameters exist only as a text table inside <code>aaareadme.pdf</code> &mdash; v2 dropped the header keywords that v1 carried. <code>build_catalog.py</code> parses that table back out, so the library's own T<sub>eff</sub>, log g and [M/H] are queryable alongside the spectra again.
+  </div>
+</section>
+
+<footer>
+  Compiled from NGSL v2 delivery documentation (Heap &amp; Lindler 2010) and direct measurement of the 379 delivered spectra. Model fits are Castelli (2004) atmospheres on VandenBerg et al. (2006) isochrones as distributed with the library. Cross-match parameters from Vizier J/MNRAS/371/703 and J/ApJ/883/175. Spectral types and magnitudes as extracted from SIMBAD by the NGSL team.
+</footer>
+</div>

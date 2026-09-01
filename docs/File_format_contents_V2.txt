@@ -1,0 +1,77 @@
+File Content and Format 
+ 
+Each data file is a FITS binary table.  The primary FITS header contains the following 
+information: 
+ 
+FITS File primary header 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+OFFSETPX gives the offset of the target in pixels (0.05 arcsecond) from the center of 
+the slit as measured using the G750L fringe flats (Section 3.2).  DATAQUAL is used to 
+flag data that may be suspect because of a large centering error within the slit.  The data 
+are flagged as suspect if the offset error is more than 0.9 pixels.  Mis-centering greater 
+than 0.9 pixels result in large errors in the aperture throughput correction. 
+ 
+The file’s binary table extension contains three columns: 
+SIMPLE  =                    T /image conforms to FITS standard 
+BITPIX  =                   16 /bits per data value 
+NAXIS   =                    0 /number of axes 
+EXTEND  =                    T /file may contain extensions 
+TARGNAME= 'BD+112998'          /target name 
+SPECTYPE= 'composite'          /Spectra type 
+TELESCOP= 'HST     '           /observatory 
+INSTRUME= 'STIS    '           /instrument 
+FILENAME= 'h_stis_ngsl_bd+112998_v1.fits' / 
+RA      =        3713.54743480 /Right Ascension (deg) 
+DEC     =        10.9976309090 /Declination (deg) 
+EQUINOX =              2000.00 /equinox of celestial coord. system 
+APERTURE= '52X0.2          '   / 
+GRATING = 'G230LB, G430L, G750L' / 
+OBSDATE = '2004-04-10'         /date of observation YYYY-MM-DD 
+EXPSTART=        53105.9428153 /Start time of obs. sequence (MJD) 
+EXPEND  =        53105.9637181 /End time of obs. sequence (MJD) 
+MINWAVE =        1675.66137068 /Minimum wavelength 
+MAXWAVE =        10198.7137562 /Maximum wavelength 
+MAXFLUX =          9.14272E-13 /Maximum Flux in erg/sec/cm^2/Angstrom 
+OFFSETPX=            -0.324710 /Offset of star from center of slit (pixels) 
+DATAQUAL= 'good    '           
+/Data Quality: good or 
+suspect 
+HISTORY STIS Next 
+Generation Spectral 
+Library, Version 1, 27-
+Feb-2008 
+HISTORY  -----------------
+--------------------------
+- 
+HISTORY        FILENAME        
+OPT_ELEM   TEXPTIME 
+HISTORY  -----------------
+--------------------------
+- 
+HISTORY  
+o8ru1p010_raw.fits   
+G230LB         600.000 
+HISTORY  
+o8ru1p020_raw.fits   
+G230LB         600.000 
+HISTORY  
+o8ru1pjiq_raw.fits   G430L          
+30.0000 
+HISTORY  
+o8ru1pjjq_raw.fits   G430L          
+30.0000 
+HISTORY  
+o8ru1pjkq_raw.fits   G750L          
+ 
+WAVELENGTH – wavelength in Angstroms 
+FLUX – observed flux in ergs/cm2/second/Angstrom 
+STATERR – propagated counting statistical errors. 
+ 
+ 
+ 

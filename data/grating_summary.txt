@@ -1,0 +1,7 @@
+grating         range (A)  disp A/px   Npix  res elem         R range  R @ mid
+G230LB      1675-3058          1.373   1008      2.75     610-1114         862
+G430L       3058-5647          2.744    945      5.49     557-1029         793
+G750L       5647-10200         4.877    933      9.75     579-1046         812
+
+sub-2000 A sampling: 1.373 A/px (oversampled relative to 1.373)
+total pixels per spectrum: 2887
