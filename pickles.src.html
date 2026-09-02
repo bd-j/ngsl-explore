@@ -1,0 +1,241 @@
+<title>The Pickles Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#f4f7f7; --panel:#ffffff; --panel-2:#e7eeee;
+  --ink:#13201f; --ink-2:#425654; --ink-3:#6e8382;
+  --rule:#d3e0df; --rule-2:#e6eeed;
+  --teal:#0d6a72; --teal-soft:#e0eff0;
+  --amber:#8a6108; --amber-soft:#faf1da; --amber-rule:#d9b45a;
+  --plum:#6d3f7a; --plum-soft:#f1e8f3;
+  --measure:68ch;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b1414; --panel:#131f1f; --panel-2:#1a2929;
+    --ink:#e6eeed; --ink-2:#a9bcbb; --ink-3:#78908f;
+    --rule:#263a39; --rule-2:#1e2f2e;
+    --teal:#54c2cb; --teal-soft:#0e2c2f;
+    --amber:#e0b256; --amber-soft:#2a2213; --amber-rule:#6d5417;
+    --plum:#c297ce; --plum-soft:#2a1f2e;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b1414; --panel:#131f1f; --panel-2:#1a2929;
+  --ink:#e6eeed; --ink-2:#a9bcbb; --ink-3:#78908f;
+  --rule:#263a39; --rule-2:#1e2f2e;
+  --teal:#54c2cb; --teal-soft:#0e2c2f;
+  --amber:#e0b256; --amber-soft:#2a2213; --amber-rule:#6d5417;
+  --plum:#c297ce; --plum-soft:#2a1f2e;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.65;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px 96px}
+.col{max-width:var(--measure)}
+h1,h2,h3{font-family:Spectral,Georgia,"Times New Roman",serif;text-wrap:balance;margin:0}
+p{margin:0}
+a{color:var(--teal)}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+
+header{padding:64px 0 40px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:20px}
+h1{font-size:clamp(38px,6vw,60px);line-height:1.04;font-weight:700;letter-spacing:-.02em}
+.standfirst{font-family:Spectral,Georgia,serif;font-size:20px;line-height:1.55;color:var(--ink-2);margin-top:20px;max-width:60ch}
+.byline{margin-top:26px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);line-height:1.9}
+.byline a{color:var(--ink-3)}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:40px 0 0;border-radius:2px;overflow:hidden}
+.fact{background:var(--panel);padding:16px 18px}
+.fact dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin:0 0 7px}
+.fact dd{margin:0;font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.fact dd small{display:block;font-size:11.5px;font-weight:400;color:var(--ink-3);margin-top:4px;letter-spacing:0}
+
+section{padding-top:60px}
+.sechead{display:flex;gap:18px;align-items:baseline;margin-bottom:22px}
+.secnum{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--teal);letter-spacing:.08em;padding-top:6px;flex:none}
+h2{font-size:clamp(26px,3.4vw,34px);font-weight:600;letter-spacing:-.015em;line-height:1.18}
+section > .col, section > p, section > .note, section > .rec{margin-left:44px}
+@media (max-width:640px){.sechead{gap:12px}section > .col,section > p,section > .note,section > .rec{margin-left:0}}
+.col p + p{margin-top:16px}
+h3{font-size:16px;font-weight:600;margin:34px 0 10px;letter-spacing:-.005em;font-family:"IBM Plex Sans",sans-serif}
+
+.tablewrap{overflow-x:auto;margin:26px 0 0;border:1px solid var(--rule);border-radius:2px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 15px;text-align:right;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:500;border-bottom:1px solid var(--rule);background:var(--panel-2)}
+tbody tr:last-child td{border-bottom:none}
+td.g{font-family:"IBM Plex Mono",monospace;font-weight:500}
+tr.pick td{background:var(--amber-soft)}
+tr.pick td:first-child{box-shadow:inset 3px 0 0 var(--amber-rule)}
+.cap{font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:78ch;line-height:1.6}
+
+figure{margin:30px 0 0}
+figure img{display:block;width:100%;border:1px solid var(--rule);border-radius:2px;background:#fff}
+figcaption{font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:78ch;line-height:1.6}
+
+.note{border-left:2px solid var(--teal);background:var(--teal-soft);padding:15px 18px;margin:26px 0 0;font-size:14px;color:var(--ink-2);border-radius:0 2px 2px 0}
+.note strong{color:var(--ink)}
+.note.warn{border-left-color:var(--amber-rule);background:var(--amber-soft)}
+.note.alt{border-left-color:var(--plum);background:var(--plum-soft)}
+
+.rec{border:1px solid var(--rule);border-top:3px solid var(--amber-rule);background:var(--panel);padding:28px 30px;margin:30px 0 0;border-radius:2px}
+.rec .label{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+.rec .star{font-family:Spectral,Georgia,serif;font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1;margin-bottom:6px}
+.rec .sub{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-2);margin-bottom:20px}
+.rec ul{margin:0;padding-left:19px;font-size:14.5px;color:var(--ink-2);line-height:1.75}
+.rec li::marker{color:var(--amber-rule)}
+.rec li strong{color:var(--ink);font-weight:600}
+
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0 0;border-radius:2px;overflow:hidden}
+.split > div{background:var(--panel);padding:20px 22px}
+.split h4{margin:0 0 10px;font-size:13px;font-family:"IBM Plex Mono",monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);font-weight:500}
+.split p{font-size:14px;color:var(--ink-2)}
+.split ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-2);line-height:1.7}
+
+.files{margin:26px 0 0;font-size:13.5px}
+.files div{display:flex;gap:16px;padding:9px 0;border-bottom:1px solid var(--rule-2);align-items:baseline;flex-wrap:wrap}
+.files div:last-child{border-bottom:none}
+.files code{color:var(--teal);font-size:12.5px;flex:none;min-width:250px}
+.files span{color:var(--ink-2)}
+footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);max-width:78ch;line-height:1.7}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Pickles 1998 &middot; PASP 110, 863 &middot; STScI CDBS</div>
+  <h1>The Pickles Atlas</h1>
+  <p class="standfirst">131 composite stellar spectra spanning every normal spectral type &mdash; what they are, what they are not, and what they can settle about the Balmer break that a library of individual stars cannot.</p>
+  <p class="byline">
+    Data &middot; <a href="https://archive.stsci.edu/hlsps/reference-atlases/cdbs/grid/pickles/">archive.stsci.edu/hlsps/reference-atlases/cdbs/grid/pickles</a><br>
+    Paper &middot; <a href="https://iopscience.iop.org/article/10.1086/316197">A. J. Pickles (1998), PASP 110, 863</a><br>
+    Companion to the NGSL survey; break amplitudes measured with the same estimator.
+  </p>
+  <dl class="facts">
+    <div class="fact"><dt>Spectra</dt><dd>131<small>composite templates</small></dd></div>
+    <div class="fact"><dt>Coverage</dt><dd>1150&ndash;10620<small>&Aring; (UVILIB)</small></dd></div>
+    <div class="fact"><dt>Sampling</dt><dd>5.0<small>&Aring;/pixel, uniform</small></dd></div>
+    <div class="fact"><dt>Resolution</dt><dd>R ~ 500<small>vs NGSL's 939 at break</small></dd></div>
+    <div class="fact"><dt>With Teff</dt><dd>79<small>assigned by type</small></dd></div>
+    <div class="fact"><dt>Abundance</dt><dd>3<small>108 solar, 11 weak, 12 rich</small></dd></div>
+  </dl>
+</header>
+
+<section>
+  <div class="sechead"><div class="secnum">01</div><h2>What the atlas actually is</h2></div>
+  <div class="col">
+    <p>The single most important thing to understand before using Pickles for model testing: <strong>these are not spectra of stars.</strong> Each entry is a composite, averaged from several observed spectra of the same spectral type drawn from 15 different source libraries &mdash; Gunn &amp; Stryker, Jacoby et al., Silva &amp; Cornell, Sviderskiene, IUE-based UV sets, and others &mdash; then spliced, resampled to a uniform 5 &Aring; grid and normalized to 1.0 at 5556 &Aring;.</p>
+    <p>That construction drives everything else. There is no error array, because the noise is not a measurement of anything. There is no measured surface gravity or metallicity, because the composite has no single star behind it. The effective temperature attached to each entry is the temperature <em>assigned to that spectral type</em> in Table 2 of the paper, not a fit to the spectrum. And any peculiarity, rotation or reddening in the input stars has been averaged into the template rather than removed from it.</p>
+    <p>What you get in exchange is a clean, gap-free, uniformly calibrated grid across the whole HR diagram, with no noise, no slit losses and no instrumental systematics to model. For some questions that trade is exactly right.</p>
+  </div>
+  <div class="split">
+    <div>
+      <h4>Use Pickles when</h4>
+      <ul>
+        <li>You need a <em>typical</em> spectrum of a spectral type, not a specific star</li>
+        <li>You want the full type and luminosity grid, including supergiants</li>
+        <li>Noise would confuse the test and you want a smooth reference</li>
+        <li>You need a wide baseline &mdash; it reaches 1150 &Aring;, and UVKLIB extends to 2.5 &micro;m</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Use NGSL or MILES when</h4>
+      <ul>
+        <li>You need measured T<sub>eff</sub>, log g and abundance for the object you are fitting</li>
+        <li>You need real error bars for a &chi;&sup2;</li>
+        <li>Resolution matters &mdash; both resolve the break better than R ~ 500</li>
+        <li>You need to know exactly which star you are looking at</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">02</div><h2>The break across the atlas</h2></div>
+  <div class="col">
+    <p>I measured the Balmer discontinuity on all 131 templates with the same estimator used on NGSL, so the two libraries are directly comparable: both continua fit as upper envelopes and extrapolated to 3646 &Aring; before ratioing, which cancels the underlying SED slope.</p>
+    <p>The measure behaves well for hot stars and badly for cool ones, and it is worth saying why rather than quietly trimming the axis. Below about 6000 K a star&rsquo;s continuum is strongly curved and densely line-blanketed near 3600 &Aring;, so a two-sided linear extrapolation stops isolating the discontinuity and starts tracking the slope. Uncorrected, M0III returns D = 2.52, which would rank it as the strongest &ldquo;break&rdquo; in the atlas; that is an artifact, not physics. The figure is therefore restricted to T<sub>eff</sub> &gt; 6000 K.</p>
+  </div>
+  <figure>
+    <img src="{{FIG_TEFF}}" alt="Scatter plot of Balmer discontinuity against effective temperature for Pickles templates hotter than 6000 K, peaking near 9000 to 10000 K and falling toward both hotter and cooler temperatures.">
+    <figcaption>Balmer discontinuity vs T<sub>eff</sub> by luminosity class. The break peaks in the A0&ndash;A3 range around 9000&ndash;10000 K, exactly the window this analysis targets: hot enough to populate n = 2 heavily, cool enough that hydrogen is not yet largely ionized. The shaded band marks the test window.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">03</div><h2>Candidates near 10,000 K</h2></div>
+  <div class="col">
+    <p>Nine templates fall between 8500 and 12500 K. Because Pickles templates are indexed by type rather than by star, &ldquo;candidate&rdquo; here means a template worth fitting, and the useful question is how many real stars stand behind each one &mdash; both as a measure of how well determined the composite is, and as a route to checking it against individual spectra.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Template</th><th>T<sub>eff</sub> (K)</th><th>Lum. class</th><th>D<sub>Balmer</sub></th><th>NGSL stars of type</th><th>MILES stars of type</th></tr></thead>
+      <tbody>
+        <tr><td class="g">B8V</td><td>11749</td><td>V</td><td>0.868</td><td>2</td><td>2</td></tr>
+        <tr><td class="g">B8I</td><td>11194</td><td>I</td><td>0.380</td><td>1</td><td>2</td></tr>
+        <tr><td class="g">B9III</td><td>11092</td><td>III</td><td>0.841</td><td>6</td><td>8</td></tr>
+        <tr class="pick"><td class="g">A0V</td><td>9550</td><td>V</td><td>0.957</td><td>7</td><td>15</td></tr>
+        <tr><td class="g">A0III</td><td>9572</td><td>III</td><td>0.993</td><td>1</td><td>5</td></tr>
+        <tr><td class="g">A0IV</td><td>9727</td><td>IV</td><td>1.111</td><td>2</td><td>2</td></tr>
+        <tr><td class="g">A0I</td><td>9727</td><td>I</td><td>0.976</td><td>1</td><td>4</td></tr>
+        <tr><td class="g">A2V</td><td>8913</td><td>V</td><td>1.096</td><td>9</td><td>16</td></tr>
+        <tr><td class="g">A3V</td><td>8790</td><td>V</td><td>1.074</td><td>5</td><td>9</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Star counts match on spectral class, subclass within &plusmn;1, and luminosity class. NGSL counterparts for A0V include HD000319, HD074721, HD086986 and HD095418.</p>
+
+  <div class="rec">
+    <div class="label">Best Pickles target for Balmer-break work</div>
+    <div class="star">A0V &mdash; and its luminosity sequence</div>
+    <div class="sub">pickles_9.fits &middot; T<sub>eff</sub> 9550 K &middot; D<sub>Balmer</sub> = 0.957 &middot; 7 NGSL and 15 MILES stars of the same type</div>
+    <ul>
+      <li><strong>Best-supported composite in the window.</strong> More real stars of this type sit in NGSL and MILES than for any other template near 10,000 K, so the template is both well determined and independently checkable.</li>
+      <li><strong>It agrees with the individual stars.</strong> D = 0.957 against 0.969 for HD194453 and 0.980 for HD040573 &mdash; a 1&ndash;2% consistency between a ground-based composite and HST spectrophotometry of single stars.</li>
+      <li><strong>The real prize is the sequence, not the single template.</strong> Pickles carries A0V, A0IV, A0III and A0I at 9550&ndash;9727 K &mdash; four luminosity classes at essentially one temperature.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-left:44px">Why that sequence matters here</h3>
+  <div class="col">
+    <p>The NGSL analysis ended on an unresolved caveat: HD194453 is typed A0III by SIMBAD but returns log g = 3.9 from the model fit, and since the Balmer break is gravity-sensitive, its luminosity class could not be pinned from one star. Pickles answers precisely that question, because it holds temperature nearly fixed and varies gravity alone.</p>
+    <p>The effect is real but modest and <strong>not monotonic</strong> in luminosity class: D runs 0.957 (V), 1.111 (IV), 0.993 (III), 0.976 (I). The supergiant is the clear outlier in shape rather than amplitude &mdash; its Balmer lines are dramatically narrower, and its blue continuum sits markedly higher, both classic low-gravity signatures visible directly in the figure below. Between dwarf, subgiant and giant, break amplitude alone spans only ~0.15 mag, so amplitude is a weak gravity diagnostic. <strong>Line width, not break depth, is what separates the classes.</strong></p>
+  </div>
+  <figure>
+    <img src="{{FIG_A0}}" alt="Left: four A0 spectra of luminosity classes V, IV, III and I overlaid across the Balmer break, showing the supergiant with much narrower Balmer lines and a higher blue continuum. Right: bar chart of break amplitude by luminosity class, spanning roughly 0.96 to 1.11 magnitudes.">
+    <figcaption>The A0 sequence at nearly constant T<sub>eff</sub>. The supergiant (A0I, red) departs from the other three in exactly the way low gravity predicts &mdash; narrow, shallow Balmer lines from reduced Stark broadening, and more flux shortward of the limit. The bar chart is drawn from a zero baseline deliberately: on a truncated axis these differences look decisive, and they are not.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">04</div><h2>Template against individual star</h2></div>
+  <div class="col">
+    <p>Overlaying the Pickles A0V composite on the NGSL recommendation puts both the agreement and the cost of compositing in one frame.</p>
+  </div>
+  <figure>
+    <img src="{{FIG_VS}}" alt="Pickles A0V template and NGSL HD194453 spectrum overlaid from 3300 to 4200 Angstroms, normalized to the same red continuum; the continuum levels track closely while the template's absorption lines are visibly shallower and broader.">
+    <figcaption>Both normalized to their 4000&ndash;4200 &Aring; continuum. The continuum shape across the limit tracks closely &mdash; the calibrations agree. The Balmer lines do not: the template&rsquo;s are shallower and smoother, partly from R ~ 500 against NGSL&rsquo;s R ~ 939, and partly because averaging stars with different rotation and radial velocities washes line cores out further than resolution alone would.</figcaption>
+  </figure>
+  <div class="note warn">
+    <strong>The compositing penalty is larger than the resolution penalty.</strong> Pickles samples the 3500&ndash;3800 &Aring; break region with 59 pixels against NGSL&rsquo;s 109, and resolves it at R ~ 500 against R ~ 939. But degrading NGSL to the Pickles grid would not reproduce the template, because line cores are additionally smeared by the velocity and rotation spread of the stars averaged into it. Fit the <em>continuum shape</em> of a Pickles template with confidence; do not fit its line profiles and infer anything about a single star&rsquo;s gravity or rotation.
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><div class="secnum">05</div><h2>What was built</h2></div>
+  <div class="files">
+    <div><code>scripts/balmer_metric.py</code><span>The shared break estimator, so Pickles and NGSL numbers mean the same thing</span></div>
+    <div><code>scripts/pickles_analysis.py</code><span>Builds <code>pickles_catalog.csv</code> &mdash; 131 templates with type, luminosity class, abundance flag, T<sub>eff</sub> and break amplitude</span></div>
+    <div><code>scripts/pickles_figures.py</code><span>The four figures above</span></div>
+  </div>
+  <div class="note alt">
+    <strong>A note on the temperatures.</strong> Only 79 of the 131 templates carry a T<sub>eff</sub>, because the CDBS README tabulates temperatures for a named subset of types. The remainder &mdash; mostly the metal-weak and metal-rich F&ndash;K variants and intermediate subtypes &mdash; have spectra but no assigned temperature, and are excluded from every temperature-based figure here rather than being given an interpolated value.
+  </div>
+</section>
+
+<footer>
+  Spectra and README from the STScI CDBS Pickles atlas (UVILIB, <code>dat_uvi</code>). Library described in A. J. Pickles (1998), PASP 110, 863; effective temperatures from Table 2 of that paper as redistributed in the CDBS README. MILES from Vizier J/MNRAS/371/703 (S&aacute;nchez-Bl&aacute;zquez et al. 2006). NGSL measurements from the companion survey of the STIS Next Generation Spectral Library v2.
+</footer>
+</div>

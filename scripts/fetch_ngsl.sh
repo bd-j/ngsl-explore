@@ -17,3 +17,22 @@ curl -sSL -o data/ngsl_listing.csv \
   "${BASE}/prepds/stisngsl/search.php?ordercolumn1=targname&max_records=500&max_rpp=500&action=Search&outputformat=CSV&nondefault=&selectedColumnsCsv=targname,ra,dec,bmag,vmag,b-v,spectral_type"
 
 unzip -oq data/stis_ngsl_v2.zip -d data/spectra
+
+# STIS model line spread functions, for the true (not sampling-limited) resolution
+# https://www.stsci.edu/hst/instrumentation/stis/performance/spectral-resolution
+LSF="https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/stis/performance/spectral-resolution/_documents/LSF"
+mkdir -p data/stis_lsf
+for f in LSF_G230L_1700 LSF_G230L_2400 LSF_G430L_3200 LSF_G430L_5500 LSF_G750L_7000; do
+    curl -sSL -A "Mozilla/5.0" -o "data/stis_lsf/${f}.txt" "${LSF}/${f}.txt"
+done
+
+# Pickles (1998) stellar spectral flux atlas, UVILIB
+# https://www.stsci.edu/hst/instrumentation/reference-data-for-calibration-and-tools/astronomical-catalogs/pickles-atlas
+PK="https://archive.stsci.edu/hlsps/reference-atlases/cdbs/grid/pickles"
+mkdir -p data/pickles
+curl -sSL -A "Mozilla/5.0" -o data/pickles/AA_README "${PK}/AA_README"
+curl -sSL -A "Mozilla/5.0" -o data/pickles/pickles_index.fits "${PK}/dat_uvi/pickles.fits"
+for i in $(seq 1 131); do
+    curl -sSL -A "Mozilla/5.0" -o "data/pickles/pickles_${i}.fits" \
+        "${PK}/dat_uvi/pickles_${i}.fits"
+done

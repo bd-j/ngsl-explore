@@ -1,0 +1,9 @@
+grating,wavelength_A,aperture,fwhm_pixels,ngsl_mode,dispersion_A_per_pix,fwhm_angstrom,R_actual,R_if_2pixel
+G230L,1700,52x0.2,2.376,"no (MAMA G230L, not CCD G230LB)",,,,
+G230L,2400,52x0.2,2.29,"no (MAMA G230L, not CCD G230LB)",,,,
+G430L,3200,52x0.2,1.386,yes,2.744,3.8,841,583
+G430L,5500,52x0.2,1.532,yes,2.744,4.2,1308,1002
+G750L,7000,52x0.2,1.659,yes,4.877,8.09,865,718
+G430L,3058,52x0.2,1.386,yes (interpolated: G430L blue end),2.744,3.8,804,557
+G430L,3646,52x0.2,1.414,yes (interpolated: Balmer limit),2.744,3.88,939,664
+G430L,5647,52x0.2,1.532,yes (interpolated: G430L red end),2.744,4.2,1343,1029

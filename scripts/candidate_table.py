@@ -7,9 +7,14 @@ measured spectra, and independent MILES parameters where the star is in MILES.
 Writes data/balmer_candidates.csv
 """
 import csv
+import pathlib
+import sys
 import numpy as np
 from astropy.io import fits
 from astroquery.simbad import Simbad
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from balmer_metric import balmer_discontinuity
 
 CANDS = ['HD194453', 'HD040573', 'HD147550', 'HD128801', 'HD143459']
 
@@ -50,14 +55,7 @@ for name in CANDS:
         d = h[1].data
     w, fl, er = d['WAVELENGTH'], d['FLUX'], d['STATERR']
 
-    # Balmer discontinuity at 3646 A: blue continuum vs red upper envelope
-    # (peaks between the Balmer lines) extrapolated back to the limit.
-    fc_blue = np.median(fl[(w > 3500) & (w < 3640)])
-    m = (w > 3700) & (w < 4150)
-    xr, yr = w[m], fl[m]
-    hi = yr > np.percentile(yr, 88)
-    fc_red = np.polyval(np.polyfit(xr[hi], yr[hi], 1), 3646.0)
-    d_balmer = 2.5 * np.log10(fc_red / fc_blue)
+    d_balmer, _, _ = balmer_discontinuity(w, fl)
 
     # S/N at the break, both scales: STATERR is optimistic by ~3x (see report)
     b = (w > 3250) & (w < 3600)

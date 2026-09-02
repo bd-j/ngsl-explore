@@ -190,7 +190,7 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
     <div class="fact"><dt>Spectra</dt><dd>379<small>FITS files in v2</small></dd></div>
     <div class="fact"><dt>Coverage</dt><dd>1675&ndash;10198<small>&Aring;, one merged spectrum</small></dd></div>
     <div class="fact"><dt>Gratings</dt><dd>3<small>G230LB / G430L / G750L</small></dd></div>
-    <div class="fact"><dt>Resolving power</dt><dd>560&ndash;1110<small>2-pixel element</small></dd></div>
+    <div class="fact"><dt>Resolving power</dt><dd>800&ndash;1340<small>actual, from LSF</small></dd></div>
     <div class="fact"><dt>True S/N</dt><dd>~100<small>per pixel, optical</small></dd></div>
     <div class="fact"><dt>T<sub>eff</sub> range</dt><dd>3540&ndash;14200<small>K, 324 stars fitted</small></dd></div>
     <div class="fact"><dt>[M/H] range</dt><dd>&minus;2.0 to +0.5<small>scaled-solar, 107 &alpha;-enh</small></dd></div>
@@ -203,20 +203,42 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
   <div class="col">
     <p>Every NGSL target was observed identically: three STIS CCD low-dispersion gratings through the <code>52X0.2E1</code> slit, spliced into one continuous spectrum per star. The delivered product hides the seams &mdash; there is a single wavelength array &mdash; but the native sampling of each grating survives in it, so the segments can be recovered by differencing the wavelength column.</p>
     <p>The three dispersions below are measured from the delivered grid, not quoted from the instrument handbook. The splice points fall inside the overlap regions the pipeline averaged across: 2990&ndash;3060 &Aring; for G230LB/G430L and 5500&ndash;5650 &Aring; for G430L/G750L.</p>
+    <p>Sampling is not resolution, though, and for these modes the two pull in opposite directions. The second table below gives the <em>actual</em> resolution, measured from the STIS model line spread functions at NGSL&rsquo;s 52x0.2 aperture.</p>
   </div>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Grating</th><th>Range (&Aring;)</th><th>Dispersion (&Aring;/px)</th><th>Pixels</th><th>Res. element (&Aring;)</th><th>R (blue&rarr;red)</th></tr></thead>
+      <thead><tr><th>Grating</th><th>Range (&Aring;)</th><th>Dispersion (&Aring;/px)</th><th>Pixels</th><th>2-px element (&Aring;)</th><th>R if 2-px sampled</th></tr></thead>
       <tbody>
         <tr><td class="g">G230LB</td><td>1675&ndash;3058</td><td>1.373</td><td>1008</td><td>2.75</td><td>610 &rarr; 1114</td></tr>
         <tr><td class="g">G430L</td><td>3058&ndash;5647</td><td>2.744</td><td>945</td><td>5.49</td><td>557 &rarr; 1029</td></tr>
-        <tr><td class="g">G750L</td><td>5647&ndash;10198</td><td>4.877</td><td>933</td><td>5.79 &rarr; 1046</td><td>579 &rarr; 1046</td></tr>
+        <tr><td class="g">G750L</td><td>5647&ndash;10198</td><td>4.877</td><td>933</td><td>9.75</td><td>579 &rarr; 1046</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="cap">Measured from <code>h_stis_ngsl_hd194453_v2.fits</code>; identical to within 0.001 &Aring;/px across the library. 2887 pixels per spectrum.</p>
+  <p class="cap"><strong>Wavelength sampling as delivered.</strong> Measured from <code>h_stis_ngsl_hd194453_v2.fits</code>; identical to within 0.001 &Aring;/px across the library. 2887 pixels per spectrum. The last column is the sampling limit only &mdash; it is <em>not</em> the resolution, as the next table shows.</p>
+
+  <h3 style="margin-left:44px">Actual resolution, from the STIS line spread functions</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Grating</th><th>&lambda; (&Aring;)</th><th>LSF FWHM (px)</th><th>LSF FWHM (&Aring;)</th><th>R actual</th><th>R if 2-px</th><th>Ratio</th></tr></thead>
+      <tbody>
+        <tr><td class="g">G430L</td><td>3058 <span style="color:var(--ink-3)">blue end</span></td><td>1.386</td><td>3.80</td><td>804</td><td>557</td><td>1.44&times;</td></tr>
+        <tr><td class="g">G430L</td><td>3200</td><td>1.386</td><td>3.80</td><td>841</td><td>583</td><td>1.44&times;</td></tr>
+        <tr class="pick"><td class="g">G430L</td><td>3646 <span style="color:var(--ink-3)">Balmer limit</span></td><td>1.414</td><td>3.88</td><td>939</td><td>664</td><td>1.41&times;</td></tr>
+        <tr><td class="g">G430L</td><td>5500</td><td>1.532</td><td>4.20</td><td>1308</td><td>1002</td><td>1.31&times;</td></tr>
+        <tr><td class="g">G430L</td><td>5647 <span style="color:var(--ink-3)">red end</span></td><td>1.532</td><td>4.20</td><td>1343</td><td>1029</td><td>1.31&times;</td></tr>
+        <tr><td class="g">G750L</td><td>7000</td><td>1.659</td><td>8.09</td><td>865</td><td>718</td><td>1.20&times;</td></tr>
+        <tr><td class="g">G230L*</td><td>1700</td><td>2.376</td><td colspan="4" style="text-align:left;color:var(--ink-3)">MAMA mode &mdash; not NGSL&rsquo;s CCD G230LB, see below</td></tr>
+        <tr><td class="g">G230L*</td><td>2400</td><td>2.290</td><td colspan="4" style="text-align:left;color:var(--ink-3)">MAMA mode &mdash; not NGSL&rsquo;s CCD G230LB, see below</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap"><strong>Actual resolution.</strong> FWHM measured from the STIS model LSFs at the <code>52x0.2</code> aperture (<a href="https://www.stsci.edu/hst/instrumentation/stis/performance/spectral-resolution">STScI spectral resolution page</a>), converted with the dispersions above. Values at the segment ends and the Balmer limit are interpolated between the two tabulated G430L points, whose FWHM varies slowly and near-linearly. Rows marked * are the NUV-MAMA G230L, the only 230-nm LSF that page provides; FWHM is given in pixels only, since converting it would require the MAMA dispersion from a different detector.</p>
   <div class="note">
-    <strong>&ldquo;R ~ 1000&rdquo; is the ceiling, not the typical value.</strong> Because each grating has fixed linear dispersion, resolving power climbs across every segment and then drops sharply at each splice. R is near 1000&ndash;1100 only at the red end of each grating; it falls to ~560&ndash;610 at each blue end. At the Balmer break (3646 &Aring;), which sits just redward of the G430L splice, <strong>R &asymp; 665</strong> &mdash; the worst-resolved part of the optical range. This matters for model comparison: the break region is the least resolved place in the spectrum, and models must be convolved with a wavelength-dependent kernel, not a single R.
+    <strong>The spectra are undersampled, so the real resolution beats the pixel grid.</strong> The STIS CCD LSF is only <strong>1.39&ndash;1.66 pixels FWHM</strong> through the 0.2&Prime; slit &mdash; narrower than the two-pixel Nyquist element. Actual resolving power therefore runs <strong>20&ndash;44% higher</strong> than the sampling alone implies: 804 &rarr; 1343 across G430L against 557 &rarr; 1029 from sampling. At the Balmer break, <strong>R &asymp; 939</strong>, not the 664 the pixel grid suggests.
+  </div>
+  <div class="note warn">
+    <strong>What this means for fitting the break.</strong> Convolve models with the tabulated LSF, not a Gaussian of 2 pixels &mdash; the latter over-broadens by ~40% at 3646 &Aring; and will make a correct model look too sharp. R still varies strongly with wavelength (it climbs across each grating and resets at every splice), so a single R across 1675&ndash;10198 &Aring; is wrong everywhere; use a wavelength-dependent kernel. And because the LSF is narrower than 2 pixels, the data are formally undersampled: sharp features are aliased, and interpolating onto a finer grid recovers nothing real. Note also that G230LB has no published LSF on that page, so the UV segment&rsquo;s true resolution remains the one unquantified piece &mdash; the sampling-limited 610 &rarr; 1114 is a lower bound there.
   </div>
 </section>
 
@@ -311,15 +333,15 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
     <table>
       <thead><tr><th>Star</th><th>Type</th><th>T<sub>eff</sub></th><th>log g</th><th>[M/H]</th><th>&alpha;</th><th>MILES [Fe/H]</th><th>V</th><th>B&minus;V</th><th>Offset (px)</th><th>D<sub>Balmer</sub></th></tr></thead>
       <tbody>
-        <tr class="pick"><td class="g">HD194453</td><td>A0</td><td>10241</td><td>3.9</td><td>+0.0</td><td>solar</td><td>&mdash;</td><td>6.75</td><td>&minus;0.01</td><td>0.00</td><td>1.023</td></tr>
-        <tr><td class="g">HD040573</td><td>B9.5V</td><td>10200</td><td>4.2</td><td>&minus;0.4</td><td>solar</td><td>&mdash;</td><td>7.46</td><td>+0.01</td><td>0.36</td><td>1.026</td></tr>
-        <tr><td class="g">HD147550</td><td>B9V</td><td>10074</td><td>3.9</td><td>&minus;0.0</td><td>solar</td><td>&mdash;</td><td>6.25</td><td>+0.05</td><td>0.24</td><td>1.102</td></tr>
-        <tr><td class="g">HD128801</td><td>B9</td><td>10123</td><td>3.7</td><td>&minus;1.9</td><td>enh.</td><td>&minus;1.20</td><td>8.73</td><td>&minus;0.04</td><td>0.58</td><td>1.090</td></tr>
-        <tr><td class="g">HD143459</td><td>A0Vs</td><td>9878</td><td>3.6</td><td>&minus;0.6</td><td>solar</td><td>&minus;1.26</td><td>5.53</td><td>+0.04</td><td>0.09</td><td>1.146</td></tr>
+        <tr class="pick"><td class="g">HD194453</td><td>A0</td><td>10241</td><td>3.9</td><td>+0.0</td><td>solar</td><td>&mdash;</td><td>6.75</td><td>&minus;0.01</td><td>0.00</td><td>0.969</td></tr>
+        <tr><td class="g">HD040573</td><td>B9.5V</td><td>10200</td><td>4.2</td><td>&minus;0.4</td><td>solar</td><td>&mdash;</td><td>7.46</td><td>+0.01</td><td>0.36</td><td>0.980</td></tr>
+        <tr><td class="g">HD147550</td><td>B9V</td><td>10074</td><td>3.9</td><td>&minus;0.0</td><td>solar</td><td>&mdash;</td><td>6.25</td><td>+0.05</td><td>0.24</td><td>1.070</td></tr>
+        <tr><td class="g">HD128801</td><td>B9</td><td>10123</td><td>3.7</td><td>&minus;1.9</td><td>enh.</td><td>&minus;1.20</td><td>8.73</td><td>&minus;0.04</td><td>0.58</td><td>1.070</td></tr>
+        <tr><td class="g">HD143459</td><td>A0Vs</td><td>9878</td><td>3.6</td><td>&minus;0.6</td><td>solar</td><td>&minus;1.26</td><td>5.53</td><td>+0.04</td><td>0.09</td><td>1.110</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="cap">All five are <code>DATAQUAL = good</code>. D<sub>Balmer</sub> = 2.5&nbsp;log<sub>10</sub>(F<sub>red</sub>/F<sub>blue</sub>) at 3646 &Aring;, with the red continuum taken from the upper envelope between Balmer lines over 3700&ndash;4150 &Aring; and extrapolated to the limit &mdash; measuring the peaks, not the line cores. NGSL [M/H] is scaled-solar total metallicity with a separate &alpha; flag; MILES [Fe/H] is a genuine iron abundance, listed where the star is in MILES. This table is also delivered as <code>data/balmer_candidates.csv</code>, with both spectral-type scales, S/N on both error scales, coordinates and per-star notes.</p>
+  <p class="cap">All five are <code>DATAQUAL = good</code>. D<sub>Balmer</sub> = 2.5&nbsp;log<sub>10</sub>(F<sub>red</sub>/F<sub>blue</sub>) evaluated <em>at</em> 3646 &Aring;. Both continua are upper-envelope fits (tracking the peaks between lines, not the cores) extrapolated to the limit, so a sloping SED cancels; see <code>scripts/balmer_metric.py</code>. The measure is only meaningful for hot stars &mdash; below ~6000 K continuum curvature dominates it. NGSL [M/H] is scaled-solar total metallicity with a separate &alpha; flag; MILES [Fe/H] is a genuine iron abundance, listed where the star is in MILES. This table is also delivered as <code>data/balmer_candidates.csv</code>, with both spectral-type scales, S/N on both error scales, coordinates and per-star notes.</p>
 
   <div class="rec">
     <div class="label">Recommended test star</div>
@@ -335,7 +357,7 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
   </div>
 
   <div class="note warn" style="margin-left:0">
-    <strong>One caveat to carry into the fit.</strong> The luminosity class is not settled: SIMBAD types HD194453 as A0<span class="mono">III</span> (giant), while the NGSL model fit returns log g = 3.9, which is subgiant-to-dwarf. Since the Balmer break is <em>gravity-sensitive</em> &mdash; that is much of why it is worth testing &mdash; log g should be a free parameter here rather than fixed from the spectral type. If you need a star whose classification and gravity already agree, use <strong>HD040573</strong> (B9.5V, log g 4.2, offset 0.36 px, identical D<sub>Balmer</sub> to within 0.003 mag); if you want one with fully independent published parameters, use <strong>HD128801</strong>, which is in MILES at 10250 K against NGSL's 10123 K with E(B&minus;V) = 0.026 &mdash; though the two catalogs disagree by 0.7 dex on its abundance ([M/H] = &minus;1.9 &alpha;-enhanced vs [Fe/H] = &minus;1.20), making it the weakest of the three on composition.
+    <strong>One caveat to carry into the fit.</strong> The luminosity class is not settled: SIMBAD types HD194453 as A0<span class="mono">III</span> (giant), while the NGSL model fit returns log g = 3.9, which is subgiant-to-dwarf. Since the Balmer break is <em>gravity-sensitive</em> &mdash; that is much of why it is worth testing &mdash; log g should be a free parameter here rather than fixed from the spectral type. If you need a star whose classification and gravity already agree, use <strong>HD040573</strong> (B9.5V, log g 4.2, offset 0.36 px, D<sub>Balmer</sub> within 0.011 mag); if you want one with fully independent published parameters, use <strong>HD128801</strong>, which is in MILES at 10250 K against NGSL's 10123 K with E(B&minus;V) = 0.026 &mdash; though the two catalogs disagree by 0.7 dex on its abundance ([M/H] = &minus;1.9 &alpha;-enhanced vs [Fe/H] = &minus;1.20), making it the weakest of the three on composition.
   </div>
 
   <figure>
@@ -379,6 +401,7 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
     <div><code>scripts/crossmatch_libraries.py</code><span>Positional match against MILES and MaStar &rarr; <code>ngsl_crossmatch.csv</code></span></div>
     <div><code>scripts/coverage.py</code><span>Parameter-coverage and S/N figures</span></div>
     <div><code>scripts/balmer_candidates.py</code><span>Break-region plots and D<sub>Balmer</sub> measurement</span></div>
+    <div><code>scripts/lsf_resolution.py</code><span>Measures true LSF FWHM and resolving power from the STScI LSF files &rarr; <code>stis_lsf_resolution.csv</code></span></div>
     <div><code>scripts/candidate_table.py</code><span>The five-candidate comparison above &rarr; <code>balmer_candidates.csv</code>, joining NGSL fits, measured spectra, MILES parameters and live SIMBAD types</span></div>
   </div>
   <div class="note">

@@ -1,6 +1,11 @@
-# Bulk data downloaded from MAST — regenerate with scripts/fetch_ngsl.sh
+# Bulk spectra downloaded from archives — regenerate with scripts/fetch_ngsl.sh
 data/spectra/
 data/stis_ngsl_v2.zip
+
+# Pickles template spectra (131 files, ~3 MB); the README, the index table and
+# the derived catalog are tracked, the spectra themselves are refetchable.
+data/pickles/*.fits
+!data/pickles/pickles_index.fits
 
 # Python
 __pycache__/
