@@ -180,18 +180,21 @@ def make_figure(star, cat):
     r = cat[star]
     def _wc(g):
         c = WAVECAL[(star, g)]
+        # separate the two coefficients: "+0.70-0.71/kA" reads as a range
         return (f'{g} {c["a"]:+.2f}' +
-                (f'{c["b"]*1000:+.2f}/kA' if c['b'] else ''))
+                (f' ({c["b"]*1000:+.2f} $\\AA$/kÅ)' if c['b'] else ''))
     wc = ', '.join(_wc(g) for g in ('G430L', 'G750L') if (star, g) in WAVECAL)
+    # Two lines: what the star is, then what was measured. One line overflows
+    # the figure width and gets clipped.
     fig.suptitle(
-        f'{star}:  Teff={float(r["teff_ngsl_K"]):.0f} K   log g={r["logg_ngsl"]}   '
-        f'[M/H]={float(r["m_h_ngsl"]):+.1f}      '
-        f'D$_{{Balmer}}$  obs {d_obs:.3f} / model {d_mod:.3f} ({d_mod-d_obs:+.3f})'
-        f'      Balmer-region residual RMS {rms:.1f}%'
-        f'      wavecal: air$\\to$vac, {wc} $\\AA$'
-        + (f'   [model only {lo:.0f}-{hi:.0f} $\\AA$]' if narrow else ''),
-        fontsize=11, color=INK)
-    fig.tight_layout(rect=[0, 0, 1, 0.975])
+        f'{star}   Teff={float(r["teff_ngsl_K"]):.0f} K   log g={r["logg_ngsl"]}   '
+        f'[M/H]={float(r["m_h_ngsl"]):+.1f}\n'
+        f'D$_{{Balmer}}$ obs {d_obs:.3f} / model {d_mod:.3f} ({d_mod-d_obs:+.3f})'
+        f'     residual RMS {rms:.1f}%'
+        f'     wavecal air$\\to$vac, {wc} $\\AA$'
+        + (f'     [model only {lo:.0f}-{hi:.0f} $\\AA$]' if narrow else ''),
+        fontsize=11, color=INK, linespacing=1.5)
+    fig.tight_layout(rect=[0, 0, 1, 0.962])
     out = ROOT / 'figures' / f'model_vs_obs_{star}.png'
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)

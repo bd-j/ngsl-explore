@@ -164,15 +164,17 @@ def make_figure(star, p):
             rms = np.nanstd(resid[inw]) * 100
             cover.append(float(np.mean(gap_free(fo)[(wo > xlim[0]) & (wo < xlim[1])])))
 
+    # Two lines: what the star is, then what was measured. One line overflows
+    # the figure width and gets clipped.
     fig.suptitle(
-        f'{star}:  Teff={float(p["teff"]):.0f} K   log g={float(p["logg"]):.2f}   '
+        f'{star}   Teff={float(p["teff"]):.0f} K   log g={float(p["logg"]):.2f}   '
         f'[Fe/H]={float(p["fe_h"]):+.2f}   v sin i={vsini:.0f} km/s   '
-        f'E(B-V)={ebv:.3f}      Balmer-region residual RMS {rms:.1f}%'
-        f'      Balmer coverage {100*cover[0]:.0f}%'
-        + ('   [GAPS: {:.0f}% of range missing]'.format(100 * gapfrac)
+        f'E(B-V)={ebv:.3f}\n'
+        f'residual RMS {rms:.1f}%     Balmer coverage {100*cover[0]:.0f}%'
+        + ('     [GAPS: {:.0f}% of full range missing]'.format(100 * gapfrac)
            if gapfrac > 0.02 else ''),
-        fontsize=11, color=INK)
-    fig.tight_layout(rect=[0, 0, 1, 0.975])
+        fontsize=11, color=INK, linespacing=1.5)
+    fig.tight_layout(rect=[0, 0, 1, 0.962])
     out = ROOT / 'figures' / f'uves_vs_model_{star}.png'
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
