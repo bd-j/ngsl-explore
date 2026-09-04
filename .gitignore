@@ -1,5 +1,11 @@
-# Bulk spectra downloaded from archives — regenerate with scripts/fetch_ngsl.sh
-data/spectra/
+# Bulk spectra downloaded from archives — regenerate with scripts/fetch_ngsl.sh.
+# The spectra of the SELECTED stars are tracked (4 x 53 KB) so the analysis can
+# be reproduced without a 22 MB refetch; the other 375 are not.
+data/spectra/*
+!data/spectra/h_stis_ngsl_hd194453_v2.fits
+!data/spectra/h_stis_ngsl_hd040573_v2.fits
+!data/spectra/h_stis_ngsl_hd128801_v2.fits
+!data/spectra/h_stis_ngsl_hd143459_v2.fits
 data/stis_ngsl_v2.zip
 
 # Pickles template spectra (131 files, ~3 MB); the README, the index table and
@@ -7,9 +13,14 @@ data/stis_ngsl_v2.zip
 data/pickles/*.fits
 !data/pickles/pickles_index.fits
 
-# UVES-POP spectra (~3 MB each) — refetchable, URLs in scripts/uves_pop_astars.py.
-# The derived catalogs (uves_pop_*.csv) ARE tracked.
-data/uves_pop/
+# UVES-POP spectra (~2.9 MB each). The four SELECTED stars are tracked
+# (11.5 MB total); anything else fetched for screening is not.
+# URLs in scripts/uves_pop_astars.py.
+data/uves_pop/*
+!data/uves_pop/Castor.fits.gz
+!data/uves_pop/HD162393.fits.gz
+!data/uves_pop/HD162678.fits.gz
+!data/uves_pop/HD188294.fits.gz
 
 # ATLAS12 output: atmospheres, synthesized spectra, logs (113 MB).
 # Regenerate with scripts/make_atlas_model.py; the driver scripts are tracked.

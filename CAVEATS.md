@@ -84,6 +84,44 @@ at 3200 to 4.37 A at 4200 (31%) against a true LSF varying 2%. Harmless inside
 one grating, off by ~3x for anyone extending below 3058 A.
 See `broaden_ngsl()` in `scripts/plot_model_vs_obs.py`.
 
+### UVES-POP has real coverage gaps, and they are not where you expect
+The delivered spectra have holes. Blanking them with NaN is mandatory: drawing
+a line across a gap previously produced an apparent flux feature at 8500 A that
+was very nearly investigated as physics.
+
+Three kinds, all visible in the data:
+
+| gap | cause | affects |
+|---|---|---|
+| 5750-5844 A | dichroic / arm split | all stars |
+| 8515-8690 A, then every ~150 A redward | inter-order gaps | all stars, Paschen region |
+| 3859-4779 A (921 A) | a missing spectral setup | HD162678 only |
+
+The last is not an order gap -- it is 44x the local free spectral range -- and
+it removes 43% of that star's Balmer coverage, which is why HD162678 cannot be
+used for the break despite being the slowest rotator of the sample.
+
+**Order width at the Balmer break.** The regular red-end gaps ARE the
+inter-order gaps, so they measure the free spectral range directly. Order
+spacing runs 140 A at 9331 A to 164 A at 10101 A, with the order number m
+falling 67 -> 62, giving a grating invariant m*lambda = 633,000 +/- 28,000 A.
+The gaps are ~28 A on a ~151 A spacing, so the detector captures ~81% of each
+order there -- the missing 19% is what makes the red-end holes.
+
+Carried to the Balmer break, m ~ 174 and the **free spectral range is ~21 A per
+order**, about 210 pixels of the delivered 0.1 A grid and ~6x narrower than at
+the red end. Since the detector covers a roughly fixed number of pixels per
+order, orders **overlap comfortably in the blue**, which is why the Balmer
+region has 100% coverage in every star while the red end is riddled with holes.
+The same instrument behaves oppositely at the two ends of its range.
+
+Caveats on that extrapolation: it assumes one echelle with m*lambda constant
+across arms, and UVES blue and red arms share the echelle but use different
+cross-dispersers, cameras and detectors -- so the 81% detector-coverage figure
+certainly does NOT carry over. The invariant has 4.5% scatter because it is
+derived by differencing gap centres rather than measuring order edges. Treat
+m ~ 174 and FSR ~ 21 A as good to ~5%.
+
 ### UVES-POP is not delivered at R = 80,000
 Native resolution is R = 80,000, but the archive product is resampled to a
 **0.1 A linear grid**, so usable resolution at the Balmer break is
@@ -248,6 +286,16 @@ says so in the figure title.
   star's gravity or rotation from their line profiles.
 - **MaStar does not overlap NGSL at all** (0/379). The cause is structural:
   MaStar targets r = 12-17 through SDSS fibres, NGSL runs V = 1.5-12.2.
+- **Castor is a composite and its RMS is misleading.** It scores the worst
+  Balmer RMS of the UVES-POP sample (10.4%) while its break continuum matches
+  well. The RMS is inflated by hundreds of sharp metal-line residuals: at
+  v sin i = 18 km/s the metal lines are fully resolved, so every abundance or
+  gf error produces a tall narrow spike, and Castor B is Am with genuinely
+  anomalous abundances. Fast rotators smear these away and score better for the
+  wrong reason -- HD162393 at 142 km/s gets 3.3%. **Residual RMS rewards
+  rotational smearing**; weight the break-region continuum instead. A smooth
+  +2 to +5% tilt across 5600-8200 A and predominantly positive metal-line
+  residuals are both consistent with dilution by a second component.
 - **Near-solar and ~10,000 K are nearly exclusive in UVES-POP.** Only two stars
   of 406 satisfy |[Fe/H]| <= 0.25 with 9300-11200 K and dwarf/subgiant gravity,
   and both are fast rotators.
