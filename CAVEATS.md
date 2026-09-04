@@ -103,15 +103,54 @@ cores and then integrates them, over-absorbing the smoothed spectrum by ~10%
 | source | convention |
 |---|---|
 | ATLAS12 / SYNTHE output | **vacuum** (verified: Ca II K at 3934.773 vs vacuum 3934.777) |
-| NGSL v2 | **vacuum** (cross-correlation r = 0.9940 at zero shift vs 0.9894 for air) |
+| NGSL v2 | **air**, plus a per-grating residual — see below |
 | UVES-POP | **air** — `CTYPE1 = AWAV` |
 
-UVES-POP must be converted before comparison or every line sits ~1.1 A blue.
-`scripts/uves_pop_load.py` converts by default. Note the NGSL determination
-needed a model to settle: Balmer-centroid tests alone were inconclusive,
-because the air-vac difference is 0.42 NGSL pixels.
+### NGSL is in air, and an early test here said otherwise
+A first cross-correlation of NGSL against a model over **3300-4150 A only**
+returned a best shift of -0.35 A and was read as "vacuum" (r = 0.9940 at zero
+shift vs 0.9894 for air). **That conclusion was wrong.** Repeating the test in
+seven windows from 3300 to 9100 A shows the required shift running -0.2 to
+-3.2 A and tracking the air-vacuum curve; converting air->vacuum drops the mean
+from -1.56 A to +0.15 A and the maximum from 3.18 A to 0.85 A.
 
----
+**Lesson:** 3300-4150 A is the worst possible window for this test. The
+air-vacuum offset there (~1 A) is comparable to the instrument's own zero-point
+error, so the two are not separable. Test a wavelength convention over the
+widest possible baseline, never in one narrow window.
+
+### A linear-in-lambda residual survives the conversion
+NGSL took no wavecals with the stellar exposures -- the readme states zero
+points were derived per spectrum from stellar feature positions -- and the
+gratings were reduced separately. After air->vacuum, G430L shows a clean
+monotonic ramp, +1.11 A at 3500 A falling to +0.08 A at 5350 A.
+
+This is a **slope, not a zero point**, and a constant offset is the wrong model
+for it: fitting one at 4200-5600 A (where the residual is ~0) leaves ~1 A
+uncorrected at the Balmer break, and makes the fit *worse* where it matters.
+A linear-in-lambda residual of this kind is what a different air-vacuum
+convention produces -- Edlen (1953/1966) vs Ciddor (1996), or different assumed
+temperature/pressure for the air index -- so it is modelled as a line.
+
+`scripts/ngsl_wavecal.py` fits air->vacuum plus a per-(star, grating)
+correction: linear for G430L (fit rms 0.02-0.20 A, slope -0.5 to -1.2 A per
+1000 A, consistent across stars), robust constant for G750L, which scatters
+window-to-window without a clean trend. G230LB cannot be calibrated this way at
+all -- the models start at 3200 A -- and is left uncorrected rather than given
+a fitted number.
+
+Residual shift, median over the sample:
+
+| stage | mean | scatter | max abs |
+|---|---|---|---|
+| as delivered | -1.41 A | 0.96 | 2.95 |
+| air->vacuum | +0.17 A | 0.57 | 1.11 |
+| air->vacuum + fit | **+0.08 A** | **0.25** | **0.66** |
+
+**Watch the sign.** The cross-correlation returns how far the MODEL must move
+to meet the data, so the data are corrected by SUBTRACTING it. Getting this
+backwards improves the break amplitude while making the line residuals worse --
+a combination that should be read as a sign error, not a partial success.
 
 ## Model physics
 

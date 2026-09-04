@@ -28,23 +28,27 @@ from scipy.ndimage import gaussian_filter1d
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from balmer_metric import balmer_discontinuity
 from make_atlas_model import hnu_to_flam
+from ngsl_wavecal import apply_wavecal, load_table
+
+WAVECAL = load_table()
 
 ROOT = Path(__file__).resolve().parent.parent
 BALMER = 3646.0                      # 911.7635 * 4, vacuum
 PASCHEN = 8205.9                     # 911.7635 * 9, vacuum
 FULL = (3200.0, 9400.0)
-ZOOM_B = (3600.0, 4050.0)
+ZOOM_B = (3600.0, 4000.0)
 ZOOM_P = (7600.0, 9100.0)
 H_MASK_A = 20.0
 
 # Normalization windows. The full-range panel uses broad continuum; each break
 # panel renormalizes in windows bracketing that break.
 WINS_FULL = [(4400., 4800.), (5000., 5600.), (6100., 6400.), (6800., 7400.)]
-# Kept deliberately wider than the Balmer display range: normalization is
-# computed on the data, not on what is shown, so the bands either side of the
-# break still anchor the scaling even when they fall outside the zoom.
-WINS_B = [(3400., 3620.), (3980., 4060.), (4180., 4300.)]
-WINS_P = [(7700., 8150.), (8250., 8420.), (9050., 9200.)]
+# Break panels are normalized on the BLUE side of the break only. With bands on
+# both sides the fit splits the difference and a break-amplitude error shows up
+# as a half-size offset on each side; anchoring blueward makes the red side of
+# the residual read directly as the break mismatch.
+WINS_B = [(3400., 3620.)]
+WINS_P = [(7700., 8150.)]
 
 # NGSL LSF FWHM in Angstroms per grating (FWHM_px x dispersion, from
 # data/stis_lsf_resolution.csv). G230LB has no published LSF: 2-px lower bound.
@@ -117,7 +121,10 @@ def style(ax):
 
 def make_figure(star, cat):
     d = fits.getdata('data/spectra/' + cat[star]['file'])
-    wo_all, fo_all = d['WAVELENGTH'].astype(float), d['FLUX'].astype(float)
+    # NGSL is delivered in AIR with a per-grating zero point (no wavecals were
+    # taken with the stellar exposures). Convert and correct before comparing.
+    wo_all = apply_wavecal(d['WAVELENGTH'].astype(float), star, WAVECAL)
+    fo_all = d['FLUX'].astype(float)
     wm, hnu, _ = np.loadtxt(f'models/work/{star}.spec', unpack=True)
     fm = hnu_to_flam(wm, hnu)
 
@@ -131,14 +138,14 @@ def make_figure(star, cat):
             (ZOOM_B, f'Balmer break ({BALMER:.0f} $\\AA$)', BALMER, WINS_B, 'lower right'),
             (ZOOM_P, f'Paschen break ({PASCHEN:.0f} $\\AA$)', PASCHEN, WINS_P, 'lower left')]
 
-    fig, axes = plt.subplots(2, 3, figsize=(19, 7.8),
-                             gridspec_kw={'height_ratios': [2.1, 1]})
+    fig, axes = plt.subplots(6, 1, figsize=(11.5, 17.5),
+                             gridspec_kw={'height_ratios': [2.1, 1] * 3})
     fig.patch.set_facecolor(SURFACE)
     d_obs = d_mod = None
 
     for i, (xlim, ttl, mark, wins, legloc) in enumerate(cols):
         mi, resid, keep = scaled(wo, fo, mi0, wins)
-        ax, rax = axes[0, i], axes[1, i]
+        ax, rax = axes[2 * i], axes[2 * i + 1]
         for a in (ax, rax):
             style(a)
             shade(a, wo, keep)
@@ -171,16 +178,22 @@ def make_figure(star, cat):
             rms = np.std(resid[sel]) * 100
 
     r = cat[star]
+    def _wc(g):
+        c = WAVECAL[(star, g)]
+        return (f'{g} {c["a"]:+.2f}' +
+                (f'{c["b"]*1000:+.2f}/kA' if c['b'] else ''))
+    wc = ', '.join(_wc(g) for g in ('G430L', 'G750L') if (star, g) in WAVECAL)
     fig.suptitle(
         f'{star}:  Teff={float(r["teff_ngsl_K"]):.0f} K   log g={r["logg_ngsl"]}   '
         f'[M/H]={float(r["m_h_ngsl"]):+.1f}      '
         f'D$_{{Balmer}}$  obs {d_obs:.3f} / model {d_mod:.3f} ({d_mod-d_obs:+.3f})'
         f'      Balmer-region residual RMS {rms:.1f}%'
+        f'      wavecal: air$\\to$vac, {wc} $\\AA$'
         + (f'   [model only {lo:.0f}-{hi:.0f} $\\AA$]' if narrow else ''),
         fontsize=11, color=INK)
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout(rect=[0, 0, 1, 0.975])
     out = ROOT / 'figures' / f'model_vs_obs_{star}.png'
-    fig.savefig(out, dpi=140, facecolor=SURFACE)
+    fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
     print(f'  {star}: D obs={d_obs:.3f} model={d_mod:.3f} ({d_mod-d_obs:+.3f}), '
           f'Balmer RMS={rms:.1f}%  -> {out.name}')
