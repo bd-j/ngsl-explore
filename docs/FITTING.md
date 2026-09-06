@@ -16,7 +16,7 @@ priors, samplers). Grid: see [GRID.md](GRID.md).
 | Teff, log g, [M/H] | interpolated in the grid |
 | E(B−V) | CCM89, R_V = 3.1 by default |
 | v sin i | Gray (2005) rotation profile, linear limb darkening |
-| instrumental | constant R, constant FWHM in Å, or the per-grating NGSL LSF |
+| instrumental | constant R, constant FWHM in Å, or the measured NGSL profile |
 | RV | Doppler shift |
 | error scale | multiplies the quoted uncertainties |
 
@@ -49,6 +49,39 @@ Three things separate them.
 Where the data cannot break the degeneracy, sample rather than optimize: the
 posterior will show the Teff–E(B−V) banana honestly, and a point estimate will
 not.
+
+## Constrain the instrumental broadening — do not fit it blind
+
+For NGSL the profile is **measured, not assumed**: matching XSL to NGSL for
+three stars in common gives **R = 600 ± 40**, constant in velocity, with no
+model involved (see [DATA.md](DATA.md)). Use it.
+
+```python
+from fitting.fit import ngsl_config
+cfg = ngsl_config()                      # inst_kind='R', prior N(600, 40)
+cfg = ngsl_config(fixed=dict(inst=600))  # or hold it exactly
+```
+
+Leaving `inst` free re-opens its degeneracy with Teff and log g — line depth
+trades against broadening — for no gain, because three stars constrain it
+better than one spectrum can. This is not hypothetical: while the fitter
+reimplemented its own kernels, `kind='R'` ignored the grid spacing and turned a
+request for R=600 into R=83. Because `inst` was free, nothing crashed; the fit
+would have absorbed the error into an absurd broadening value and dragged Teff
+and log g with it. The kernels now delegate to `common.lsf`, and a prior means
+such a failure shows up as a fight with the prior rather than passing silently.
+
+Per library:
+
+| library | `inst_kind` | value |
+|---|---|---|
+| NGSL | `'R'` | 600 ± 40 (or `'ngsl'`, which applies it directly) |
+| XSL | `'R'` | ~9800 UVB, ~11600 VIS — constant in velocity |
+| UVES-POP | — | R = 80,000 *then* a 0.1 Å rebin; neither pure kind is exact, apply the boxcar as `plot_uves_vs_model.py` does |
+
+`FitConfig.priors` takes any `{parameter: object with .logp}`, so the same
+mechanism constrains v sin i from a published value, or RV, or anything else
+known independently.
 
 ## The dust prior
 

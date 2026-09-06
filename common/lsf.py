@@ -39,6 +39,7 @@ NGSL_LSF_TABULATED = [(1675., 3058., 2.75), (3058., 5647., 3.85),
 # which broadens the profile beyond it. Use MEASURED for anything comparing to
 # the delivered spectra. See explore/ngsl_lsf_from_xsl.py and docs/DATA.md.
 NGSL_R_MEASURED = 600.0
+NGSL_R_SIGMA = 40.0      # star-to-star scatter of the measurement
 
 # Back-compatible name; now the measured profile.
 NGSL_LSF = NGSL_LSF_TABULATED

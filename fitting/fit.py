@@ -27,6 +27,7 @@ from scipy.optimize import minimize
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid, forward
+from common.lsf import NGSL_R_MEASURED, NGSL_R_SIGMA
 
 PARAMS = ['teff', 'logg', 'mh', 'ebv', 'vsini', 'inst', 'rv', 'lnerr']
 
@@ -94,12 +95,42 @@ class DustPrior:
 
 
 @dataclass
+class GaussianPrior:
+    """N(value, sigma) on any single parameter."""
+    value: float
+    sigma: float
+
+    def logp(self, x):
+        return -0.5 * ((x - self.value) / self.sigma) ** 2
+
+
+@dataclass
 class FitConfig:
     inst_kind: str = 'R'                 # 'R', 'fwhm' or 'ngsl'
     bounds: dict = field(default_factory=dict)
     dust: DustPrior = field(default_factory=DustPrior)
     fixed: dict = field(default_factory=dict)
+    priors: dict = field(default_factory=dict)   # param name -> object with .logp
     r_v: float = 3.1
+
+
+def ngsl_config(**kw):
+    """FitConfig for an NGSL spectrum, with the instrumental broadening
+    constrained rather than free.
+
+    The NGSL profile is MEASURED, not assumed: matching XSL to NGSL for three
+    stars in common gives R = 600 +/- 40, constant in velocity (see
+    docs/DATA.md). Leaving `inst` free would re-open its degeneracy with Teff
+    and log g -- line depth trades against broadening -- for no gain, since we
+    know it better than the fit could determine it from one star.
+
+    Use fixed=dict(inst=NGSL_R_MEASURED) instead to hold it exactly.
+    """
+    cfg = dict(inst_kind='R',
+               priors={'inst': GaussianPrior(NGSL_R_MEASURED, NGSL_R_SIGMA)},
+               bounds={'inst': (400.0, 900.0)})
+    cfg.update(kw)
+    return FitConfig(**cfg)
 
 
 def default_bounds(grid):
@@ -139,7 +170,11 @@ class SpectrumFit:
             lo, hi = self.bounds[k]
             if not (lo <= p[k] <= hi):
                 return -np.inf
-        return self.cfg.dust.logp(p.get('ebv', 0.0))
+        lp = self.cfg.dust.logp(p.get('ebv', 0.0))
+        for k, pr in self.cfg.priors.items():
+            if k in p:
+                lp += pr.logp(p[k])
+        return lp
 
     def log_prob(self, theta):
         p = self.unpack(theta)

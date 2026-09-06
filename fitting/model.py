@@ -19,7 +19,8 @@ from scipy.ndimage import gaussian_filter1d
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.extinction_ccm import redden
-from common.lsf import broaden_rot, NGSL_LSF
+from common.lsf import (broaden_rot, broaden_R, broaden_ngsl,
+                        broaden, NGSL_R_MEASURED)
 
 ROOT = Path(__file__).resolve().parent.parent
 C_KMS = 2.99792458e5
@@ -72,35 +73,30 @@ class Grid:
 
 
 def instrument(w, f, kind, value):
-    """Instrumental broadening.
+    """Instrumental broadening. Delegates to common.lsf so the fitter and the
+    comparison figures cannot drift apart.
 
-    kind='R'     constant resolving power (value = R)
-    kind='fwhm'  constant FWHM in Angstroms (value = FWHM)
-    kind='ngsl'  the per-grating NGSL LSF, constant in Angstroms per segment
+    kind='R'      constant resolving power (value = R)
+    kind='fwhm'   constant FWHM in Angstroms (value = FWHM)
+    kind='ngsl'   the MEASURED NGSL profile: constant R = 600 (see docs/DATA.md).
+                  Not the STIS-table profile, which is 1.7-1.8x too narrow for
+                  the delivered spectra.
+    kind='ngsl_tab'  the STIS-table profile, for comparison only.
+
+    Both 'R' and 'ngsl' were previously computed here by hand and were wrong:
+    the constant-R sigma ignored the grid spacing (R=600 came out as R=83), and
+    'ngsl' still applied the superseded 3.85 A tabulated width.
     """
     if kind == 'ngsl':
-        out = np.array(f, float)
-        step = 0.01
-        wl = np.arange(w[0], w[-1], step)
-        fl = np.interp(wl, w, f)
-        for lo, hi, fwhm in NGSL_LSF:
-            seg = (w >= lo) & (w < hi)
-            if seg.any():
-                sm = gaussian_filter1d(fl, fwhm / 2.3548 / step, mode='nearest')
-                out[seg] = np.interp(w[seg], wl, sm)
-        return out
+        return broaden_ngsl(w, f)
+    if kind == 'ngsl_tab':
+        return broaden_ngsl(w, f, tabulated=True)
     if not value or value <= 0:
         return f
     if kind == 'R':
-        # the grid is a log-lambda array, so constant R is a fixed pixel sigma
-        npix = (1.0 / np.log1p(1.0 / value)) if value > 1 else 0.0
-        return gaussian_filter1d(f, npix / 2.3548, mode='nearest')
+        return broaden_R(w, f, value)
     if kind == 'fwhm':
-        step = 0.01
-        wl = np.arange(w[0], w[-1], step)
-        sm = gaussian_filter1d(np.interp(wl, w, f), value / 2.3548 / step,
-                               mode='nearest')
-        return np.interp(w, wl, sm)
+        return broaden(w, f, value)
     raise ValueError(f'unknown instrument kind: {kind}')
 
 
