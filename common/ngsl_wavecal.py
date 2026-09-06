@@ -147,7 +147,7 @@ def load_table(path=None):
 
 
 if __name__ == '__main__':
-    from plot_model_vs_obs import broaden_ngsl
+    from plot_ngsl_vs_model import broaden_ngsl
     cat = [r for r in csv.DictReader(open(ROOT / 'data' / 'balmer_candidates.csv'))
            if r.get('selected') != 'no']
     rows = []

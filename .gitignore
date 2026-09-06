@@ -22,6 +22,17 @@ data/uves_pop/*
 !data/uves_pop/HD162678.fits.gz
 !data/uves_pop/HD188294.fits.gz
 
+# XSL DR3: the 772 MB full-release tarball is refetchable (data/xsl/fetch.sh);
+# the extracted spectra of the selected stars are tracked by name, as for NGSL.
+data/xsl/*.tar
+data/xsl/*.log
+data/xsl/XSL_DR3_release/*
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0196_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0243_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0245_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0288_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0386_merged.fits
+
 # ATLAS12 output: atmospheres, synthesized spectra, logs, and the 25 GB model
 # grid. All of it is regenerable (grid/build_grid.py, grid/make_model.py), so
 # ignore models/ wholesale and allow back only the small driver scripts.

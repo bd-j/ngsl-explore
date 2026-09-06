@@ -67,7 +67,7 @@ python3 common/uves_pop_load.py          # UVES-POP parameters + reddening cut
 python3 grid/build_grid.py --workers 9   # the model grid (~25 h, resumable)
 python3 grid/pack_grid.py                # collapse it into models/grid.npz
 
-python3 explore/plot_model_vs_obs.py     # NGSL comparison figures
+python3 explore/plot_ngsl_vs_model.py     # NGSL comparison figures
 python3 explore/plot_uves_vs_model.py    # UVES-POP comparison figures
 ```
 

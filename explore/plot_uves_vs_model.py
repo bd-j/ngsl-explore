@@ -33,7 +33,7 @@ from common.lsf import broaden, broaden_ngsl, NGSL_LSF
 from grid.make_model import hnu_to_flam, SYNTHE_R
 from common.uves_pop_load import load as load_uves, params as uves_params
 from common.extinction_ccm import deredden
-from explore.plot_model_vs_obs import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
+from explore.plot_ngsl_vs_model import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
                                OBS_C, MOD_C, SURFACE, INK, MUTED, GRID)
 
 ROOT = Path(__file__).resolve().parent.parent
