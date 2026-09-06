@@ -17,8 +17,8 @@ is zscale = 10**[Fe/H].
 
 Usage:
   export ATLAS12=/path/to/atlas12
-  python3 scripts/make_atlas_model.py --all
-  python3 scripts/make_atlas_model.py --star HD194453 --teff 10241 --logg 3.9 --feh 0.0
+  python3 explore/make_atlas_model.py --all
+  python3 explore/make_atlas_model.py --star HD194453 --teff 10241 --logg 3.9 --feh 0.0
 """
 import argparse
 import csv
@@ -202,12 +202,15 @@ def main():
                     help='walk up to Teff in bounded rungs. Not normally needed: '
                          'the direct teff= jump converges, it just takes 0.5-1 h. '
                          'Reach for this only if a direct run fails to converge.')
+    ap.add_argument('--workdir',
+                    help='directory for atmospheres and spectra '
+                         '(default models/work)')
     ap.add_argument('--skip-atlas', action='store_true',
                     help='reuse an existing .atm and only redo synthesis')
     args = ap.parse_args()
 
     A12 = atlas_home()
-    workdir = MODELS / 'work'
+    workdir = Path(args.workdir) if args.workdir else MODELS / 'work'
     workdir.mkdir(parents=True, exist_ok=True)
 
     if args.all:

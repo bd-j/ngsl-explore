@@ -25,10 +25,11 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from scipy.ndimage import gaussian_filter1d
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from balmer_metric import balmer_discontinuity
-from make_atlas_model import hnu_to_flam
-from ngsl_wavecal import apply_wavecal, load_table
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.balmer_metric import balmer_discontinuity
+from common.lsf import broaden, broaden_ngsl, NGSL_LSF
+from grid.make_model import hnu_to_flam
+from common.ngsl_wavecal import apply_wavecal, load_table
 
 WAVECAL = load_table()
 
@@ -52,7 +53,6 @@ WINS_P = [(7700., 8150.)]
 
 # NGSL LSF FWHM in Angstroms per grating (FWHM_px x dispersion, from
 # data/stis_lsf_resolution.csv). G230LB has no published LSF: 2-px lower bound.
-NGSL_LSF = [(1675., 3058., 2.75), (3058., 5647., 3.85), (5647., 10198., 8.09)]
 
 OBS_C, MOD_C, SURFACE = '#2a78d6', '#eb6834', '#fcfcfb'
 INK, MUTED, GRID = '#22262b', '#6b7280', '#dfe3e8'
@@ -66,24 +66,6 @@ def hydrogen_lines(wmin, wmax, series=(2, 3), nmax=40):
             if wmin <= lam <= wmax:
                 out.append(lam)
     return np.array(out)
-
-
-def broaden(w, f, fwhm_A, step=0.01):
-    """Gaussian of constant FWHM in ANGSTROMS (resample to linear grid first)."""
-    wl = np.arange(w[0], w[-1], step)
-    sm = gaussian_filter1d(np.interp(wl, w, f), fwhm_A / 2.3548 / step,
-                           mode='nearest')
-    return np.interp(w, wl, sm)
-
-
-def broaden_ngsl(w, f):
-    """The NGSL instrument profile: piecewise constant in Angstroms per grating."""
-    out = np.array(f, dtype=float)
-    for lo, hi, fwhm in NGSL_LSF:
-        seg = (w >= lo) & (w < hi)
-        if seg.any():
-            out[seg] = broaden(w, f, fwhm)[seg]
-    return out
 
 
 def norm_mask(wo, wins):

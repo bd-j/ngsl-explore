@@ -22,11 +22,13 @@ data/uves_pop/*
 !data/uves_pop/HD162678.fits.gz
 !data/uves_pop/HD188294.fits.gz
 
-# ATLAS12 output: atmospheres, synthesized spectra, logs (113 MB).
-# Regenerate with scripts/make_atlas_model.py; the driver scripts are tracked.
-models/work/
-models/*.log
-models/*_R10000.csv
+# ATLAS12 output: atmospheres, synthesized spectra, logs, and the 25 GB model
+# grid. All of it is regenerable (grid/build_grid.py, grid/make_model.py), so
+# ignore models/ wholesale and allow back only the small driver scripts.
+# Ignoring by directory name was NOT enough: models/grid/ appeared later and was
+# swept into a commit because the rules named models/work/ specifically.
+models/*
+!models/*.sh
 
 # Python
 __pycache__/

@@ -17,8 +17,8 @@ import re
 import numpy as np
 from astropy.io import fits
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from balmer_metric import balmer_discontinuity
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from common.balmer_metric import balmer_discontinuity
 
 
 def parse_teff(path='data/pickles/AA_README'):

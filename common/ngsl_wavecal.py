@@ -39,8 +39,8 @@ from pathlib import Path
 import numpy as np
 from astropy.io import fits
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_atlas_model import hnu_to_flam
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from grid.make_model import hnu_to_flam
 
 ROOT = Path(__file__).resolve().parent.parent
 LAM_REF = 4000.0            # pivot for the linear term, near the Balmer break

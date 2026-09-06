@@ -28,11 +28,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d, uniform_filter1d
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_atlas_model import hnu_to_flam, SYNTHE_R
-from uves_pop_load import load as load_uves, params as uves_params
-from extinction_ccm import deredden
-from plot_model_vs_obs import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.lsf import broaden, broaden_ngsl, NGSL_LSF
+from grid.make_model import hnu_to_flam, SYNTHE_R
+from common.uves_pop_load import load as load_uves, params as uves_params
+from common.extinction_ccm import deredden
+from explore.plot_model_vs_obs import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
                                OBS_C, MOD_C, SURFACE, INK, MUTED, GRID)
 
 ROOT = Path(__file__).resolve().parent.parent

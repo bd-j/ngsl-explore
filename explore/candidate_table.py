@@ -14,8 +14,8 @@ import numpy as np
 from astropy.io import fits
 from astroquery.simbad import Simbad
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from balmer_metric import balmer_discontinuity
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from common.balmer_metric import balmer_discontinuity
 
 CANDS = ['HD194453', 'HD040573', 'HD147550', 'HD128801', 'HD143459']
 
