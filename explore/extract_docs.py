@@ -9,7 +9,7 @@ import pypdf
 
 SKIP = {'v2_versus_v1'}
 
-for p in sorted(pathlib.Path('docs').glob('*.pdf')):
+for p in sorted(pathlib.Path('docs/ngsl_delivery').glob('*.pdf')):
     if p.stem in SKIP:
         continue
     reader = pypdf.PdfReader(str(p))

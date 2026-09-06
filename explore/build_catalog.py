@@ -2,9 +2,9 @@
 magnitude table into a single catalog: data/ngsl_catalog.csv
 
 Sources:
-  docs/aaareadme.txt   section 4 model fits (Teff, log g, log Z, alpha) - Castelli(2004)
+  docs/ngsl_delivery/aaareadme.txt   section 4 model fits (Teff, log g, log Z, alpha) - Castelli(2004)
                        models on Victoria-Regina isochrones, from NGSL v1
-  docs/Table_V2.txt    B, V, spectral type as extracted from SIMBAD
+  docs/ngsl_delivery/Table_V2.txt    B, V, spectral type as extracted from SIMBAD
   data/spectra/*.fits  v2 primary headers (offset, data quality, coords, dates)
 """
 import re, csv, glob
@@ -17,7 +17,7 @@ fit = {}
 row = re.compile(
     r'^\s*(\S+)\s+(good|suspect)\s+([123])'
     r'(?:\s+([\d.]+)\s+([\d.]+)\.?\s+(-?[\d.]+)\s+(-?[\d.]+)\s+([na]))?\s*$')
-for line in open('docs/aaareadme.txt'):
+for line in open('docs/ngsl_delivery/aaareadme.txt'):
     m = row.match(line.rstrip())
     if not m:
         continue
@@ -30,7 +30,7 @@ for line in open('docs/aaareadme.txt'):
 mag = {}
 trow = re.compile(r'^\s*(\S+)\s+(\d\d \d\d [\d.]+)\s+([+-]\d\d \d\d [\d.]+)'
                   r'\s+(\S+)\s+(\S+)\s*(.*?)\s*$')
-for line in open('docs/Table_V2.txt'):
+for line in open('docs/ngsl_delivery/Table_V2.txt'):
     m = trow.match(line.rstrip())
     if not m:
         continue

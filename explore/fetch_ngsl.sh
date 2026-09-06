@@ -4,10 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 BASE=https://archive.stsci.edu
-mkdir -p data docs
+mkdir -p data docs/ngsl_delivery
 
 for f in aaareadme File_format_contents_V2 Table_V2 Lindler_AAS_Jan2010 v2_versus_v1; do
-    curl -sSL -o "docs/${f}.pdf" "${BASE}/prepds/stisngsl/docs/${f}.pdf"
+    curl -sSL -o "docs/ngsl_delivery/${f}.pdf" "${BASE}/prepds/stisngsl/docs/${f}.pdf"
 done
 
 curl -sSL -o data/stis_ngsl_v2.zip "${BASE}/pub/hlsp/stisngsl/v2/stis_ngsl_v2.zip"
