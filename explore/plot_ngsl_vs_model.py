@@ -177,7 +177,7 @@ def make_figure(star, cat):
         + (f'     [model only {lo:.0f}-{hi:.0f} $\\AA$]' if narrow else ''),
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 0.962])
-    out = ROOT / 'figures' / f'model_vs_obs_{star}.png'
+    out = ROOT / 'figures' / f'ngsl_vs_model_{star}.png'
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
     print(f'  {star}: D obs={d_obs:.3f} model={d_mod:.3f} ({d_mod-d_obs:+.3f}), '

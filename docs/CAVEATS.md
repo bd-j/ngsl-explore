@@ -61,17 +61,33 @@ as an upper bound only. See `scripts/reddening.py`.
 
 ## Resolution and instrument profiles
 
-### "R ~ 1000" is a ceiling for NGSL, not a typical value
-Each grating has fixed linear dispersion, so resolving power climbs across every
-segment and resets at each splice. Measured from the STIS LSF tables, actual R
-runs **804 -> 1343 across G430L** and is **939 at the Balmer break** — not the
-664 the 2-pixel sampling limit implies, because the CCD LSF is only
-1.39-1.66 px FWHM, *narrower* than Nyquist.
+### NGSL's delivered resolution is R ~ 600, not what the tables imply
+Three numbers have been quoted for this at different times; the last is right.
 
-**Do:** convolve models with the tabulated LSF. A 2-px Gaussian over-broadens by
-~40% at 3646 A and will make a correct model look too sharp. Note also that the
-data are formally undersampled, so interpolating onto a finer grid recovers
-nothing real. G230LB has no published LSF — its UV resolution is unquantified.
+| source | claim |
+|---|---|
+| 2-px sampling limit | R ~ 665 at the break |
+| STIS LSF tables (3.85 A) | R ~ 939 at the break |
+| **measured against XSL** | **R = 600 +/- 40, constant in velocity** |
+
+The tables describe the single-exposure optical LSF. The delivered v2 spectra
+are co-adds of two dithered exposures resampled onto a common grid and are
+1.7-1.8x broader, and constant in VELOCITY rather than in Angstroms (7% scatter
+vs 41%). Measured with XSL as the reference, so no model is involved --
+see docs/DATA.md and explore/ngsl_lsf_from_xsl.py.
+
+**A dismissed result was right.** Fitting an effective LSF against the ATLAS12
+models had preferred 7.0-7.5 A, and that was rejected as "laundering physics
+into an instrumental parameter" because the Balmer cores carry genuine excess
+flux the LTE models cannot produce. The reasoning was sound but the conclusion
+was too strong: the model-free XSL measurement gives ~6.7 A in the same window.
+Both things are true at once -- the cores are filled AND the profile is broader
+than tabulated. When two explanations are both available, prefer the test that
+removes one of them entirely rather than arguing about which dominates.
+
+**The data are not undersampled.** An earlier claim that the LSF is narrower
+than 2 pixels followed from the tabulated width; at the measured 6.6 A over
+2.744 A pixels there are ~2.4 px per resolution element.
 
 ### The smoothing kernel must be wavelength dependent
 The NGSL LSF is set by a fixed dispersion per grating, so it is constant in
@@ -82,7 +98,7 @@ sigma in pixels is a constant-**R** kernel — the wrong thing.
 **Bug that bit us:** a constant-R kernel anchored at 3700 A varied from 3.33 A
 at 3200 to 4.37 A at 4200 (31%) against a true LSF varying 2%. Harmless inside
 one grating, off by ~3x for anyone extending below 3058 A.
-See `broaden_ngsl()` in `scripts/plot_model_vs_obs.py`.
+See `broaden_ngsl()` in `scripts/plot_ngsl_vs_model.py`.
 
 ### UVES-POP has real coverage gaps, and they are not where you expect
 The delivered spectra have holes. Blanking them with NaN is mandatory: drawing
@@ -264,7 +280,7 @@ masked +/- 20 A.
 ### Never extrapolate a model past its synthesis range
 `np.interp` returns edge values silently. A model synthesized over 3200-4200 A
 and compared over 3200-9400 A produced a 15.8% residual RMS that was pure
-artifact. `plot_model_vs_obs.py` now clips to the model's actual coverage and
+artifact. `plot_ngsl_vs_model.py` now clips to the model's actual coverage and
 says so in the figure title.
 
 ---

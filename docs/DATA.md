@@ -58,6 +58,74 @@ The two samples are **disjoint** — no star appears in both — so they are
 independent tests rather than a repeat measurement. Between them they span
 9878-11016 K, log g 3.5-4.2, [M/H] -1.9 to +0.1, and rotation 37-182 km/s.
 
+## NGSL resolution: use R = 600, not the STIS tables
+
+The STIS LSF tables give the *single-exposure optical* profile: constant in
+Angstroms within a grating (3.85 A for G430L, 8.09 A for G750L), implying
+R = 804-1343. **The delivered NGSL v2 spectra are 1.7-1.8x broader than that,
+and broader in a different functional form.**
+
+Measured against XSL, which observes three of these stars at ~10x the
+resolution — so no model, no NLTE, nothing but instrument
+(`explore/ngsl_lsf_from_xsl.py`):
+
+| lambda | measured FWHM | implied R | tabulated |
+|---|---|---|---|
+| 3900 A | 6.60 A | 591 | 3.85 A |
+| 4400 A | 6.99 A | 629 | 3.85 A |
+| 4900 A | 7.79 A | 629 | 3.85 A |
+| 6600 A | 12.68 A | 521 | 8.09 A |
+| 8700 A | 14.48 A | 601 | 8.09 A |
+
+**R = 600 +/- 40**, constant in velocity, with no jump at the G430L/G750L
+splice. Constant-R describes it with 7% scatter; constant-Angstrom needs 41%.
+Three stars agree independently, and the jointly fitted wavelength shifts are
+below 0.2 A in G430L, so the width is not absorbing a wavecal error. Both
+spectra are continuum-normalized per window, so the grey flux offset between
+the libraries cannot contribute either.
+
+The likely cause is in the delivery rather than the optics: v2 spectra are
+co-adds of two dithered exposures resampled onto a common grid, which broadens
+the profile beyond the single-exposure LSF the tables describe.
+
+Using the correct profile matters a great deal. Switching the model convolution
+from 3.85 A to R = 600 cut the Balmer-region residual RMS by ~2.5x across the
+sample and shrank every break residual:
+
+| star | RMS before -> after | D residual before -> after |
+|---|---|---|
+| HD194453 | 6.7% -> 3.1% | +0.027 -> +0.010 |
+| HD040573 | 5.0% -> 1.9% | +0.084 -> +0.058 |
+| HD128801 | 6.2% -> 2.4% | +0.025 -> +0.020 |
+| HD143459 | 7.3% -> 2.6% | -0.060 -> -0.007 |
+
+`common.lsf.broaden_ngsl` uses the measured profile by default;
+`tabulated=True` gives the STIS-table form.
+
+Two earlier statements are superseded. **R = 939 at the Balmer break is wrong**
+— it is ~600. And the claim that the data are *undersampled* (LSF narrower than
+2 pixels) is wrong: at 6.6 A FWHM over 2.744 A pixels the spectra are sampled
+at ~2.4 px per resolution element, which is adequate rather than aliased.
+
+## The two libraries differ by a grey flux offset
+
+NGSL and XSL are both absolutely calibrated, so their fluxes can be compared
+directly. For the three stars in common the ratio XSL/NGSL is flat in
+wavelength and star-dependent:
+
+| star | XSL / NGSL | spread over 3300-9100 A |
+|---|---|---|
+| HD194453 | 1.04 | +/-2% |
+| HD143459 | 0.90 | +/-2% |
+| HD128801 | 1.00 | +/-3% |
+
+Grey, so smoothing cannot be the cause — convolution conserves flux. It is an
+absolute flux-calibration difference; ground-based XSL must correct slit
+losses, NGSL need not. HD143459's 10% offset exceeds both libraries' quoted
+accuracies (NGSL ~3%, XSL 1.5-4%), so at least one is worse than advertised for
+that star. Comparisons should normalize; do not read an absolute flux
+difference between the libraries as astrophysical.
+
 ## Provenance
 
 | dataset | source |

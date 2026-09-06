@@ -190,7 +190,7 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
     <div class="fact"><dt>Spectra</dt><dd>379<small>FITS files in v2</small></dd></div>
     <div class="fact"><dt>Coverage</dt><dd>1675&ndash;10198<small>&Aring;, one merged spectrum</small></dd></div>
     <div class="fact"><dt>Gratings</dt><dd>3<small>G230LB / G430L / G750L</small></dd></div>
-    <div class="fact"><dt>Resolving power</dt><dd>800&ndash;1340<small>actual, from LSF</small></dd></div>
+    <div class="fact"><dt>Resolving power</dt><dd>~600<small>measured, as delivered</small></dd></div>
     <div class="fact"><dt>True S/N</dt><dd>~100<small>per pixel, optical</small></dd></div>
     <div class="fact"><dt>T<sub>eff</sub> range</dt><dd>3540&ndash;14200<small>K, 324 stars fitted</small></dd></div>
     <div class="fact"><dt>[M/H] range</dt><dd>&minus;2.0 to +0.5<small>scaled-solar, 107 &alpha;-enh</small></dd></div>
@@ -217,10 +217,10 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
   </div>
   <p class="cap"><strong>Wavelength sampling as delivered.</strong> Measured from <code>h_stis_ngsl_hd194453_v2.fits</code>; identical to within 0.001 &Aring;/px across the library. 2887 pixels per spectrum. The last column is the sampling limit only &mdash; it is <em>not</em> the resolution, as the next table shows.</p>
 
-  <h3 style="margin-left:44px">Actual resolution, from the STIS line spread functions</h3>
+  <h3 style="margin-left:44px">Single-exposure resolution, from the STIS line spread functions</h3>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Grating</th><th>&lambda; (&Aring;)</th><th>LSF FWHM (px)</th><th>LSF FWHM (&Aring;)</th><th>R actual</th><th>R if 2-px</th><th>Ratio</th></tr></thead>
+      <thead><tr><th>Grating</th><th>&lambda; (&Aring;)</th><th>LSF FWHM (px)</th><th>LSF FWHM (&Aring;)</th><th>R (tabulated)</th><th>R if 2-px</th><th>Ratio</th></tr></thead>
       <tbody>
         <tr><td class="g">G430L</td><td>3058 <span style="color:var(--ink-3)">blue end</span></td><td>1.386</td><td>3.80</td><td>804</td><td>557</td><td>1.44&times;</td></tr>
         <tr><td class="g">G430L</td><td>3200</td><td>1.386</td><td>3.80</td><td>841</td><td>583</td><td>1.44&times;</td></tr>
@@ -233,12 +233,47 @@ footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);font-si
       </tbody>
     </table>
   </div>
-  <p class="cap"><strong>Actual resolution.</strong> FWHM measured from the STIS model LSFs at the <code>52x0.2</code> aperture (<a href="https://www.stsci.edu/hst/instrumentation/stis/performance/spectral-resolution">STScI spectral resolution page</a>), converted with the dispersions above. Values at the segment ends and the Balmer limit are interpolated between the two tabulated G430L points, whose FWHM varies slowly and near-linearly. Rows marked * are the NUV-MAMA G230L, the only 230-nm LSF that page provides; FWHM is given in pixels only, since converting it would require the MAMA dispersion from a different detector.</p>
-  <div class="note">
-    <strong>The spectra are undersampled, so the real resolution beats the pixel grid.</strong> The STIS CCD LSF is only <strong>1.39&ndash;1.66 pixels FWHM</strong> through the 0.2&Prime; slit &mdash; narrower than the two-pixel Nyquist element. Actual resolving power therefore runs <strong>20&ndash;44% higher</strong> than the sampling alone implies: 804 &rarr; 1343 across G430L against 557 &rarr; 1029 from sampling. At the Balmer break, <strong>R &asymp; 939</strong>, not the 664 the pixel grid suggests.
-  </div>
+  <p class="cap"><strong>Tabulated, single-exposure resolution &mdash; superseded for the delivered product by the measurement below.</strong> FWHM from the STIS model LSFs at the <code>52x0.2</code> aperture (<a href="https://www.stsci.edu/hst/instrumentation/stis/performance/spectral-resolution">STScI spectral resolution page</a>), converted with the dispersions above. Values at the segment ends and the Balmer limit are interpolated between the two tabulated G430L points, whose FWHM varies slowly and near-linearly. Rows marked * are the NUV-MAMA G230L, the only 230-nm LSF that page provides; FWHM is given in pixels only, since converting it would require the MAMA dispersion from a different detector.</p>
   <div class="note warn">
-    <strong>What this means for fitting the break.</strong> Convolve models with the tabulated LSF, not a Gaussian of 2 pixels &mdash; the latter over-broadens by ~40% at 3646 &Aring; and will make a correct model look too sharp. R still varies strongly with wavelength (it climbs across each grating and resets at every splice), so a single R across 1675&ndash;10198 &Aring; is wrong everywhere; use a wavelength-dependent kernel. And because the LSF is narrower than 2 pixels, the data are formally undersampled: sharp features are aliased, and interpolating onto a finer grid recovers nothing real. Note also that G230LB has no published LSF on that page, so the UV segment&rsquo;s true resolution remains the one unquantified piece &mdash; the sampling-limited 610 &rarr; 1114 is a lower bound there.
+    <strong>Correction: the delivered spectra are R &asymp; 600, not R &asymp; 939.</strong>
+    This section originally reported R = 804 &rarr; 1343 across G430L, derived from
+    the STIS line spread function tables, and concluded the data were
+    <em>undersampled</em> because the tabulated CCD LSF (1.39&ndash;1.66 px FWHM) is
+    narrower than the two-pixel Nyquist element. Both conclusions were wrong for
+    the delivered product.
+    <br><br>
+    The STIS tables describe the <em>single-exposure optical</em> profile. NGSL v2
+    spectra are co-adds of two dithered exposures resampled onto a common grid,
+    and the resulting profile is <strong>1.7&ndash;1.8&times; broader</strong>. Measured
+    directly against the X-shooter Spectral Library &mdash; which observes three of
+    these stars at ~10&times; the resolution, so no model, no NLTE, nothing but
+    instrument &mdash; the effective profile is <strong>R = 600 &plusmn; 40, constant in
+    velocity</strong>, with no jump at the G430L/G750L splice:
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>&lambda; (&Aring;)</th><th>measured FWHM</th><th>implied R</th><th>tabulated FWHM</th></tr></thead>
+      <tbody>
+        <tr><td class="g">3900</td><td>6.60 &Aring;</td><td>591</td><td>3.85 &Aring;</td></tr>
+        <tr><td class="g">4400</td><td>6.99</td><td>629</td><td>3.85</td></tr>
+        <tr><td class="g">4900</td><td>7.79</td><td>629</td><td>3.85</td></tr>
+        <tr><td class="g">6600</td><td>12.68</td><td>521</td><td>8.09</td></tr>
+        <tr><td class="g">8700</td><td>14.48</td><td>601</td><td>8.09</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Constant-R describes this with 7% scatter; constant-&Aring;ngstr&ouml;m
+  needs 41%. Three stars agree independently, and jointly fitted wavelength
+  shifts stay below 0.2 &Aring; in G430L, so the width is not absorbing a
+  calibration error.</p>
+  <div class="note">
+    <strong>What this means for fitting the break.</strong> Convolve models to
+    <strong>R = 600</strong>, constant in velocity, across the whole optical range.
+    Using the tabulated 3.85 &Aring; instead leaves models far too sharp: switching to
+    the measured profile cut the Balmer-region residual RMS by ~2.5&times; across the
+    sample (6.7% &rarr; 3.1% for HD194453) and shrank every break residual. And the
+    data are <em>not</em> undersampled &mdash; at 6.6 &Aring; FWHM over 2.744 &Aring;
+    pixels there are ~2.4 pixels per resolution element.
   </div>
 </section>
 
