@@ -32,7 +32,26 @@ PROJECT_DIR=$SCRATCH/conroy_lab/Lab/$USER/ngsl
 export ATLAS12=$SCRATCH/conroy_lab/Lab/$USER/atlas12
 cd $PROJECT_DIR
 
+# NTASKS is the WIDTH OF THE PARTITION, not the number of tasks in this
+# submission. They are the same for a full array and differ when resubmitting a
+# subset, which is the only time you must set it by hand:
+#
+#   sbatch --array=0-99                        NTASKS=100 automatically
+#   sbatch --array=5,7,9 --export=ALL,NTASKS=100    resubmitting 3 of those 100
+#
+# Getting it wrong is not benign. Tasks take pool[task::NTASKS]; with
+# --array=5,7,9 the default NTASKS=3 makes task 5 compute pool[5::3], which
+# aliases onto a 3-way split. Each task would claim ~568 nodes instead of ~17
+# and several would compute the SAME node concurrently, writing one .spec path
+# from two processes.
 NTASKS=${NTASKS:-$SLURM_ARRAY_TASK_COUNT}
+
+if [ -z "$NTASKS" ] || [ "$SLURM_ARRAY_TASK_ID" -ge "$NTASKS" ]; then
+    echo "ERROR: SLURM_ARRAY_TASK_ID=$SLURM_ARRAY_TASK_ID is not in [0,$NTASKS)."
+    echo "       Resubmitting a subset of an array? Pass the ORIGINAL width:"
+    echo "         sbatch --array=<ids> --export=ALL,NTASKS=<original> $0"
+    exit 1
+fi
 ONLY_MISSING=${ONLY_MISSING:-0}
 EXTRA=""
 [ "$ONLY_MISSING" = "1" ] && EXTRA="--only-missing"

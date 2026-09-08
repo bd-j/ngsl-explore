@@ -41,7 +41,7 @@ model that under-predicts the break.
 **Caught:** HD147550 at E(B-V) = 0.125 — 96% of the entire Galactic column on
 its sightline, despite being only 141 pc away — and the only star in the NGSL
 sample whose observed break exceeded the model (1.070 vs 1.003). Dropped;
-`EBV_MAX = 0.10` in `scripts/candidate_table.py` now enforces the cut.
+`EBV_MAX = 0.10` in `explore/candidate_table.py` now enforces the cut.
 
 **Do NOT use SFD98 or SF11 map values as the reddening to a star.** They are
 the *total* column through the whole Galactic dust layer, and these stars sit
@@ -55,7 +55,7 @@ inside it at 137-317 pc. The overestimate is severe and not uniform:
 
 Use a fitted value where one exists (UVES-POP and MILES both publish them),
 otherwise `(B-V)_obs - (B-V)_0` from the spectral type. Treat the map columns
-as an upper bound only. See `scripts/reddening.py`.
+as an upper bound only. See `explore/reddening.py`.
 
 ---
 
@@ -98,7 +98,7 @@ sigma in pixels is a constant-**R** kernel — the wrong thing.
 **Bug that bit us:** a constant-R kernel anchored at 3700 A varied from 3.33 A
 at 3200 to 4.37 A at 4200 (31%) against a true LSF varying 2%. Harmless inside
 one grating, off by ~3x for anyone extending below 3058 A.
-See `broaden_ngsl()` in `scripts/plot_ngsl_vs_model.py`.
+See `broaden_ngsl()` in `common/lsf.py`.
 
 ### UVES-POP has real coverage gaps, and they are not where you expect
 The delivered spectra have holes. Blanking them with NaN is mandatory: drawing
@@ -186,7 +186,7 @@ A linear-in-lambda residual of this kind is what a different air-vacuum
 convention produces -- Edlen (1953/1966) vs Ciddor (1996), or different assumed
 temperature/pressure for the air index -- so it is modelled as a line.
 
-`scripts/ngsl_wavecal.py` fits air->vacuum plus a per-(star, grating)
+`common/ngsl_wavecal.py` fits air->vacuum plus a per-(star, grating)
 correction: linear for G430L (fit rms 0.02-0.20 A, slope -0.5 to -1.2 A per
 1000 A, consistent across stars), robust constant for G750L, which scatters
 window-to-window without a clean trend. G230LB cannot be calibrated this way at
@@ -264,7 +264,7 @@ strongest "break" in the Pickles atlas. It is an artifact.
 
 An earlier version took the blue continuum as a median centred at ~3570 A
 rather than extrapolating it to 3646 A, so the slope did not cancel; values
-shifted by 0.02-0.09 mag when fixed. See `scripts/balmer_metric.py`.
+shifted by 0.02-0.09 mag when fixed. See `common/balmer_metric.py`.
 
 ### The break metric is resolution sensitive
 The same model gives D = 1.072 at R = 300,000 and 1.001 at R = 939.
@@ -290,7 +290,7 @@ says so in the figure title.
 - **NGSL v2 dropped the stellar parameters** that v1 carried as header keywords
   (`TEFF`, `LOG_G`, `LOG_Z`, `EBMV`, `DPC`) along with the `FLUX_UNRED` and
   `FLUX_10PC` columns. They survive only as a text table inside `aaareadme.pdf`;
-  `scripts/build_catalog.py` parses them back out.
+  `explore/build_catalog.py` parses them back out.
 - **NGSL `STATERR` is optimistic by ~3x.** It holds propagated counting
   statistics only. Real pixel scatter in a line-free continuum gives S/N ~ 100,
   not the ~330 claimed. Inflate before any chi-squared.

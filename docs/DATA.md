@@ -8,7 +8,8 @@ resolution, coverage gaps, peculiar stars — are in [CAVEATS.md](CAVEATS.md).
 
 | library | what it is | resolution | coverage | role here |
 |---|---|---|---|---|
-| **NGSL v2** | 379 HST/STIS spectra, space-based spectrophotometry | R = 804-1343 (LSF-measured) | 1675-10198 A | primary sample; the only one reaching the UV |
+| **NGSL v2** | 379 HST/STIS spectra, space-based spectrophotometry | **R ~ 600 as delivered** (tables say 804-1343) | 1675-10198 A | primary sample; the only one reaching the UV |
+| **XSL DR3** | 830 VLT/X-shooter spectra of 683 stars (Verro+2022) | R ~ 9800 UVB, ~11600 VIS | 3500-24800 A | **23 stars shared with NGSL** — independent check on the same objects |
 | **UVES-POP** | 406 VLT/UVES spectra, re-reduced and flux-calibrated (2023) | R = 80,000 native, **~18,000 as delivered** | 3200-10250 A | high-resolution follow-up; resolves line cores |
 | **MILES** | 985 ground-based spectra | FWHM 2.5 A | 3525-7500 A | independent Teff, [Fe/H] and E(B-V); 145 stars shared with NGSL |
 | **Pickles** | 131 composite templates by spectral type | R ~ 500 | 1150-10620 A | reference break shape vs type and gravity; not individual stars |
@@ -19,12 +20,17 @@ Model atmospheres are computed with [ATLAS12 + SYNTHE](https://github.com/cconro
 
 ## The sample
 
-Seven stars near 10,000 K across two libraries, selected for clean model
-comparison. Selection is enforced in code, not by hand: `scripts/candidate_table.py`
-for NGSL and `scripts/uves_pop_load.py` for UVES-POP, both applying the same
+Seven stars near 10,000 K make up the fitted sample, drawn from NGSL and
+UVES-POP. XSL enters differently: it is not a separate fitted sample but an
+independent observation of stars already in NGSL, which is what makes it useful
+for measuring the NGSL instrument profile and cross-checking flux
+calibration.
+
+Selection is enforced in code, not by hand: `explore/candidate_table.py`
+for NGSL and `common/uves_pop_load.py` for UVES-POP, both applying the same
 `E(B-V) <= 0.10` cut.
 
-### NGSL — space-based spectrophotometry, R ~ 940 at the break
+### NGSL — space-based spectrophotometry, R ~ 600 at the break
 
 | star | Teff | log g | [M/H] | E(B-V) | slit offset | notes |
 |---|---|---|---|---|---|---|
@@ -57,6 +63,60 @@ cuts alone.
 The two samples are **disjoint** — no star appears in both — so they are
 independent tests rather than a repeat measurement. Between them they span
 9878-11016 K, log g 3.5-4.2, [M/H] -1.9 to +0.1, and rotation 37-182 km/s.
+
+### XSL — the only library that overlaps NGSL star by star
+
+XSL DR3 (Verro et al. 2022): 830 spectra of 683 stars, ground-based
+VLT/X-shooter. 74 A stars in 7000-11500 K; 11 in the Balmer window, 8 clean
+after vetting (`explore/xsl_astars.py`, parameters from Arentsen et al. 2019
+since the DR3 table carries only names and filenames).
+
+Its value here is the **overlap**. UVES-POP is disjoint from NGSL, but 23 of
+the 74 XSL A stars are also in NGSL, including three of the four Balmer-break
+targets. Same star, two instruments, one space-based and one ground-based at
+~16x the resolution — which is what made the NGSL LSF measurement below
+possible without a model.
+
+| star | XSL Teff | NGSL Teff | Δ | in our sample |
+|---|---|---|---|---|
+| HD 194453 | 10489 | 10241 | +248 | yes |
+| HD 147550 | 10044 | 10074 | −30 | dropped (reddened) |
+| HD 143459 | 10689 | 9878 | +811 | yes |
+| HD 128801 | 8774 | 10123 | −1349 | yes |
+
+Those disagreements are the case for fitting rather than adopting catalog
+parameters, made concrete: up to 1450 K in Teff and 0.9 dex in log g for the
+same star, from two published analyses.
+
+**Format facts, all verified rather than assumed:**
+
+* **Air wavelengths.** Established by cross-correlating HD194453 — in both
+  libraries — against the wavecal-corrected NGSL spectrum: +1.05 A required
+  against a +1.13 A air-vacuum offset at 4000 A, closing to −0.05 A after
+  conversion. `common/xsl_load.py` converts to vacuum by default.
+* **Rest-frame**, so the RV is already removed. Fix `rv = 0` when fitting XSL,
+  unlike NGSL.
+* **Wavelengths in nm**, log-sampled at ~R = 30,000 (3 px per resolution
+  element). The range is spectrum-dependent because the rest-frame shift differs
+  per star.
+* **Resolution is quoted as sigma(v), NOT FWHM**: 13 km/s UVB, 11 VIS, 16 NIR.
+  FWHM = 2.3548 sigma, so R ~ 9800 at the Balmer break — misreading this gives an
+  answer 2.35x wrong. It is constant in VELOCITY, unlike NGSL's, so the two need
+  different convolution kernels.
+* **Dereddened flux ships alongside raw** (`FLUX_DR`), plus variants for
+  slit-loss correction (`_scl`, `_ncl`, `_ncge`). We use `FLUX` with our own
+  CCM89 so extinction is handled identically across all three libraries, and
+  treat `FLUX_DR` as a cross-check.
+
+**Coverage gaps are real and must be masked**, not interpolated across: a
+dichroic gap at 5750-5844 A, inter-order gaps every ~150 A redward of 8515 A,
+and one star (HD162678) missing 3859-4779 A outright — 43% of its Balmer
+coverage. See [CAVEATS.md](CAVEATS.md), which also has the echelle order-width
+measurement explaining why the blue has no gaps and the red does.
+
+Only the spectra of the selected stars are tracked; the 772 MB DR3 tarball is
+refetchable with `data/xsl/fetch.sh`, a resume loop — the server drops long
+connections, and a single curl truncated at 264 MB while exiting cleanly.
 
 ## NGSL resolution: use R = 600, not the STIS tables
 
@@ -107,7 +167,7 @@ Two earlier statements are superseded. **R = 939 at the Balmer break is wrong**
 2 pixels) is wrong: at 6.6 A FWHM over 2.744 A pixels the spectra are sampled
 at ~2.4 px per resolution element, which is adequate rather than aliased.
 
-## The two libraries differ by a grey flux offset
+## NGSL and XSL differ by a grey flux offset
 
 NGSL and XSL are both absolutely calibrated, so their fluxes can be compared
 directly. For the three stars in common the ratio XSL/NGSL is flat in
