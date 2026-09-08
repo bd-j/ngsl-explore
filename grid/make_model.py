@@ -198,6 +198,12 @@ def main():
     ap.add_argument('--wlbeg', type=float, default=320.0, help='nm (default 320)')
     ap.add_argument('--wlend', type=float, default=950.0, help='nm (default 950)')
     ap.add_argument('--obs-R', type=float, default=10000.0)
+    ap.add_argument('--no-csv', action='store_true',
+                    help='skip the smoothed CSV. It has the same row count as '
+                         'the .spec it came from (no downsampling), so it is '
+                         'LARGER than the binary, and nothing downstream reads '
+                         'it -- the fitter loads models/grid.npz built from the '
+                         '.spec files. ~11 MB and ~5 s per node.')
     ap.add_argument('--ladder', action='store_true',
                     help='walk up to Teff in bounded rungs. Not normally needed: '
                          'the direct teff= jump converges, it just takes 0.5-1 h. '
@@ -246,7 +252,8 @@ def main():
         spec = make_spectrum(star, atm, args.wlbeg, args.wlend, workdir, A12)
         if spec is None:
             continue
-        postprocess(star, spec, args.obs_R, MODELS)
+        if not args.no_csv:
+            postprocess(star, spec, args.obs_R, MODELS)
         print()
 
 

@@ -25,7 +25,10 @@ extending the grid later costs only the new nodes, and an interrupted run
 resumes. Use --dry-run to see what would be computed.
 
 Outputs one .spec per node under models/grid/, then pack_grid.py collapses them
-into a single interpolatable array.
+into a single interpolatable array. The per-node smoothed CSV that make_model.py
+writes for single stars is suppressed here (--no-csv): it is not downsampled, so
+it is larger than the .spec it derives from, and nothing reads it -- 19 GB and
+2.4 hours over the full grid for no purpose.
 """
 import argparse
 import itertools
@@ -132,7 +135,7 @@ def run_node(args):
            '--feh', f'{m:.2f}', '--start', str(start),
            '--wlbeg', str(WLBEG), '--wlend', str(WLEND),
            '--numit', str(NUMIT), '--vturb', str(VTURB),
-           '--workdir', str(GRID_DIR)]
+           '--workdir', str(GRID_DIR), '--no-csv']
     r = subprocess.run(cmd, capture_output=True, text=True)
     dt = (time.time() - t0) / 60.0
     if r.returncode != 0 or not spec.exists():

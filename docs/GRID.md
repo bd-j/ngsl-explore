@@ -77,6 +77,29 @@ Synthesis runs at R = 300,000 because that is SYNTHE's enforced floor
 and a coarse grid undersamples line cores and over-absorbs the smoothed
 spectrum by ~10%. Nothing downstream needs that resolution — the observations
 are R ≤ 18,000 — so the fitter loads a packed array resampled to R ≈ 50,000
-(~100 MB for the whole grid) rather than the raw files.
+(`pack_grid.py` → `models/grid.npz`, ~370 MB) rather than the raw files.
+
+### The smoothed CSV, and why the grid does not write it
+
+`make_model.py` also writes `models/<name>_R10000.csv` — three columns,
+`wavelength_A_vacuum, flam, flam_continuum` — smoothed to R = 10,000. That was
+the original single-star deliverable and is still useful for one-off models.
+
+**The grid suppresses it** (`build_grid.py` passes `--no-csv`), for three
+reasons:
+
+* It is **not downsampled**. It has the same row count as the `.spec` it comes
+  from (326,442), written as ASCII, so it is *larger* than the binary source —
+  ~11 MB per node.
+* **Nothing reads it.** The fitter loads `models/grid.npz`, which `pack_grid.py`
+  builds from the `.spec` files directly.
+* **R = 10,000 is the wrong resolution** for every comparison here anyway: NGSL
+  is R ≈ 600, XSL ≈ 9800, UVES-POP ≈ 18,000. The fitter convolves from the
+  native grid to whichever instrument it is fitting.
+
+Over the full grid that would have been **~19 GB and ~2.4 hours** of pure
+waste; 385 such files (4.2 GB) were written before this was noticed and have
+been deleted. Pass `--no-csv` to `make_model.py` for any bulk use; omit it for a
+single star if you want the convenience file.
 
 All of `models/` is gitignored: 25 GB, and fully regenerable from this script.
