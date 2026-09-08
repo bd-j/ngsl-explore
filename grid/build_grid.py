@@ -30,6 +30,7 @@ into a single interpolatable array.
 import argparse
 import itertools
 import os
+import re
 import subprocess
 import sys
 import time
@@ -74,21 +75,44 @@ def spec_complete(path):
         return False
 
 
-def c3k_start(t, g):
-    """Nearest C3K atmosphere: exact in Teff, nearest available log g.
+_C3K_CACHE = None
 
-    C3K is spaced 0.5 dex in log g and this grid is 0.25 dex, so half the nodes
-    start 0.25 dex away. ATLAS12 recovers from that easily; what it cannot
-    recover from is a start hundreds of K away in Teff (see CAVEATS.md).
+
+def _c3k_nodes():
+    """(path, Teff, logg) for every C3K starting atmosphere."""
+    global _C3K_CACHE
+    if _C3K_CACHE is None:
+        d = Path(os.environ['ATLAS12']) / C3K
+        out = []
+        for p in sorted(d.glob('at12_feh+0.00_afe+0.0_t*g*.atm')):
+            m = re.search(r'_t(\d{5})g(-?\d\.\d{2})$', p.stem)
+            if m:
+                out.append((p, float(m.group(1)), float(m.group(2))))
+        _C3K_CACHE = out
+    return _C3K_CACHE
+
+
+def c3k_start(t, g):
+    """NEAREST C3K atmosphere in both Teff and log g.
+
+    This used to require an EXACT Teff match, which silently destroyed a run:
+    C3K is spaced 250 K and this grid is 100 K, so only nodes landing on a
+    shared multiple (every 500 K, since both start at 8500) found a start. 1320
+    of 1705 nodes returned 'no-start-model' and were counted as neither ok nor
+    failed, so a 40-hour job reported "384 ok, 0 failed" while producing 23% of
+    the grid.
+
+    Nearest-neighbour is safe here: the offsets are at most 125 K and 0.1 dex,
+    and the observed-star runs converged in 7 min from starts 123 K and 0.20 dex
+    away. What ATLAS12 cannot recover from is a start thousands of K off.
     """
-    a12 = Path(os.environ['ATLAS12'])
-    d = a12 / C3K
-    best = None
-    for cand in sorted(d.glob(f'at12_feh+0.00_afe+0.0_t{t:05.0f}g*.atm')):
-        gc = float(cand.stem.split('g')[-1])
-        if best is None or abs(gc - g) < abs(best[1] - g):
-            best = (cand, gc)
-    return best[0] if best else None
+    nodes = _c3k_nodes()
+    if not nodes:
+        return None
+    # normalize the two axes by their grid spacings so neither dominates
+    p, _, _ = min(nodes, key=lambda n: ((n[1] - t) / 250.0) ** 2
+                                       + ((n[2] - g) / 0.5) ** 2)
+    return p
 
 
 def run_node(args):
@@ -124,6 +148,15 @@ def main():
                     help='parallel ATLAS12 runs (~900 MB each; default 9 of '
                          '10 cores, leaving one free)')
     ap.add_argument('--dry-run', action='store_true')
+    # Cluster job arrays: each task takes a deterministic slice of the node
+    # list, so tasks never collide and the set is covered exactly once.
+    ap.add_argument('--task', type=int,
+                    help='0-based array task index (SLURM_ARRAY_TASK_ID)')
+    ap.add_argument('--ntasks', type=int,
+                    help='total number of array tasks')
+    ap.add_argument('--only-missing', action='store_true',
+                    help='slice the MISSING nodes rather than all nodes; use '
+                         'when resubmitting so tasks share the work evenly')
     a = ap.parse_args()
 
     if not os.environ.get('ATLAS12'):
@@ -132,6 +165,13 @@ def main():
     nodes = list(itertools.product(TEFF, LOGG, MH))
     todo = [n for n in nodes
             if not spec_complete(GRID_DIR / f'{node_name(*n)}.spec')]
+    if a.task is not None and a.ntasks:
+        pool = todo if a.only_missing else nodes
+        mine = pool[a.task::a.ntasks]          # stride, so tasks interleave
+        todo = [n for n in mine
+                if not spec_complete(GRID_DIR / f'{node_name(*n)}.spec')]
+        print(f'array task {a.task}/{a.ntasks}: {len(mine)} assigned, '
+              f'{len(todo)} to compute')
     print(f'grid: {len(TEFF)} Teff x {len(LOGG)} logg x {len(MH)} [M/H] '
           f'= {len(nodes)} nodes')
     print(f'  already present : {len(nodes) - len(todo)}')
@@ -142,22 +182,26 @@ def main():
     if a.dry_run or not todo:
         return
 
-    done = t0 = time.time()
-    ok = fail = 0
+    t0 = time.time()
+    tally = {}
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         futs = {ex.submit(run_node, n): n for n in todo}
         for i, f in enumerate(as_completed(futs), 1):
             name, status, dt = f.result()
-            if status == 'FAILED':
-                fail += 1
-            elif status == 'ok':
-                ok += 1
+            tally[status] = tally.get(status, 0) + 1
             el = (time.time() - t0) / 60
             eta = el / i * (len(todo) - i)
             print(f'[{i:3d}/{len(todo)}] {name} {status:6s} {dt:5.1f} min '
                   f'| elapsed {el:5.1f} min, eta {eta:5.1f} min', flush=True)
-    print(f'\ndone: {ok} ok, {fail} failed, '
-          f'{(time.time() - t0) / 3600:.2f} h wall')
+    print(f'\ndone in {(time.time() - t0) / 3600:.2f} h wall')
+    for k in sorted(tally):
+        print(f'  {k:16s} {tally[k]:5d}')
+    bad = sum(v for k, v in tally.items() if k not in ('ok', 'skip'))
+    produced = sum(1 for n in nodes
+                   if spec_complete(GRID_DIR / f'{node_name(*n)}.spec'))
+    print(f'  grid now {produced}/{len(nodes)} complete')
+    if bad:
+        print(f'  WARNING: {bad} node(s) neither computed nor skipped')
 
 
 if __name__ == '__main__':

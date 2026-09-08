@@ -41,6 +41,10 @@ data/xsl/XSL_DR3_release/*
 models/*
 !models/*.sh
 
+# SLURM job output; the directory itself is kept so sbatch has somewhere to write
+grid/jobs/logs/*
+!grid/jobs/logs/.gitkeep
+
 # Python
 __pycache__/
 *.pyc
