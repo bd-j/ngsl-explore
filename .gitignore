@@ -33,6 +33,22 @@ data/xsl/XSL_DR3_release/*
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0288_merged.fits
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0386_merged.fits
 
+# Gaia DR3 XP sampled spectra (343 points, ~12 KB each; explore/fetch_gaia.py).
+# Tracked BY NAME, as for the NGSL and XSL spectra, so the tracked set cannot
+# drift out of step with the selected sample when the selection changes.
+data/gaia_xp/*
+!data/gaia_xp/HD072968_xp.csv
+!data/gaia_xp/HD074721_xp.csv
+!data/gaia_xp/HD106304_xp.csv
+!data/gaia_xp/HD117880_xp.csv
+!data/gaia_xp/HD128801_xp.csv
+!data/gaia_xp/HD147550_xp.csv
+!data/gaia_xp/HD164257_xp.csv
+!data/gaia_xp/HD164967_xp.csv
+!data/gaia_xp/HD166991_xp.csv
+!data/gaia_xp/HD167946_xp.csv
+!data/gaia_xp/HD194453_xp.csv
+
 # ATLAS12 output: atmospheres, synthesized spectra, logs, and the 25 GB model
 # grid. All of it is regenerable (grid/build_grid.py, grid/make_model.py), so
 # ignore models/ wholesale and allow back only the small driver scripts.
