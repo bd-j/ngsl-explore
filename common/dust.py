@@ -94,11 +94,25 @@ def is_binary(otype, sptype=''):
 
 # SIMBAD object types implying chemical peculiarity or a magnetic field.
 # a2* is the Alpha2 CVn class: magnetic Ap stars with abundance patches.
-PECULIAR_OTYPES = {'a2*', 'Ap*', 'rC*', 'HB*'}
+PECULIAR_OTYPES = {'a2*', 'Ap*', 'rC*'}
+
+# HB* was previously in the set above, which conflated two different problems.
+# A field horizontal-branch star is EVOLVED, not abundance-patched: at
+# 9000-11000 K it sits below the ~11500 K Grundahl jump where radiative
+# levitation starts, so a scaled-solar atmosphere still describes it. What
+# actually disqualifies these stars is where they land -- low log g (HD128801
+# is at 2.84) and low [M/H] (-1.6 to -1.9) -- and that is a grid-coverage
+# question, recorded as such, not a peculiarity rejection.
+EVOLVED_OTYPES = {'HB*'}
 
 
 def is_peculiar_otype(otype):
+    """Chemical peculiarity or a magnetic field only -- see EVOLVED_OTYPES."""
     return str(otype).strip() in PECULIAR_OTYPES
+
+
+def is_horizontal_branch(otype):
+    return str(otype).strip() in EVOLVED_OTYPES
 
 
 def is_peculiar(sptype):
