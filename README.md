@@ -64,6 +64,10 @@ python3 explore/reddening.py             # E(B-V): map, photometric, fitted
 python3 explore/uves_pop_astars.py       # select A stars from UVES-POP
 python3 common/uves_pop_load.py          # UVES-POP parameters + reddening cut
 
+python3 explore/build_sample.py          # the fitted sample: NGSL n XSL, 9000-11000 K
+python3 explore/fetch_gaia.py            # Gaia DR3 photometry + XP spectra
+python3 explore/build_sample.py          # rerun: folds Gaia RUWE into the binarity flag
+
 python3 grid/build_grid.py --workers 9   # the model grid (~25 h, resumable)
 python3 grid/pack_grid.py                # collapse it into models/grid.npz
 

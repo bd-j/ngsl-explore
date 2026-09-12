@@ -20,17 +20,74 @@ Model atmospheres are computed with [ATLAS12 + SYNTHE](https://github.com/cconro
 
 ## The sample
 
-Seven stars near 10,000 K make up the fitted sample, drawn from NGSL and
-UVES-POP. XSL enters differently: it is not a separate fitted sample but an
-independent observation of stars already in NGSL, which is what makes it useful
-for measuring the NGSL instrument profile and cross-checking flux
-calibration.
+**The fitted sample is the NGSL ∩ XSL intersection, 9000–11000 K**, built by
+`explore/build_sample.py` → `data/sample.csv`. 13 stars: 9 primary, 3 secondary
+(binaries, kept and flagged), 1 rejected.
 
-Selection is enforced in code, not by hand: `explore/candidate_table.py`
-for NGSL and `common/uves_pop_load.py` for UVES-POP, both applying the same
-`E(B-V) <= 0.10` cut.
+This supersedes the earlier NGSL + UVES-POP sample described further down.
+Two reasons the definition changed:
 
-### NGSL — space-based spectrophotometry, R ~ 600 at the break
+* **UVES-POP is no longer fitted.** It has no overlap with NGSL, so it can only
+  ever be a separate sample rather than a cross-check on the same star, and its
+  continuum normalisation is too uncertain to contribute to a break measurement.
+* **The intersection is the point.** Each library supplies something the other
+  cannot, and the break test needs both at once:
+
+  | library | what only it provides |
+  |---|---|
+  | NGSL | space-based spectrophotometry; the 3200–3500 Å continuum slope is measured from above the atmosphere |
+  | XSL | ~16× the resolving power; locally normalised line profiles are **immune to reddening**, so they carry Teff, log g and v sin i free of the dust degeneracy |
+
+  A degree-4 polynomial absorbs CCM89 across a 1100 Å window to 3×10⁻⁵, which is
+  what makes the second statement exact rather than approximate. HD040573, a
+  mainstay of the earlier NGSL-only comparison, drops out: XSL never observed it.
+
+Selection, all enforced in code with the reason recorded and rejected rows kept:
+
+| criterion | action |
+|---|---|
+| Teff 9000–11000 K, satisfied by **either** catalog | select |
+| Ap/Bp/Am by SIMBAD type, or [Fe/H] ≥ +0.4 with no binary flag | **reject** |
+| binary — SIMBAD type **or Gaia RUWE > 1.4** | flag → secondary |
+| horizontal branch (`HB*`) | flag only, keep |
+| outside the model grid in Teff, log g or [M/H] | flag, recorded per axis |
+
+Either catalog satisfying the Teff window is deliberate: XSL and NGSL disagree
+by up to 2900 K for the same star (HD164257: 10885 vs 7977), which is the whole
+reason parameters are fitted here. Requiring agreement would let one catalog's
+systematic define the sample.
+
+`HB*` was previously treated as peculiarity and is not. A field horizontal-branch
+star at 9000–11000 K sits below the ~11500 K Grundahl jump where radiative
+levitation starts, so a scaled-solar atmosphere still describes it; what actually
+disqualifies these stars is low log g and low [M/H], which the grid-coverage flag
+records instead. This reclassification is why HD143459, HD074721 and HD128801 are
+in the sample rather than rejected.
+
+**Gaia RUWE caught two binaries that SIMBAD did not**: HD164967 (RUWE = 8.32) and
+HD147550 (1.80), both of which have clean SIMBAD object types. That is the failure
+mode CAVEATS records for HD162630, caught this time.
+
+### The binding constraint is the grid's [M/H] floor
+
+**8 of the 13 stars fall outside the model grid**, almost all in [M/H]: the grid
+stops at −0.5 while the sample reaches −1.92. A node scan cannot extrapolate — it
+piles up on the boundary and returns a wall, not a measurement — so this is a
+hard limit on which stars produce quotable parameters, not a bias to be corrected.
+
+| axis | grid | sample needs | stars affected |
+|---|---|---|---|
+| [M/H] | −0.5 … +0.3 | down to −1.92 | HD143459, HD074721, HD164967, HD117880, HD128801, HD106304, HD164257, HD072968 |
+| log g | 3.0 … 5.0 | down to 2.84 | HD128801 |
+| Teff | 8500 … 11500 | down to 7977 (NGSL value) | HD166991, HD164257 |
+
+### Superseded: the earlier NGSL + UVES-POP sample
+
+The tables below describe the sample used for the *catalog-parameter comparison*
+figures, before the fit was set up. Kept because the figures in `figures/` and
+the resolution and flux-offset measurements below were made with it.
+
+#### NGSL — space-based spectrophotometry, R ~ 600 at the break
 
 | star | Teff | log g | [M/H] | E(B-V) | slit offset | notes |
 |---|---|---|---|---|---|---|
@@ -44,7 +101,7 @@ HD194453 is the primary target because its **slit offset is 0.00 px** — the
 wavelength-dependent slit-throughput correction, the dominant systematic on
 break *shape*, is essentially null for it.
 
-### UVES-POP — high resolution, resolves the line cores
+#### UVES-POP — high resolution, resolves the line cores
 
 | star | Teff | log g | [Fe/H] | v sin i | E(B-V) | S/N | notes |
 |---|---|---|---|---|---|---|---|
@@ -117,6 +174,49 @@ measurement explaining why the blue has no gaps and the red does.
 Only the spectra of the selected stars are tracked; the 772 MB DR3 tarball is
 refetchable with `data/xsl/fetch.sh`, a resume loop — the server drops long
 connections, and a single curl truncated at 264 MB while exiting cleanly.
+
+## Gaia DR3: the independent dust lever
+
+`explore/fetch_gaia.py` → `data/gaia_sample.csv` and `data/gaia_xp/<star>_xp.csv`.
+
+The break test needs E(B−V) *measured*, from data statistically independent of
+the break itself. Gaia supplies that from space, over almost exactly the NGSL
+range, with no slit and no atmosphere. What matters is the lever arm:
+
+| baseline | differential extinction per 0.01 mag E(B−V) |
+|---|---|
+| NGSL 3200–3500 Å window | 0.0035 mag |
+| NGSL full 3300–9400 Å | 0.0365 mag |
+| **Gaia XP 3360–10200 Å** | **0.0358 mag** |
+
+XP sampled spectra are 343 points, 336–1020 nm at 2 nm, externally calibrated to
+~1–2%. Retrieved for 11 of 13 stars; HD143459 (V = 5.53) and HD174240 have no XP.
+
+**Verified, not assumed:** XP against NGSL for HD194453 gives a median flux ratio
+of **1.011** over 4000–9000 Å — two independent space observatories agreeing to
+1.1% in absolute flux, which validates both calibrations and the unit conversion.
+The 10.7% scatter about that is XP's very low resolution smearing lines
+differently, not a calibration disagreement; the ratio at 4000 Å drops to 0.91
+because Hδ/Hγ sit there.
+
+**Units.** XP flux is W m⁻² nm⁻¹; NGSL and the models are erg s⁻¹ cm⁻² Å⁻¹. The
+factor is 10², and the wavelengths are **vacuum** — Gaia has no air path, so
+unlike NGSL, XSL and UVES-POP no conversion is needed.
+
+**Two sources, deliberately.** VizieR (`I/355/gaiadr3`) for the cone search, ESA
+DataLink for the XP spectra. ESA's TAP endpoint answered a single cone search in
+115 s and then degraded to failing three retries in a row; VizieR answers the
+same query in 1.1 s. VizieR also returns `Source` as int64, so the 19-digit
+source_id survives exactly — through ESA TAP it arrived float64-rounded, and
+`fetch_gaia.py` now checks DataLink's echoed id against the requested one so a
+mismatch cannot pass silently.
+
+Caveats carried per star rather than assumed away: Gaia photometry and XP
+calibration degrade below G ≈ 6 (three stars), so `XPcont`, `XPsamp`, G and the
+BP/RP excess factor are all stored; and the cone is kept at 5″ with the
+counterpart chosen by brightness (for an A star G ≈ V to ~0.1 mag) because the
+library coordinates are epoch 2000 against DR3's 2016.0. Observed offsets came
+out 0.1–2.7″.
 
 ## NGSL resolution: use R = 600, not the STIS tables
 
@@ -196,6 +296,7 @@ difference between the libraries as astrophysical.
 | UVES-POP | https://sl.voxastro.org/library/UVES-POP/details/ (JSON API `/api/objects/UVES-POP/`) |
 | MILES | Vizier J/MNRAS/371/703 |
 | MaStar | Vizier J/ApJ/883/175 |
+| Gaia DR3 | VizieR I/355/gaiadr3 (photometry); ESA DataLink XP_SAMPLED (spectra) — `explore/fetch_gaia.py` |
 | Dust | IRSA SFD98/SF11 service; UVES-POP fitted E(B-V) |
 
 Delivery documentation for NGSL is in `docs/ngsl_delivery/`. The spectra of the
