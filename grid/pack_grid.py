@@ -24,7 +24,7 @@ GRID_DIR = ROOT / 'models' / 'grid'
 OUT = ROOT / 'models' / 'grid.npz'
 PACK_R = 50000.0
 WMIN, WMAX = 3200.0, 9500.0
-NODE = re.compile(r'^t(\d{5})g(\d\.\d{2})m([+-]\d\.\d{2})\.spec$')
+NODE = re.compile(r'^at12_feh([+-]\d\.\d{2})_afe\+0\.0_t(\d{5})g(\d\.\d{2})\.spec$')
 C_ANG = 2.99792458e18
 
 
@@ -38,7 +38,7 @@ def main():
     for p in sorted(GRID_DIR.glob('*.spec')):
         m = NODE.match(p.name)
         if m:
-            found[(int(m.group(1)), float(m.group(2)), float(m.group(3)))] = p
+            found[(int(m.group(2)), float(m.group(3)), float(m.group(1)))] = p
     if not found:
         raise SystemExit('no node spectra in models/grid/')
     teff = np.array(sorted({k[0] for k in found}), float)

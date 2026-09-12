@@ -108,7 +108,10 @@ def make_atmosphere(star, teff, logg, feh, vturb, numit, ladder, workdir, A12,
                     start_atm=START_ATM):
     """Converge an ATLAS12 atmosphere. Returns path to the .atm file."""
     zscale = 10.0 ** feh
-    start = workdir / Path(start_atm).name
+    # Copy under a name of our own, never the source basename: nodes are now
+    # named in the C3K convention, so a node sitting on a C3K grid point would
+    # otherwise have its starting model and its ATLAS12 output be the same file.
+    start = workdir / f'{star}.start.atm'
     if not start.exists():
         src = Path(start_atm)
         if not src.is_absolute():

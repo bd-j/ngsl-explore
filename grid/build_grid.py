@@ -56,7 +56,14 @@ VTURB = 2.0
 
 
 def node_name(t, g, m):
-    return f't{t:05.0f}g{g:.2f}m{m:+.2f}'
+    """Node basename, in the C3K v2.3 convention.
+
+    Matches the starting-grid filenames (at12_feh+0.00_afe+0.0_t10000g4.00),
+    so a node of this grid and a node of C3K are named the same way.  The
+    afe field is fixed: ATLAS12 is being run with solar-scaled abundances
+    scaled by zscale, so there is no alpha knob to record.
+    """
+    return f'at12_feh{m:+.2f}_afe+0.0_t{t:05.0f}g{g:.2f}'
 
 
 def spec_complete(path):

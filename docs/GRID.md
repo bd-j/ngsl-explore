@@ -63,7 +63,10 @@ than cores; 9 workers on a 10-core machine leaves one free.
 
 ## Output
 
-`models/grid/<node>.{atm,spec,iter,flux}`, node named `t10000g4.00m-0.10`.
+`models/grid/<node>.{atm,spec,iter,flux}`, node named
+`at12_feh-0.10_afe+0.0_t10000g4.00` -- the same convention as the C3K v2.3
+starting grid.  `grid/rename_nodes.sh` converts a directory written under the
+old `t10000g4.00m-0.10` naming.
 
 | file | each | ×1705 |
 |---|---|---|
