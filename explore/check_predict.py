@@ -125,14 +125,16 @@ def main():
         results[label] = dict(cal_b=cal_b, rb=rb, ub=ub, scalar=c[0],
                               model_spec=model_spec, hres=hres)
 
-    figure(a.star, nb, spec, xs, held, results, xsl_cal, row, bands)
+    figure(a.star, nb, spec, xs, held, results, xsl_cal, row, bands,
+           fixed=dict(ebv=a.ebv, vsini=a.vsini))
 
 
-def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands):
+def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
+           fixed=None):
     labels = list(results)
     fig = plt.figure(figsize=(12.5, 14))
-    gs = fig.add_gridspec(5, 2, height_ratios=[1.9, 1.1, 1.5, 1.5, 1.4],
-                          hspace=.45, wspace=.22)
+    gs = fig.add_gridspec(5, 2, height_ratios=[1.9, 1.5, 0.95, 1.4, 1.3],
+                          hspace=.48, wspace=.22)
     fig.patch.set_facecolor(SURFACE)
     m = spec.mask
 
@@ -142,12 +144,11 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands):
         for win in (BREAK_WINDOW, PASCHEN_WINDOW):
             ax.axvspan(*win, color=HELD_C, alpha=.13, lw=0)
 
-    ax, rax = fig.add_subplot(gs[0, :]), fig.add_subplot(gs[1, :])
-    for a_ in (ax, rax):
-        style(a_)
-        shade(a_)
-        for lam in (BALMER, PASCHEN):
-            a_.axvline(lam, color=MUTED, ls='--', lw=1)
+    ax = fig.add_subplot(gs[0, :])
+    style(ax)
+    shade(ax)
+    for lam in (BALMER, PASCHEN):
+        ax.axvline(lam, color=MUTED, ls='--', lw=1)
     ax.plot(spec.wavelength[m], spec.flux[m], color=OBS_C, lw=1.2,
             label='NGSL observed')
     for lab, c in zip(labels, (MOD_C, MOD2_C)):
@@ -157,34 +158,55 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands):
     ax.set_ylabel(r'F$_\lambda$', fontsize=9, color=INK)
     ax.set_title(f'{star} — blue = bands used for conditioning;  '
                  'red = held out and PREDICTED', fontsize=10, color=INK)
+    ax.set_xlabel(r'Wavelength [$\AA$, vacuum]', fontsize=9, color=INK)
     ax.legend(fontsize=8, loc='upper right', framealpha=.92)
-    for lab, c in zip(labels, (MOD_C, MOD2_C)):
-        r = (spec.flux - results[lab]['model_spec']) / results[lab]['model_spec']
-        rax.plot(spec.wavelength[m], r[m] * 100, color=c, lw=.8, label=lab)
-    rax.axhline(0, color=MUTED, lw=1)
-    rax.set_ylim(-12, 12)
-    rax.set_ylabel('(obs−model)/model [%]', fontsize=9, color=INK)
-    rax.set_xlabel(r'Wavelength [$\AA$, vacuum]', fontsize=9, color=INK)
-    rax.legend(fontsize=8, loc='upper left', ncol=2, framealpha=.92)
 
     for col, (nm, win, lam0) in enumerate((('Balmer', BREAK_WINDOW, BALMER),
                                            ('Paschen', PASCHEN_WINDOW, PASCHEN))):
-        axz = fig.add_subplot(gs[2, col])
-        style(axz)
-        shade(axz)
+        axz = fig.add_subplot(gs[1, col])
+        axr = fig.add_subplot(gs[2, col], sharex=axz)
         lo, hi = win[0] - 350, win[1] + 150
-        s = m & (spec.wavelength > lo) & (spec.wavelength < hi)
-        axz.plot(spec.wavelength[s], spec.flux[s], color=OBS_C, lw=1.3)
+        sel = m & (spec.wavelength > lo) & (spec.wavelength < hi)
+        for a_ in (axz, axr):
+            style(a_)
+            shade(a_)
+            a_.axvline(lam0, color=MUTED, ls='--', lw=1)
+            a_.set_xlim(lo, hi)
+        axz.plot(spec.wavelength[sel], spec.flux[sel], color=OBS_C, lw=1.3,
+                 label='NGSL observed')
         for lab, c in zip(labels, (MOD_C, MOD2_C)):
-            axz.plot(spec.wavelength[s], results[lab]['model_spec'][s],
-                     color=c, lw=1.0)
-        axz.axvline(lam0, color=MUTED, ls='--', lw=1)
-        axz.set_xlim(lo, hi)
+            axz.plot(spec.wavelength[sel], results[lab]['model_spec'][sel],
+                     color=c, lw=1.0, label=f'model, {lab}')
         med = 100 * np.nanmedian(results[labels[-1]]['hres'][nm])
-        axz.set_title(f'{nm} — HELD OUT (node residual {med:+.1f}%)',
-                      fontsize=9, color=INK)
-        axz.set_xlabel(r'$\lambda$ [$\AA$]', fontsize=8, color=INK)
+        axz.set_title(f'{nm} — HELD OUT and predicted '
+                      f'(node median {med:+.2f}%)', fontsize=9, color=INK)
         axz.set_ylabel(r'F$_\lambda$', fontsize=8, color=INK)
+        axz.tick_params(labelbottom=False)
+        if col == 0:
+            axz.legend(fontsize=7, loc='upper left', framealpha=.92)
+
+        # residual panel: ONLY inside the held-out window is a prediction --
+        # everything outside it was used to set the scalar, so the two must be
+        # drawn differently or the figure invites reading a fit as a prediction.
+        inwin = (spec.wavelength >= win[0]) & (spec.wavelength <= win[1])
+        for lab, c in zip(labels, (MOD_C, MOD2_C)):
+            full = ((spec.flux - results[lab]['model_spec'])
+                    / results[lab]['model_spec'])
+            out = sel & ~inwin
+            axr.plot(spec.wavelength[out], full[out] * 100, color=c, lw=.7,
+                     alpha=.35)
+            hin = sel & inwin
+            axr.plot(spec.wavelength[hin], full[hin] * 100, color=c, lw=1.2)
+            axr.axhline(100 * np.nanmedian(full[hin]), color=c, ls=':', lw=1)
+        axr.axhline(0, color=MUTED, lw=1)
+        r_all = np.concatenate([
+            (((spec.flux - results[l]['model_spec']) / results[l]['model_spec'])
+             [sel & inwin]) for l in labels])
+        pad = 2.0
+        axr.set_ylim(np.nanpercentile(r_all, 1) * 100 - pad,
+                     np.nanpercentile(r_all, 99) * 100 + pad)
+        axr.set_ylabel('(obs−model)/model [%]', fontsize=8, color=INK)
+        axr.set_xlabel(r'$\lambda$ [$\AA$]', fontsize=8, color=INK)
 
     if xs is not None:
         for col, (lo, hi, ttl) in enumerate((
@@ -221,10 +243,18 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands):
                   '(error bars = 1% calibration floor)', fontsize=9, color=INK)
     axb.legend(fontsize=8, framealpha=.92)
 
-    fig.suptitle(f'{star}   conditioning = NGSL bands + XSL lines;   '
-                 f'Balmer and Paschen held out   '
-                 f'(nominal {row["teff_ngsl"]} / {row["logg_ngsl"]} / '
-                 f'{row["mh_ngsl"]})', fontsize=11, color=INK)
+    fixed = fixed or {}
+    # E(B-V) and v sin i are HELD, not fitted, in this check -- and the held-out
+    # residuals move a lot with both, so the title must say what they were or
+    # the numbers in it cannot be compared between runs.
+    fig.suptitle(
+        f'{star}   conditioning = NGSL bands + XSL lines;   '
+        f'Balmer and Paschen held out\n'
+        f'nominal Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
+        f'[M/H]={row["mh_ngsl"]}    '
+        f'held fixed: E(B-V)={fixed.get("ebv", 0.0):.3f}, '
+        f'v sin i={fixed.get("vsini", 0.0):.0f} km/s',
+        fontsize=11, color=INK, linespacing=1.5)
     out = ROOT / 'figures' / f'predict_check_{star}.png'
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')
     plt.close(fig)

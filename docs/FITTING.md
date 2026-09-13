@@ -1,144 +1,210 @@
 # Fitting
 
-Measure stellar parameters from the spectra rather than adopting them from a
-catalog. Catalog values may be wrong, biased, or derived by a method carrying
-its own systematics relative to these data — UVES-POP's, for instance, come
-from fitting a PHOENIX grid, so adopting them wholesale would import a
-code-to-code systematic into an ATLAS12 comparison.
+The question is not "what are this star's parameters". It is:
 
-Code: `fitting/model.py` (forward model), `fitting/fit.py` (likelihood,
-priors, samplers). Grid: see [GRID.md](GRID.md).
+> **Can the model atmospheres reproduce the shape of the continuum around the
+> Balmer break, while remaining consistent with everything else we know about
+> the star?**
 
-## Free parameters
+That phrasing decides the statistics. The break is not fitted — it is **held
+out and predicted**, from parameters constrained by data that excludes it. The
+deliverable is a prediction residual with an honest uncertainty, not a best-fit
+χ².
 
-| parameter | role |
+## The design
+
+| role | data | constrains |
+|---|---|---|
+| **condition** | NGSL collapsed into 13 synthetic bands, 3220–8180 Å | E(B−V), continuum shape |
+| **condition** | XSL, continuum marginalised away | Teff, log g, [M/H], v sin i |
+| **predict** | NGSL 3550–4000 Å (Balmer) | the answer |
+| **predict** | NGSL 8180–9500 Å (Paschen) | a second, free test |
+| *neither* | the hydrogen lines in NGSL | XSL resolves them ~16× better |
+
+**Every NGSL pixel is used at most once.** That is what makes NGSL-derived
+photometry legitimate: the band regions are removed from any spectral use, so
+the continuum information is not double-counted against itself.
+`fitting.observations.conditioning_set()` and `heldout()` return the legal sets
+from one place, so the separation is enforced rather than remembered.
+
+Why each instrument gets the job it does:
+
+* **NGSL** is space-based spectrophotometry. It is the only thing here trusted
+  for absolute calibration over a wide baseline, so it carries the continuum
+  and therefore the dust.
+* **XSL** resolves lines ~16× better, but it is ground-based and slit-loss
+  corrected, so its continuum is not trusted. Marginalising a polynomial over
+  it removes continuum shape and leaves line profiles — and **a locally
+  normalised line profile cannot be changed by a smooth reddening law**. A
+  degree-4 polynomial absorbs CCM89 across a 1100 Å window to 3×10⁻⁵. So XSL
+  carries Teff, log g and v sin i *free of the dust degeneracy*, which is what
+  makes the break prediction possible at all.
+
+## The error budget — this is Teff-limited, not dust-limited
+
+Sensitivity of the predicted Balmer discontinuity:
+
+| parameter | dD/d(parameter) |
 |---|---|
-| Teff, log g, [M/H] | interpolated in the grid |
-| E(B−V) | CCM89, R_V = 3.1 by default |
-| v sin i | Gray (2005) rotation profile, linear limb darkening |
-| instrumental | constant R, constant FWHM in Å, or the measured NGSL profile |
-| RV | Doppler shift |
-| error scale | multiplies the quoted uncertainties |
+| Teff | **−0.0170 mag per 100 K** |
+| log g | −0.0060 mag per 0.1 dex |
+| [M/H] | −0.0011 mag per 0.1 dex |
+| E(B−V) | +0.0027 mag per 0.01 mag |
 
-The **normalization is not sampled**. For a single multiplicative constant the
-maximum-likelihood value is available in closed form, so it is solved at every
-likelihood call and one dimension is removed at no cost.
+At **fixed** Teff, dust barely matters. It matters through its *covariance* with
+Teff: along the locus that keeps the conditioning set unchanged, dTeff/dE(B−V) =
+**+126 K per 0.01 mag**, and that Teff swing is what moves the break.
 
-The **error scale** is there because NGSL's `STATERR` is optimistic by ~3× — it
-carries propagated counting statistics only. Fitting with the quoted errors at
-face value yields parameter uncertainties that are confidently wrong.
+| term | σ | error in predicted D |
+|---|---|---|
+| **Teff at published XSL precision** | 280 K | **0.048 mag** |
+| Teff if the XSL line fit reaches | 100 K | 0.017 mag |
+| log g | 0.1 dex | 0.006 mag |
+| [M/H] | 0.2 dex | 0.004 mag |
+| E(B−V) from the NGSL bands | ~0.005 | 0.001 mag |
 
-## No continuum polynomial, and what that costs
+The effect being chased is 0.02–0.08 mag. So the binding requirement is
+**σ(Teff) ≈ 100 K, about 3× better than Arentsen+2019 achieve for these stars**,
+and the XSL line-profile leg is the critical path. An earlier draft of this
+document called the problem dust-limited; that was wrong, and the correction
+matters because it changes which leg deserves the work.
 
-A free multiplicative polynomial would absorb the continuum shape — which is
-exactly the information that constrains Teff and E(B−V) — leaving only line
-profiles to carry the temperature. It is therefore omitted, and the fit relies
-on the spectrophotometry being good: NGSL is space-based and calibrated to ~3%,
-UVES-POP quotes 1.5–4% absolute.
+## The synthetic bands
 
-The price is that **Teff and E(B−V) are covariant**: both tilt the continuum.
-Three things separate them.
+`fitting.observations.ngsl_band_edges()` — deterministic, from the analytic
+Rydberg line positions, so it needs no model spectrum and cannot drift with the
+grid. Hydrogen masked ±20 Å, both held-out windows removed, remaining stretches
+split into ~400 Å bands (165 Å blueward of the break).
 
-1. **The Balmer break amplitude** responds sharply to Teff and only weakly to a
-   smooth reddening law. This is the main lever, and the reason the break is
-   worth fitting rather than masking.
-2. **A wide wavelength baseline.** Over 3200–9500 Å the CCM89 curvature and a
-   temperature change are distinguishable in a way they are not over 400 Å.
-3. **A prior on E(B−V)** (below).
+**Band edges need no line-free placement**, unlike the Gaia XP bands that
+preceded them: NGSL is already at R = 600 and the model is broadened to R = 600,
+so both sides carry the same LSF and there is no leakage mismatch to dodge.
 
-Where the data cannot break the degeneracy, sample rather than optimize: the
-posterior will show the Teff–E(B−V) banana honestly, and a point estimate will
-not.
+**Bands stop just blueward of the Paschen break** (8206 Å). That keeps 89.5% of
+the 3220–9480 lever arm — 0.0348 against 0.0389 mag of differential extinction
+per 0.01 mag of E(B−V), because CCM89 is nearly flat redward of 8000 Å — and
+buys the entire Paschen region back as a second untouched prediction.
 
-## Constrain the instrumental broadening — do not fit it blind
+**3220–3550 Å is the dust lever and is split in two.** It sits blueward of the
+Balmer series limit, so it contains no hydrogen lines at all. It also sits ~2.8%
+below the SYNTHE continuum from smooth metal blanketing — which is part of the
+continuum shape under test, not a reason to exclude it. Two bands rather than
+one add almost no leverage (0.0017 mag per 0.01 mag E(B−V) internally, against
+0.0328 for blue-vs-8000 Å) but give a **shape check**: if they disagreed it
+would point at the near-UV specifically — blanketing, CCM89's near-UV shape, or
+G430L calibration at its blue edge — rather than at reddening.
 
-For NGSL the profile is **measured, not assumed**: matching XSL to NGSL for
-three stars in common gives **R = 600 ± 40**, constant in velocity, with no
-model involved (see [DATA.md](DATA.md)). Use it.
+## The linear calibration, solved in closed form
 
-```python
-from fitting.fit import ngsl_config
-cfg = ngsl_config()                      # inst_kind='R', prior N(600, 40)
-cfg = ngsl_config(fixed=dict(inst=600))  # or hold it exactly
+Every calibration policy is linear in its coefficients:
+
+```
+model_i = M_i * sum_k c_k B_k(lambda_i)
 ```
 
-Leaving `inst` free re-opens its degeneracy with Teff and log g — line depth
-trades against broadening — for no gain, because three stars constrain it
-better than one spectrum can. This is not hypothetical: while the fitter
-reimplemented its own kernels, `kind='R'` ignored the grid spacing and turned a
-request for R=600 into R=83. Because `inst` was free, nothing crashed; the fit
-would have absorbed the error into an absurd broadening value and dragged Teff
-and log g with it. The kernels now delegate to `common.lsf`, and a prior means
-such a failure shows up as a fight with the prior rather than passing silently.
+* `'scalar'` — one column. For a star this is (R/d)², plus any grey calibration
+  error. NGSL bands and the photometry get this.
+* `'poly', n` — n+1 Chebyshev columns. XSL gets this.
+* `'none'` — no free columns.
+
+So χ² is quadratic in **c** and one weighted least-squares solve covers all of
+them (`fitting/calibration.py`). Writing it once is the point: NGSL's
+normalisation, XSL's continuum and the photometric scale are then provably the
+same operation, so a convention error cannot apply to one dataset and not
+another. Marginalising rather than profiling adds a −½ln|BᵀC⁻¹B| term and needs
+a prior on **c**; that belongs with the likelihood and is not yet written.
+
+**The held-out windows use the scalar solved on the bands**, never refit. That
+is the whole point — the bands bracket the Balmer break on both sides, so the
+prediction is asking whether the model's *jump* matches, with the continuum
+level pinned next door.
+
+## Instrumental broadening — constrained, not fitted
+
+For NGSL the profile is **measured**: matching XSL to NGSL for three stars in
+common gives **R = 600 ± 40**, constant in velocity, with no model involved (see
+[DATA.md](DATA.md)). Use it.
+
+Leaving `inst` free re-opens its degeneracy with Teff and log g for no gain.
+This is not hypothetical: while the fitter reimplemented its own kernels,
+`kind='R'` ignored the grid spacing and turned a request for R = 600 into R = 83.
+Because `inst` was free, nothing crashed. The kernels now delegate to
+`common.lsf`, and `Observation.resolution` is a property of the instrument.
+
+**NGSL cannot measure v sin i below ~150 km/s.** Fractional model change after
+grey rescaling, 3300–9400 Å at R = 600:
+
+| change | rms | | change | rms |
+|---|---|---|---|---|
+| v sin i 0→40 | 0.014% | | R 600→560 (1σ prior) | 0.242% |
+| v sin i 0→130 | 0.141% | | Teff +100 K | 0.720% |
+| v sin i 0→180 | 0.266% | | log g +0.1 | 0.560% |
+
+v sin i = 180 km/s is worth exactly as much as the 1σ width of the R prior. So
+v sin i comes from XSL, where after continuum division the signal is 0.53% rms at
+20 km/s, 1.33% at 40 and 2.22% at 80 — then **saturates** (2.77% at 150, 3.08%
+at 250). XSL measures it over ~15–100 km/s and loses it above ~150.
 
 Per library:
 
-| library | `inst_kind` | value |
+| library | `resolution` | value |
 |---|---|---|
-| NGSL | `'R'` | 600 ± 40 (or `'ngsl'`, which applies it directly) |
-| XSL | `'R'` | ~9800 UVB, ~11600 VIS — constant in velocity |
-| UVES-POP | — | R = 80,000 *then* a 0.1 Å rebin; neither pure kind is exact, apply the boxcar as `plot_uves_vs_model.py` does |
+| NGSL | `('R', 600)` | measured, ±40 |
+| XSL | `('R_segments', …)` | ~9800 UVB, ~11600 VIS — constant in velocity |
 
-`FitConfig.priors` takes any `{parameter: object with .logp}`, so the same
-mechanism constrains v sin i from a published value, or RV, or anything else
-known independently.
+## Code
 
-## The dust prior
-
-`DustPrior` has three modes, and the choice matters more than it looks.
-
-| kind | form | when |
-|---|---|---|
-| `upper` | U(0, value) | an SFD98/SF11 **map column** |
-| `gaussian` | N(value, σ) | a 3D/tomographic map at the star's distance, or a published fitted value |
-| `fixed` | — | hold it |
-
-**An SFD/SF11 value is an upper bound, not an estimate.** It is the total
-column through the entire Galactic dust layer, while these stars sit inside it
-at 137–317 pc. The overestimate is large and not uniform: for HD040573 SF11
-gives 0.470 against 0.06 photometric, 8×. Using it as a Gaussian centre would
-force the fit to absurd reddening and drag Teff with it along the degeneracy.
-
-For a real estimate, use a **tomographic map evaluated at the star's distance**
-(parallaxes are in `data/reddening.csv`). Bayestar19 is queryable through the
-Argonaut API without downloading the map, but is PS1-based and covers Dec > −30
-— three of the four UVES-POP stars sit near Dec −34 and fall outside it.
-Lallement/Vergely and Edenhofer cover the southern sky at coarser resolution.
-UVES-POP publishes its own fitted E(B−V) per star, which is a measurement along
-the actual sightline and preferable to any map.
-
-## Masking
-
-`build_mask` takes arbitrary `fit_ranges` and `exclude` windows, plus
-`mask_h_cores`: a half-width in Å dropped around every Balmer and Paschen line.
-
-That last one exists because the observed hydrogen cores carry a genuine flux
-excess of ~10% of the line equivalent width relative to these LTE models —
-almost certainly NLTE in hydrogen, which the code does not treat for H. Masking
-the cores lets the break and the line wings constrain Teff and log g without
-the fit trying to accommodate physics the models are missing. Set it to 0 to
-fit the cores deliberately, e.g. to measure that excess.
-
-Detector gaps must also be excluded: UVES-POP has a dichroic gap at 5750–5844 Å,
-inter-order gaps redward of 8515 Å, and one star (HD162678) is missing
-3859–4779 Å entirely.
-
-## Usage
-
-```python
-from fitting.model import Grid
-from fitting.fit import SpectrumFit, FitConfig, DustPrior, build_mask
-
-grid = Grid()                                    # models/grid.npz
-mask = build_mask(wave, fit_ranges=[(3300, 4600)], mask_h_cores=6.0)
-cfg  = FitConfig(inst_kind='ngsl',
-                 dust=DustPrior('upper', 0.13),  # SF11 column for this sightline
-                 fixed=dict(rv=0.0))
-f    = SpectrumFit(grid, wave, flux, err, mask, cfg)
-
-best, lnp = f.optimize(start)                    # Nelder-Mead point estimate
-chain, names = f.sample(best, nwalkers=32, nsteps=2000)   # emcee posterior
+```
+fitting/observations.py   one record per dataset: data + resolution +
+                          calibration + mask. conditioning_set() / heldout().
+fitting/predict.py        predict(theta, observations) -> one prediction each.
+                          Node-exact lookup when on grid nodes, trilinear
+                          otherwise, same code path either way.
+fitting/calibration.py    the linear solve.
+common/photometry.py      sedpy filter projection, shared by model and data.
+explore/check_predict.py  the end-to-end smoke test on one star.
 ```
 
-Optimize first, then start the sampler from the optimum. Sampling is what
-exposes the Teff–E(B−V) covariance; the point estimate hides it.
+`predict()` agrees with interpolation to 6×10⁻⁸ at a node and is 5× faster
+(0.1 vs 0.5 ms), which is what a 1705-node scan per star needs. The node
+tolerance is **absolute** (10⁻³ K): a step-scaled tolerance would have accepted
+10241 K as the 10200 K node and returned the wrong spectrum while reporting an
+exact lookup.
+
+Still to write: `likelihood.py` (marginal, with the log-det term) and `scan.py`
+(the 1705-node driver). See [../PLAN.md](../PLAN.md).
+
+## Traps, all hit before being fixed
+
+* **sedpy silently integrates a truncated bandpass.** `obj_counts_hires` has its
+  "source does not span filter" assertion commented out, so a source truncated
+  at 9500 Å returns `gaia_rp` **0.040 mag too faint with no warning**. The dust
+  constraint is a colour, so `common.photometry.project` returns NaN instead.
+* **Gaia broadband photometry is unusable with this grid.** `gaia_g`
+  (3270–10500 Å) and `gaia_rp` (6160–10700 Å) run past the grid's 9500 Å limit;
+  `gaia_bp` alone is exactly determined by its own free scalar, so it carries no
+  information, and it spans the break besides.
+* **Gaia XP and NGSL disagree in colour by up to 4.8%** with only 1.2%
+  star-to-star scatter — instrumental, worth 0.040 mag in E(B−V), 8× the error
+  budget (`explore/xp_vs_ngsl.py`). Their agreeing to a median flux ratio of
+  1.011 validates the mean *level*, not the *colour*, and the colour is the
+  whole lever. This is why the dust constraint comes from NGSL alone.
+* **A band at exactly 3200 Å is silently dropped** for a spectrum starting at
+  3201 Å, because `tophat` tapers ~10 Å past each edge. That cost the bluest and
+  most important band once already; `NGSL_BAND_RANGE` is now inset.
+
+## Superseded
+
+The earlier design fitted the whole NGSL spectrum with emcee over free Teff,
+log g, [M/H], E(B−V), v sin i, `inst`, RV and an error scale, with the break
+*included* in the fit and a `DustPrior` doing the work of separating Teff from
+reddening. `fitting/fit.py` still implements it.
+
+Two things killed it. A Gaussian dust prior **does not bite**: with 1466 pixels
+and a free error scale the likelihood formally measures E(B−V) to ~0.001, so
+N(0.00, 0.02) came back 2σ out at 0.038. And fitting the break to then report
+its residual answers a different question from the one at the top of this file.
+
+UVES-POP is no longer fitted at all — it shares no star with NGSL, so it can
+only be a separate sample rather than a cross-check on the same object, and its
+continuum normalisation is too uncertain for a break measurement.
