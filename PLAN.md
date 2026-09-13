@@ -87,7 +87,60 @@ degree-1 extrapolated to 3646) needs checking against the band edges: its slope
 is fitted over a range that overlaps the 3385-3550 band, so the "independent"
 claim needs the windows to be disjoint.
 
-### 4. `likelihood.py`
+### 4. Define the XSL fit regions properly
+
+Right now XSL gets one degree-4 Chebyshev across 3501-9500 A, which is a very
+long baseline for five terms and eats Teff information indiscriminately.
+Replace it with explicit windows at order 1-2 each, of two kinds.
+
+**Balmer lines.** These are the dust-immune Teff / log g diagnostic and the
+reason XSL is in the analysis at all -- a locally normalised profile cannot be
+changed by a smooth reddening law. XSL covers H-alpha 6563, H-beta 4861,
+H-gamma 4341 and H-delta 4102 with clean separation, so each gets its own window
+with a low-order local continuum. Two cautions:
+
+* The high-order members (H-epsilon 3970 down to the series limit) are blended,
+  so a "local continuum" there is ill-defined and the polynomial may absorb or
+  inject break-like structure. Use them only after checking that.
+* Those same members sit inside the NGSL held-out window. That is *not* double
+  counting -- XSL's continuum is marginalised away, so it contributes line
+  SHAPE and carries no information about the jump amplitude -- but it should be
+  stated rather than assumed, since it looks like a violation at first glance.
+* H-alpha's red wing approaches the telluric B band at 6860 A; keep the window
+  clear of it.
+
+**Metal lines, chosen by measured [M/H] sensitivity.** Seed measurement done:
+grid models at 10200 K / log g 3.8, [M/H] = -0.5 vs +0.3, broadened to R = 9800
+and continuum-normalised, ranked by change in line depth (H masked +/-25 A).
+237 features exceed 0.02; the strongest:
+
+| feature | lambda (vac) | d(depth) |
+|---|---|---|
+| Ca II K | 3934.8 | -0.209 |
+| Fe II 4549 | 4550.0 | -0.158 |
+| Mg II 4481 | 4482.4 | -0.121 |
+| Si II 6347 | 6348.9 | -0.113 |
+| Fe II | 5057.5 | -0.119 |
+| Si II 6371 | 6373.1 | -0.078 |
+| Mg I b 5167 | 5169.0 | -0.090 |
+
+Three things to carry forward from that:
+
+* **The sensitivity is concentrated in 3900-4600 A**, dominated by Fe II, Ti II
+  and Cr II blends. Any XSL metallicity constraint will come mostly from there.
+* **Mg I b is NOT a good choice at these temperatures.** It was worth trying, but
+  at ~10,000 K magnesium is largely ionised: Mg I b 5167 gives -0.090 against
+  Mg II 4481 at -0.121, and both are well behind the Fe II blends. Use Mg II
+  4481 as the magnesium diagnostic, not Mg I b.
+* **Ca II K is the single most sensitive feature and must not be used naively.**
+  It carries an interstellar component on these sightlines, exactly like Na I D
+  (-0.076, also excluded). Either drop both or model the ISM component; do not
+  let an ISM line masquerade as stellar metallicity.
+
+Redo the ranking at more than one node before fixing the windows -- the seed is
+one Teff / log g, and the answer may move across the sample.
+
+### 5. `likelihood.py`
 
 `marginalize_linear(design, y, ivar)` — generalising `calibration.solve` with the
 −½ln|A| term and a prior on the coefficients. Plus the analytic error-scale
@@ -104,11 +157,6 @@ residual level.
   the −0.5 model) — and that Mg is *not* correspondingly weak, i.e.
   α-enhancement, which a scaled-solar `afe+0.0` grid cannot represent at any
   [M/H]. Only 3 primary stars sit fully inside the grid.
-* **XSL windows and polynomial order.** Currently one degree-4 Chebyshev across
-  3501–9500 Å, which is a very long baseline for 5 terms and eats Teff
-  information indiscriminately. Better: several ~200–400 Å windows at order 1–2,
-  centred on Balmer lines *and* the metal features (Mg I b 5167–5183 is useful;
-  **Na I D ~5890 must be excluded — it is interstellar**).
 * **Error model.** Independent-pixel χ² overstates confidence on any smooth
   parameter. Cheapest honest treatment: a ~1% systematic floor for the bands
   (already applied) plus reporting the envelope under ±1% continuum tilt
