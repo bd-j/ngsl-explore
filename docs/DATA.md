@@ -171,9 +171,40 @@ and one star (HD162678) missing 3859-4779 A outright — 43% of its Balmer
 coverage. See [CAVEATS.md](CAVEATS.md), which also has the echelle order-width
 measurement explaining why the blue has no gaps and the red does.
 
-Only the spectra of the selected stars are tracked; the 772 MB DR3 tarball is
-refetchable with `data/xsl/fetch.sh`, a resume loop — the server drops long
-connections, and a single curl truncated at 264 MB while exiting cleanly.
+#### Getting an XSL spectrum: extract it from the tarball, do not refetch
+
+**The whole release is already on disk** as `data/xsl/XSL_DR3_release.tar`
+(772,163,584 bytes, 832 members, **606 `_merged.fits` spectra**). It is
+gitignored but it is not deleted after extraction, so adding a star to the
+sample needs no download at all — only an extraction. This was missed once
+already, and nearly cost a second 772 MB fetch.
+
+Spectra are keyed by XSL ID (the `xslid` column of `data/sample.csv` or
+`data/xsl_all.csv`), so one star is:
+
+```bash
+tar -xf data/xsl/XSL_DR3_release.tar -C data/xsl \
+    XSL_DR3_release/xsl_spectrum_X0196_merged.fits
+```
+
+Extracting several at once is the same command with more members; passing the
+member list is what keeps it from unpacking all 606 (12 MB vs 736 MB on disk).
+Each merged spectrum is 928 KB.
+
+**Verify the tarball by reading it, not by its size.** `data/xsl/fetch.sh` is a
+resume loop because the server drops long connections: this copy needed **three
+resumes** (264 MB → 465 MB → 722 MB → complete), and a single curl exits
+cleanly on a truncated file. `tar -tf` returning exit 0 with 832 members is the
+check that the archive is whole; `ls -l` is not.
+
+Only the spectra of the *selected* stars are extracted and tracked, by name, so
+the tracked set cannot drift out of step with the sample. 13 are currently
+extracted: the 12 non-rejected sample stars, plus **X0288, a second XSL epoch of
+HD194453**. XSL observed the primary target twice (X0196 and X0288) and
+`build_sample.py` takes one epoch per star, so X0288 is not in `sample.csv` — but
+two independent observations of the same star with the same instrument are a
+repeatability check on the XSL continuum and on v sin i, which is worth having
+for the one star the whole analysis leans on.
 
 ## Gaia DR3: the independent dust lever
 

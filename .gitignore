@@ -27,11 +27,23 @@ data/uves_pop/*
 data/xsl/*.tar
 data/xsl/*.log
 data/xsl/XSL_DR3_release/*
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0163_merged.fits
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0196_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0228_merged.fits
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0243_merged.fits
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0245_merged.fits
+# X0288 is a SECOND XSL epoch of HD194453 (the primary target). The sample
+# builder takes one epoch per star, so it is not in sample.csv, but two
+# independent XSL observations of the same star are a repeatability check on
+# the XSL continuum and on v sin i -- keep it.
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0288_merged.fits
 !data/xsl/XSL_DR3_release/xsl_spectrum_X0386_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0450_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0460_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0468_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0614_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0626_merged.fits
+!data/xsl/XSL_DR3_release/xsl_spectrum_X0874_merged.fits
 
 # Gaia DR3 XP sampled spectra (343 points, ~12 KB each; explore/fetch_gaia.py).
 # Tracked BY NAME, as for the NGSL and XSL spectra, so the tracked set cannot
