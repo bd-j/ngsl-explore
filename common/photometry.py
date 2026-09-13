@@ -25,21 +25,46 @@ def filter_set(names):
 def project(wave_A, flam, filters):
     """Synthetic photometry of a spectrum -> maggies, one per filter.
 
-    Returns NaN for any filter whose transmission is not fully covered by the
-    spectrum, rather than silently integrating over the missing part. That guard
-    matters here: the model grid stops at 9500 A, so gaia_g and gaia_rp are only
-    partly covered and would otherwise come back quietly too faint.
+    Returns NaN for any filter whose bandpass is not FULLY covered by the
+    spectrum. This guard is not redundant with sedpy: `obj_counts_hires` has its
+    "Source spectrum does not span filter" assertion commented out, so it clips
+    the integration to whatever is covered and returns a perfectly plausible
+    number. Measured: a source truncated at 9500 A gives gaia_rp 0.040 mag too
+    faint, silently. The model grid stops at 9500 A and the entire dust argument
+    is a colour, so a 0.04 mag error in one band is exactly the failure that
+    must not pass quietly.
     """
     from sedpy.observate import getSED
     wave_A = np.asarray(wave_A, float)
     out = np.full(len(filters), np.nan)
-    mags = getSED(wave_A, np.asarray(flam, float), filterlist=filters)
-    mags = np.atleast_1d(mags)
+    maggies = np.atleast_1d(getSED(wave_A, np.asarray(flam, float),
+                                   filterlist=filters, linear_flux=True))
     for i, f in enumerate(filters):
         lo, hi = f.wavelength[f.transmission > 1e-3 * f.transmission.max()][[0, -1]]
         if wave_A[0] <= lo and wave_A[-1] >= hi:
-            out[i] = 10.0 ** (-0.4 * mags[i])
+            out[i] = maggies[i]
     return out
+
+
+def tophat(name, lo, hi, taper=1.0, step=1.0):
+    """A rectangular bandpass as a sedpy Filter, for banding up a spectrum.
+
+    Integrating a spectrum over a band is how the Gaia XP spectra are used
+    here without needing XP's line-spread function. Convolution conserves the
+    integral, so a band whose EDGES sit in smooth continuum gives the same
+    answer whatever the LSF is -- even if the band contains a line, as long as
+    the line and its wings are wholly inside. That is why the band edges below
+    are placed in line-free stretches rather than at round numbers.
+
+    `taper` softens the edge by a few Angstroms so the transmission is not a
+    literal step; a hard edge makes the band integral sensitive to how much
+    flux the LSF moves across it.
+    """
+    from sedpy.observate import Filter
+    w = np.arange(lo - 10 * taper, hi + 10 * taper, step)
+    t = (0.5 * (1 + np.tanh((w - lo) / taper))
+         * 0.5 * (1 + np.tanh((hi - w) / taper)))
+    return Filter(kname=name, data=(w, t))
 
 
 def coverage(wave_A, filters):

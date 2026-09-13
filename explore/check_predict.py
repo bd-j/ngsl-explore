@@ -22,14 +22,14 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid
-from fitting.observations import load_ngsl, load_xsl, load_photometry
+from fitting.observations import (load_ngsl, load_xsl, load_photometry,
+                                  load_xp, BREAK_WINDOW)
 from fitting.predict import predict, spectrum_at, _on_node, NODE_ATOL
 from fitting.calibration import solve, residual, chi2
 from common.photometry import overlaps, coverage
 
 ROOT = Path(__file__).resolve().parent.parent
 BALMER, PASCHEN = 3646.0, 8205.9
-BREAK_WINDOW = (3550.0, 3750.0)      # held out of the fit; predicted
 DUST_WINDOW = (3200.0, 3400.0)       # line-free, NGSL-only dust constraint
 
 OBS_C, MOD_C, MOD2_C = '#2a78d6', '#eb6834', '#7a3fa8'
@@ -71,13 +71,20 @@ def main():
 
     obs = []
     for fn, label in ((load_ngsl, 'ngsl'), (load_xsl, 'xsl'),
-                      (load_photometry, 'phot')):
+                      (load_xp, 'xp'), (load_photometry, 'phot')):
         try:
             o = fn(a.star)
             obs.append(o)
             print(f'  {o!r}')
         except Exception as exc:
             print(f'  no {label}: {type(exc).__name__}: {exc}')
+
+    xp = next((o for o in obs if o.name == 'xp'), None)
+    if xp is not None:
+        print(f'\n  Gaia XP bands (held-out window {BREAK_WINDOW[0]:.0f}-'
+              f'{BREAK_WINDOW[1]:.0f} A excluded):')
+        print(f'    kept    : {", ".join(xp.meta["names"])}')
+        print(f'    dropped : {", ".join(xp.meta["excluded"]) or "none"}')
 
     phot = next((o for o in obs if o.name == 'phot'), None)
     if phot is not None:
@@ -129,7 +136,7 @@ def main():
                   f'residual rms = {rms:6.2f}%   ncoeff={len(c)}   n={int(u.sum())}')
             if o.name == 'ngsl':
                 for wlo, whi, nm in ((DUST_WINDOW[0], DUST_WINDOW[1], 'dust 3200-3400'),
-                                     (BREAK_WINDOW[0], BREAK_WINDOW[1], 'break 3550-3750'),
+                                     (BREAK_WINDOW[0], BREAK_WINDOW[1], 'break (held out)'),
                                      (4000., 9400., 'red 4000-9400')):
                     s = o.mask & (o.wavelength > wlo) & (o.wavelength < whi)
                     if s.sum() > 5:
@@ -218,42 +225,37 @@ def figure(star, obs, results, row):
             if col == 0:
                 axx.legend(fontsize=7.5, loc='lower left', framealpha=.92)
 
-    # --- photometry -------------------------------------------------------
-    if ph is not None:
+    # --- Gaia XP bands: the dust lever ------------------------------------
+    xp = next((o for o in obs if o.name == 'xp'), None)
+    if xp is not None:
         axp = fig.add_subplot(gs[4, 0])
         axp2 = fig.add_subplot(gs[4, 1])
         for a_ in (axp, axp2):
             style(a_)
-        names = ph.meta['names']
-        x = np.arange(len(names))
-        lam = np.array([f.wave_effective for f in ph.filters])
-        u0 = results[labels[0]]['phot'][3]
-        axp.errorbar(x, -2.5 * np.log10(ph.flux), yerr=2.5 / np.log(10)
-                     * ph.uncertainty / ph.flux, fmt='o', color=OBS_C,
-                     label='Gaia DR3 (AB)', ms=6, capsize=3)
+        lam = np.array([f.wave_effective for f in xp.filters])
+        u0 = results[labels[0]]['xp'][3]
+        axp.errorbar(lam, xp.flux, yerr=xp.uncertainty, fmt='o', color=OBS_C,
+                     ms=6, capsize=3, label='Gaia XP, banded')
         for lab, c in zip(labels, (MOD_C, MOD2_C)):
-            cal = results[lab]['phot'][0]
-            axp.plot(x[u0], -2.5 * np.log10(cal[u0]), 's', color=c, ms=6,
-                     label=f'model, {lab}')
-        for i, ok in enumerate(u0):
-            if not ok:
-                axp.annotate('past grid', (x[i], -2.5 * np.log10(ph.flux[i])),
-                             fontsize=7, color=MUTED, xytext=(0, 10),
-                             textcoords='offset points', ha='center')
-        axp.set_xticks(x)
-        axp.set_xticklabels([n.replace('gaia_', '').upper() for n in names])
-        axp.invert_yaxis()
-        axp.set_ylabel('AB mag (scaled)', fontsize=9, color=INK)
-        axp.set_title('Gaia photometry, one free scalar', fontsize=9, color=INK)
+            cal = results[lab]['xp'][0]
+            axp.plot(lam[u0], cal[u0], 's', color=c, ms=6, label=f'model, {lab}')
+        axp.set_yscale('log')
+        axp.set_ylabel('band flux', fontsize=9, color=INK)
+        axp.set_xlabel(r'effective $\lambda$ [$\AA$]', fontsize=9, color=INK)
+        axp.set_title('Gaia XP in bands (LSF-free), one free scalar',
+                      fontsize=9, color=INK)
         axp.legend(fontsize=7.5, framealpha=.92)
 
         for lab, c in zip(labels, (MOD_C, MOD2_C)):
-            r = results[lab]['phot'][1]
-            axp2.plot(lam[u0], r[u0] * 100, 'o-', color=c, lw=1.1, ms=6, label=lab)
+            r = results[lab]['xp'][1]
+            axp2.errorbar(lam[u0], r[u0] * 100,
+                          yerr=100 * xp.uncertainty[u0] / xp.flux[u0],
+                          fmt='o-', color=c, lw=1.1, ms=5, capsize=3, label=lab)
         axp2.axhline(0, color=MUTED, lw=1)
+        axp2.axvspan(*BREAK_WINDOW, color='#c0392b', alpha=.09, lw=0)
         axp2.set_xlabel(r'effective $\lambda$ [$\AA$]', fontsize=9, color=INK)
-        axp2.set_ylabel('(obs−model)/model [%]', fontsize=9, color=INK)
-        axp2.set_title('Photometric residual — this is the dust lever',
+        axp2.set_ylabel('(obs-model)/model [%]', fontsize=9, color=INK)
+        axp2.set_title('XP residual - this is the dust lever (err bars = 1% floor)',
                        fontsize=9, color=INK)
         axp2.legend(fontsize=7.5, framealpha=.92)
 

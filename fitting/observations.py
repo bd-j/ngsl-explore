@@ -205,6 +205,88 @@ def load_photometry(star, names=GAIA_FILTERS, mag_floor=GAIA_MAG_FLOOR):
                   mag_floor=mag_floor, source_id=g['source_id']))
 
 
+# The held-out region: predicted, never conditioned on. 3550-4000 A rather than
+# a narrow window around 3646, because the high-order Balmer lines crowd
+# together from H-epsilon 3970 down to the series limit, and Ca II H and K sit
+# at 3934/3968. Anything in here is Balmer-break information.
+BREAK_WINDOW = (3550.0, 4000.0)
+
+# Bands for the Gaia XP spectrum. Edges are placed in line-free continuum, which
+# is what makes the band integral independent of XP's (complicated,
+# wavelength-dependent, R ~ 20-100) line-spread function: convolution conserves
+# the integral, so a line wholly inside a band contributes the same flux however
+# it is smeared. A band edge cutting through a Balmer wing would NOT be safe.
+#
+# 3550-4000 is omitted entirely -- that is the held-out break. 3360-3540 is the
+# blue-of-break band and is the one that matters most for dust; it is narrow
+# because XP starts at 3360 A and the break region begins at 3550.
+# Edges sit 15+ A inside BOTH the XP range (3360-10200 A) and the model grid
+# (3200-9500 A), because tophat() tapers ~10 A beyond each edge and
+# common.photometry.project returns NaN for a band that is not fully covered.
+# At 3360 and 9500 exactly, the blue and red bands both came back NaN.
+XP_BANDS = [('xp_3380_3540', 3380., 3540.),   # Balmer continuum, blueward
+            ('xp_4050_4550', 4050., 4550.),   # contains H-delta 4102, H-gamma 4341
+            ('xp_4550_5200', 4550., 5200.),   # contains H-beta 4861
+            ('xp_5200_5900', 5200., 5900.),
+            ('xp_5900_6300', 5900., 6300.),
+            ('xp_6300_7100', 6300., 7100.),   # contains H-alpha 6563
+            ('xp_7100_7900', 7100., 7900.),
+            ('xp_7900_9480', 7900., 9480.)]   # contains the Paschen series
+
+# Gaia XP is externally calibrated to ~1-2%. The quoted per-pixel errors are far
+# smaller than that over a whole band, so a calibration floor is applied -- the
+# dust constraint is a colour, and an over-tight band error would be read as a
+# reddening measurement the calibration cannot support.
+XP_CAL_FLOOR = 0.01
+
+
+def load_xp(star, bands=XP_BANDS, cal_floor=XP_CAL_FLOOR,
+            exclude=(BREAK_WINDOW,)):
+    """Gaia XP sampled spectrum, integrated into bands -> Observation.
+
+    This is the long-baseline dust lever: 3360-9500 A from space, ~0.036 mag of
+    differential extinction per 0.01 mag of E(B-V), against 0.0035 mag for
+    NGSL's 3200-3500 A window. Gaia's BROADBAND photometry cannot do this job --
+    gaia_g and gaia_rp run past the grid's 9500 A limit, and gaia_bp alone is
+    exactly determined by its own free scalar, so it carries no information.
+
+    Bands rather than pixels because XP's LSF is a basis reconstruction, not a
+    Gaussian; banding makes the comparison LSF-free (see common.photometry.tophat).
+    """
+    from common.photometry import tophat
+    p = ROOT / 'data' / 'gaia_xp' / f'{star}_xp.csv'
+    d = np.loadtxt(p, delimiter=',', skiprows=1)
+    w, f, e = d[:, 0], d[:, 1], d[:, 2]
+
+    keep = [b for b in bands
+            if not any(b[2] > lo and b[1] < hi for lo, hi in (exclude or []))]
+    filters = [tophat(*b) for b in keep]
+
+    flux, unc = [], []
+    for nm, lo, hi in keep:
+        s = (w >= lo) & (w <= hi) & np.isfinite(f)
+        # band flux as a maggie-like quantity is not needed: integrate f_lambda
+        # through the same tophat the model will see, via the same code path
+        from common.photometry import project as phot_project
+        val = phot_project(w, f, [tophat(nm, lo, hi)])[0]
+        # error: quadrature sum over the band, then the calibration floor
+        rel = (np.sqrt(np.sum(e[s] ** 2)) / np.sum(f[s])) if s.sum() else np.nan
+        flux.append(val)
+        unc.append(abs(val) * max(rel, cal_floor))
+
+    flux, unc = np.array(flux), np.array(unc)
+    return Observation(
+        name='xp', star=star, flux=flux, uncertainty=unc,
+        mask=np.isfinite(flux), filters=filters,
+        resolution=(None,),          # a band integral needs no LSF -- the point
+        calibration=('scalar',),     # colours only
+        rv_fixed=0.0,
+        meta=dict(names=[b[0] for b in keep],
+                  bands=keep, cal_floor=cal_floor,
+                  excluded=[b[0] for b in bands if b not in keep],
+                  file=str(p.relative_to(ROOT))))
+
+
 def load_all(star, **kw):
     """-> [ngsl, xsl, phot] for one star, skipping any that is unavailable."""
     out = []
