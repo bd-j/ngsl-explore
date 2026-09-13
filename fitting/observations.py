@@ -211,6 +211,138 @@ def load_photometry(star, names=GAIA_FILTERS, mag_floor=GAIA_MAG_FLOOR):
 # at 3934/3968. Anything in here is Balmer-break information.
 BREAK_WINDOW = (3550.0, 4000.0)
 
+# --- NGSL as synthetic photometry ----------------------------------------
+#
+# NGSL is used TWICE in different roles, and the roles must not overlap:
+#
+#   load_ngsl_bands()  the continuum, collapsed into synthetic bands. This is
+#                      the dust and continuum-shape constraint.
+#   the break region   held out entirely, never conditioned on, predicted.
+#
+# and the hydrogen lines are used from NEITHER -- XSL resolves them ~16x better
+# for the same stars, and the NGSL cores carry the known NLTE excess.
+#
+# So every NGSL pixel enters the analysis at most once. That is what makes
+# banded NGSL photometry legitimate where Gaia XP was not: earlier the plan was
+# to take the dust constraint from XP, but XP and NGSL disagree in COLOUR by up
+# to 4.8% with only 1.2% star-to-star scatter -- an instrumental difference
+# worth 0.040 mag in E(B-V), 8x the error budget (explore/xp_vs_ngsl.py).
+# Using NGSL for both roles avoids having to decide which instrument is right.
+#
+# Band edges need no line-free placement here, unlike the XP bands: the data is
+# already at R=600 and the model is broadened to R=600, so both sides carry the
+# same LSF and there is no leakage mismatch to dodge. The only requirements are
+# to avoid the held-out break and the hydrogen lines.
+NGSL_H_MASK_A = 20.0        # half-width dropped around every H line
+NGSL_BAND_WIDTH = 400.0     # long stretches are split into bands this wide
+NGSL_BAND_MIN = 80.0        # a band narrower than this is not worth carrying
+
+
+# Bands run from just inside the grid's blue edge to just BLUEWARD OF THE
+# PASCHEN BREAK (8206 A = 911.7635 x 9), which keeps 89.5% of the 3220-9480
+# dust lever arm (0.0348 vs 0.0389 mag per 0.01 mag of E(B-V)) because CCM89 is
+# nearly flat redward of 8000 A. The 10.5% that is given up buys the entire
+# Paschen region back as a SECOND untouched prediction, on the same footing as
+# the Balmer break.
+#
+# Inset from MODEL_RANGE at the blue end because tophat() tapers ~10 A past each
+# edge and project() refuses a partially covered band: a band starting at
+# exactly 3200 is silently dropped for a spectrum starting at 3201, which cost
+# the bluest and most important band the first time.
+PASCHEN_LIMIT = 8205.9
+NGSL_BAND_RANGE = (3220.0, 8180.0)
+
+# Held out alongside the Balmer break, and predicted rather than fitted.
+PASCHEN_WINDOW = (8180.0, 9500.0)
+
+
+def ngsl_band_edges(h_mask=NGSL_H_MASK_A, break_window=None,
+                    width=NGSL_BAND_WIDTH, min_width=NGSL_BAND_MIN,
+                    wrange=NGSL_BAND_RANGE):
+    """-> [(name, lo, hi)] bands covering `wrange` minus H lines and the break.
+
+    Deterministic: the hydrogen line positions are analytic (Rydberg), so this
+    needs no model spectrum and cannot drift with the grid.
+    """
+    from fitting.fit import hydrogen_lines
+    if break_window is None:
+        break_window = BREAK_WINDOW
+    lines = hydrogen_lines(wrange[0] - 200.0, wrange[1] + 200.0, series=(2, 3))
+    blocked = [(lam - h_mask, lam + h_mask) for lam in lines] + [tuple(break_window)]
+    blocked.sort()
+
+    # complement of the blocked intervals within wrange
+    free, cur = [], wrange[0]
+    for lo, hi in blocked:
+        if hi <= cur:
+            continue
+        if lo > cur:
+            free.append((cur, min(lo, wrange[1])))
+        cur = max(cur, hi)
+        if cur >= wrange[1]:
+            break
+    if cur < wrange[1]:
+        free.append((cur, wrange[1]))
+
+    out = []
+    for lo, hi in free:
+        if hi - lo < min_width:
+            continue
+        n = max(1, int(round((hi - lo) / width)))
+        edges = np.linspace(lo, hi, n + 1)
+        for a, b in zip(edges[:-1], edges[1:]):
+            if b - a >= min_width:
+                out.append((f'ngsl_{a:.0f}_{b:.0f}', float(a), float(b)))
+    return out
+
+
+def load_ngsl_bands(star, bands=None, cal_floor=0.01, **kw):
+    """NGSL collapsed into synthetic bands -> the continuum/dust constraint.
+
+    The 3200-3540 A band matters most: it is blueward of the Balmer series
+    limit, so it holds no hydrogen lines, and it is the longest lever NGSL has
+    on reddening. It sits ~2.8% below the SYNTHE continuum from metal
+    blanketing, which is part of the continuum shape under test rather than a
+    reason to exclude it.
+
+    `cal_floor` is NGSL's spectrophotometric accuracy (~1-3%), not its photon
+    noise. Band-integrating thousands of pixels drives the statistical error far
+    below the calibration error, and the dust constraint is a colour, so an
+    over-tight band error would be read as a reddening measurement the
+    calibration cannot support.
+    """
+    from common.photometry import tophat, project as phot_project
+    ng = load_ngsl(star, **kw)
+    if bands is None:
+        bands = ngsl_band_edges()
+    m = ng.mask
+    wl, fl, er = ng.wavelength[m], ng.flux[m], ng.uncertainty[m]
+
+    keep, flux, unc = [], [], []
+    for nm, lo, hi in bands:
+        if wl[0] > lo or wl[-1] < hi:
+            continue                      # band not covered by this spectrum
+        val = phot_project(wl, fl, [tophat(nm, lo, hi)])[0]
+        if not np.isfinite(val):
+            continue
+        s = (wl >= lo) & (wl <= hi)
+        rel = np.sqrt(np.sum(er[s] ** 2)) / np.sum(fl[s]) if s.sum() else np.nan
+        keep.append((nm, lo, hi))
+        flux.append(val)
+        unc.append(abs(val) * max(rel, cal_floor))
+
+    flux, unc = np.array(flux), np.array(unc)
+    return Observation(
+        name='ngsl_bands', star=star, flux=flux, uncertainty=unc,
+        mask=np.isfinite(flux), filters=[tophat(*b) for b in keep],
+        resolution=('R', 600.0),     # model must be at NGSL resolution first
+        calibration=('scalar',),
+        rv_fixed=None,
+        meta=dict(names=[b[0] for b in keep], bands=keep,
+                  cal_floor=cal_floor, h_mask=NGSL_H_MASK_A,
+                  break_window=tuple(BREAK_WINDOW)))
+
+
 # Bands for the Gaia XP spectrum. Edges are placed in line-free continuum, which
 # is what makes the band integral independent of XP's (complicated,
 # wavelength-dependent, R ~ 20-100) line-spread function: convolution conserves
@@ -297,3 +429,32 @@ def load_all(star, **kw):
         except (KeyError, FileNotFoundError, OSError) as exc:
             print(f'  {star}: no {label} ({type(exc).__name__}: {exc})')
     return out
+
+
+def conditioning_set(star, xsl_kw=None, band_kw=None):
+    """The observations a fit may condition on: banded NGSL + XSL lines.
+
+    Deliberately NOT the NGSL spectrum itself. NGSL enters once, as bands; its
+    hydrogen lines are left to XSL, which resolves them ~16x better for these
+    same stars; and the break region is held out by `heldout`. Returning the
+    legal set from one place is what keeps that separation enforceable rather
+    than conventional -- double-counting NGSL would quietly shrink the
+    uncertainty on exactly the parameter the break prediction is most sensitive
+    to.
+    """
+    out = [load_ngsl_bands(star, **(band_kw or {}))]
+    try:
+        out.append(load_xsl(star, **(xsl_kw or {})))
+    except (FileNotFoundError, KeyError) as exc:
+        print(f'  {star}: no XSL ({type(exc).__name__}) -- line constraint absent')
+    return out
+
+
+def heldout(star, window=None, **kw):
+    """The NGSL spectrum inside the break window: predicted, never fitted."""
+    window = tuple(window or BREAK_WINDOW)
+    o = load_ngsl(star, **kw)
+    o.mask &= (o.wavelength >= window[0]) & (o.wavelength <= window[1])
+    o.meta['role'] = 'held out'
+    o.meta['window'] = window
+    return o
