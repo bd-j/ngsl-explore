@@ -111,31 +111,40 @@ with a low-order local continuum. Two cautions:
 
 **Metal lines, chosen by measured [M/H] sensitivity.** Seed measurement done:
 grid models at 10200 K / log g 3.8, [M/H] = -0.5 vs +0.3, broadened to R = 9800
-and continuum-normalised, ranked by change in line depth (H masked +/-25 A).
-237 features exceed 0.02; the strongest:
+and continuum-normalised, ranked by change in line depth. Excluded up front:
+hydrogen +/-25 A, the **held-out window 3550-4000 A**, and **Na I D** (ISM).
+213 features still exceed 0.02; the strongest:
 
-| feature | lambda (vac) | d(depth) |
-|---|---|---|
-| Ca II K | 3934.8 | -0.209 |
-| Fe II 4549 | 4550.0 | -0.158 |
-| Mg II 4481 | 4482.4 | -0.121 |
-| Si II 6347 | 6348.9 | -0.113 |
-| Fe II | 5057.5 | -0.119 |
-| Si II 6371 | 6373.1 | -0.078 |
-| Mg I b 5167 | 5169.0 | -0.090 |
+| feature | lambda (vac) | width | d(depth) |
+|---|---|---|---|
+| Fe II / Ti II blend | 4410.1 | 19 | -0.246 |
+| Cr II / Fe II | 4827.3 | 5 | -0.196 |
+| Fe II 4549 | 4550.7 | 1 | -0.158 |
+| Fe II | 4535.3 | 1 | -0.155 |
+| Fe II / Ti II | 4390.8 | 13 | -0.145 |
+| Fe II | 4134.2 | 11 | -0.136 |
+| blend | 4287.6 | 8 | -0.133 |
+| blend | 4183.0 | 21 | -0.124 |
+| **Mg II 4481** | 4482.5 | 2 | -0.121 |
+| Fe II | 5057.5 | 1 | -0.119 |
+| **Si II 6347** | 6348.7 | 2 | -0.113 |
 
-Three things to carry forward from that:
+Three things to carry forward:
 
-* **The sensitivity is concentrated in 3900-4600 A**, dominated by Fe II, Ti II
-  and Cr II blends. Any XSL metallicity constraint will come mostly from there.
-* **Mg I b is NOT a good choice at these temperatures.** It was worth trying, but
-  at ~10,000 K magnesium is largely ionised: Mg I b 5167 gives -0.090 against
-  Mg II 4481 at -0.121, and both are well behind the Fe II blends. Use Mg II
-  4481 as the magnesium diagnostic, not Mg I b.
-* **Ca II K is the single most sensitive feature and must not be used naively.**
-  It carries an interstellar component on these sightlines, exactly like Na I D
-  (-0.076, also excluded). Either drop both or model the ISM component; do not
-  let an ISM line masquerade as stellar metallicity.
+* **The sensitivity is concentrated in 4000-4600 A**, dominated by Fe II, Ti II
+  and Cr II blends -- 50 of the 213 features sit blueward of 4600 A, and they
+  include every one of the strongest. Any XSL metallicity constraint comes
+  mostly from there. Si II 6347 is the best feature redward of 5100 A.
+* **Mg I b is the wrong magnesium diagnostic at these temperatures.** At
+  ~10,000 K magnesium is largely ionised: Mg I b 5167 gives -0.090 against
+  Mg II 4481 at -0.121, and both trail the Fe II blends. Use Mg II 4481.
+* **Ca II H and K are excluded**, on two independent grounds: they sit at
+  3934.8 / 3969.6 A, inside the held-out window, and they carry an
+  interstellar component on these sightlines. K was the most sensitive feature
+  in the whole spectrum before exclusion (-0.209), which is exactly why it
+  needed excluding rather than using -- an ISM line masquerading as stellar
+  metallicity would bias [M/H] in the direction of the reddening. Na I D is out
+  for the same ISM reason.
 
 Redo the ranking at more than one node before fixing the windows -- the seed is
 one Teff / log g, and the answer may move across the sample.
