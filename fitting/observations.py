@@ -236,6 +236,7 @@ BREAK_WINDOW = (3550.0, 4000.0)
 NGSL_H_MASK_A = 20.0        # half-width dropped around every H line
 NGSL_BAND_WIDTH = 400.0     # long stretches are split into bands this wide
 NGSL_BAND_MIN = 80.0        # a band narrower than this is not worth carrying
+NGSL_BLUE_WIDTH = 165.0     # finer bands blueward of the break (see below)
 
 
 # Bands run from just inside the grid's blue edge to just BLUEWARD OF THE
@@ -258,11 +259,18 @@ PASCHEN_WINDOW = (8180.0, 9500.0)
 
 def ngsl_band_edges(h_mask=NGSL_H_MASK_A, break_window=None,
                     width=NGSL_BAND_WIDTH, min_width=NGSL_BAND_MIN,
-                    wrange=NGSL_BAND_RANGE):
+                    wrange=NGSL_BAND_RANGE, blue_width=NGSL_BLUE_WIDTH):
     """-> [(name, lo, hi)] bands covering `wrange` minus H lines and the break.
 
     Deterministic: the hydrogen line positions are analytic (Rydberg), so this
     needs no model spectrum and cannot drift with the grid.
+
+    Anything blueward of the break gets `blue_width` instead of `width`. That
+    stretch -- 3220-3550 A, the Balmer continuum below the series limit -- is
+    where the extinction curve is steepest and where the dust lever therefore
+    lives, so it is worth resolving as a SHAPE rather than collapsing to a
+    single point. One band there gives one colour against the red; two give an
+    internal colour across the steepest part of CCM89 as well.
     """
     from fitting.fit import hydrogen_lines
     if break_window is None:
@@ -288,7 +296,8 @@ def ngsl_band_edges(h_mask=NGSL_H_MASK_A, break_window=None,
     for lo, hi in free:
         if hi - lo < min_width:
             continue
-        n = max(1, int(round((hi - lo) / width)))
+        w = blue_width if hi <= break_window[0] else width
+        n = max(1, int(round((hi - lo) / w)))
         edges = np.linspace(lo, hi, n + 1)
         for a, b in zip(edges[:-1], edges[1:]):
             if b - a >= min_width:
