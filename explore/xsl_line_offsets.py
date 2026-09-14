@@ -233,15 +233,18 @@ def main():
     out = ROOT / 'data' / 'xsl_line_offsets.csv'
     with open(out, 'w', newline='') as fh:
         wr = csv.writer(fh)
-        wr.writerow(['star', 'lam_vac', 'species', 'blended', 'sep_A',
-                     'offset_kms'])
+        cols = ['star', 'panel_center', 'lam_vac', 'species', 'blended',
+                'sep_A', 'offset_kms']
+        wr.writerow(cols)
         for s in kept:
             for L in lines:
                 if L['lam'] in table[s]:
-                    wr.writerow([s, f'{L["panel"]:.1f}', f'{L["lam"]:.3f}',
-                                 L['species'],
-                                 'yes' if L['blended'] else 'no',
-                                 f'{L["sep"]:.2f}', f'{table[s][L["lam"]]:.2f}'])
+                    rec = dict(star=s, panel_center=f'{L["panel"]:.1f}',
+                               lam_vac=f'{L["lam"]:.3f}', species=L['species'],
+                               blended='yes' if L['blended'] else 'no',
+                               sep_A=f'{L["sep"]:.2f}',
+                               offset_kms=f'{table[s][L["lam"]]:.2f}')
+                    wr.writerow([rec[c] for c in cols])
     print(f'\n  -> {out.relative_to(ROOT)}')
 
 

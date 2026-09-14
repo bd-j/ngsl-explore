@@ -180,3 +180,36 @@ def dominant_species(lo_A, hi_A, T, ne, eps, path=LINELIST, top=2):
     smax = ranked[0][1][0]
     return [(f'{ELEMENT[z]} {ROMAN[stage]}', float(s - smax), float(lam))
             for (z, stage), (s, lam) in ranked[:top]]
+
+
+def strong_lines(lo_A, hi_A, T, ne, eps, n=4, within=2.0, path=LINELIST):
+    """-> [(lam, 'Fe II', rel_strength)] for the n strongest lines in a window.
+
+    For annotating a panel: which lines are actually there, so the figure names
+    them instead of leaving the reader to guess from a window centre.
+    `within` keeps only lines this many dex of the strongest.
+    """
+    theta = 5040.0 / T
+    rows = []
+    for lam, gf, z, stage, elow in read_lines(lo_A, hi_A, path):
+        if z not in ELEMENT or stage > 2:
+            continue
+        f_ion = ion_fraction(z, stage, T, ne)
+        if f_ion <= 0:
+            continue
+        rows.append((gf + eps.get(z, -12.0) + np.log10(f_ion) - theta * elow,
+                     lam, f'{ELEMENT[z]} {ROMAN[stage]}'))
+    if not rows:
+        return []
+    rows.sort(reverse=True)
+    smax = rows[0][0]
+    out = []
+    for s, lam, sp in rows:
+        if s < smax - within:
+            break
+        if any(abs(lam - l) < 0.25 for l, _, _ in out):
+            continue          # same feature, already labelled
+        out.append((float(lam), sp, float(s - smax)))
+        if len(out) >= n:
+            break
+    return out

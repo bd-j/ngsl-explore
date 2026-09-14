@@ -34,9 +34,10 @@ from fitting.model import Grid
 from fitting.observations import load_xsl
 from fitting.predict import predict
 from fitting.calibration import solve
-from common.specplot import spectrum_panel, style, BAND_C, HELD_C
+from common.specplot import (spectrum_panel, style, BAND_C, HELD_C,
+                             MUTED, SURFACE)
 from common.species import (atmosphere_point, abundances, species_label,
-                            dominant_species)
+                            dominant_species, strong_lines)
 
 ROOT = Path(__file__).resolve().parent.parent
 OBS_C, MOD_C, BAND_C = '#2a78d6', '#eb6834', '#7a3fa8'
@@ -100,7 +101,7 @@ def main():
     # which have the most transitions in this range and are entirely ionised
     # away at 11,600 K.
     atm = ROOT / 'models' / 'work' / f'{a.star}.atm'
-    species = {}
+    species, marks = {}, {}
     if atm.exists():
         T_line, ne_line = atmosphere_point(atm)
         eps = abundances(atm)
@@ -108,6 +109,9 @@ def main():
         for f in feats:
             species[float(f['lam_center'])] = species_label(
                 float(f['lam_lo']), float(f['lam_hi']), T_line, ne_line, eps)
+            marks[float(f['lam_center'])] = strong_lines(
+                float(f['lam_lo']) - 2, float(f['lam_hi']) + 2,
+                T_line, ne_line, eps, n=4)
     else:
         print(f'  no {atm.name}: species not identified')
 
@@ -165,6 +169,21 @@ def main():
             continue
         ax.set_title(ax.get_title(), fontsize=9,
                      color=(HELD_C if flag else '#22262b'))
+        # name the individual lines, as the predict_check XSL panels do.
+        # Headroom first, then place the text in AXES coordinates so a rotated
+        # label cannot be clipped by the data limits.
+        ylo, yhi = ax.get_ylim()
+        ax.set_ylim(ylo, yhi + 0.30 * (yhi - ylo))
+        trans = ax.get_xaxis_transform()
+        for lam_l, sp_l, _ds in marks.get(cen, [])[:3]:
+            if not (lo - pad < lam_l < hi + pad):
+                continue
+            ax.axvline(lam_l, color=MUTED, ls=':', lw=.8, alpha=.7, zorder=1)
+            ax.text(lam_l, 0.97, f'{sp_l} {lam_l:.1f}', transform=trans,
+                    rotation=90, va='top', ha='center', fontsize=6,
+                    color=MUTED, zorder=6,
+                    bbox=dict(fc=SURFACE, ec='none', alpha=.75, pad=.6))
+
         # the band the grid can reach, which is what this figure is for
         inr = (obs.wavelength > lo - pad) & (obs.wavelength < hi + pad)
         ax.fill_between(obs.wavelength[inr], cal_lo[inr], cal_hi[inr],

@@ -123,6 +123,50 @@ def load_ngsl(star, exclude=None, snr_ceiling=NGSL_SNR_CEILING):
                   snr_ceiling=snr_ceiling, file=row['ngsl_file']))
 
 
+# XSL sits redward of the models by a small, measured amount
+# (explore/xsl_line_offsets.py -> data/xsl_line_offsets.csv). Decomposed over
+# 12 stars x 6 isolated lines the offset is:
+#
+#   grand mean      +4.21 km/s   common to every star and every line
+#   star-to-star     2.00 km/s
+#   line-to-line     1.13 km/s
+#   unexplained      2.30 km/s
+#
+# The CONSTANT dominates, so it is applied as a zero point to every star and a
+# per-star departure is allowed on top -- clipped, because the star-to-star
+# term is only 2 km/s and the per-star means are measured from as few as one
+# usable line. An unclipped per-star value would be fitting noise: HD164967
+# (RUWE = 8.32, an astrometric binary) comes out at +10.1 km/s from a single
+# line, which is not a radial velocity measurement.
+#
+# Sign: the measurement is obs - model, so the MODEL is shifted redward by this
+# amount to meet the data, which is what a positive `rv` does in predict().
+# For scale, 4.2 km/s is 0.4 of an XSL pixel and a seventh of its resolution
+# element, so this matters for line-centre residuals and not for line depths.
+XSL_RV_ZEROPOINT = 4.21
+XSL_RV_STAR_MAX = 2.0
+
+
+def xsl_rv(star, path=None, zeropoint=XSL_RV_ZEROPOINT,
+           star_max=XSL_RV_STAR_MAX):
+    """-> velocity in km/s to apply to the MODEL when comparing with XSL."""
+    p = Path(path or ROOT / 'data' / 'xsl_line_offsets.csv')
+    if not p.exists():
+        return zeropoint
+    vals, allv = [], []
+    for r in csv.DictReader(open(p)):
+        if r['blended'] == 'yes':
+            continue                   # a blend measures a line ratio, not a shift
+        v = float(r['offset_kms'])
+        allv.append(v)
+        if r['star'] == star:
+            vals.append(v)
+    if not vals or not allv:
+        return zeropoint
+    delta = float(np.mean(vals) - np.mean(allv))
+    return zeropoint + float(np.clip(delta, -star_max, star_max))
+
+
 def xsl_resolution_segments():
     """XSL resolving power per arm.
 
@@ -362,10 +406,11 @@ def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
         name='xsl', star=star, wavelength=w, flux=f, uncertainty=e, mask=ok,
         resolution=('R_segments', xsl_resolution_segments()),
         calibration=('segments', segs),
-        rv_fixed=0.0,
+        rv_fixed=xsl_rv(star),
         meta=dict(xslid=row['xslid'], n_balmer=len(bal), n_metal=len(met),
                   core_mask=core_mask, half_width=half_width,
                   bad_regions=[(a_, b_) for a_, b_, _ in MODEL_BAD_REGIONS],
+                  rv_kms=xsl_rv(star),
                   segments=[(s['name'], s['order'], len(s['ranges']))
                             for s in segs]))
 

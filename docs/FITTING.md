@@ -98,6 +98,22 @@ G430L calibration at its blue edge — rather than at reddening.
 
 XSL is fitted only inside named windows, not across its whole range.
 
+**XSL carries a measured velocity zero point.** The data sits redward of the
+models by **+4.21 km/s**, common to every star and every line. Decomposed over
+12 stars × 6 isolated lines (`explore/xsl_line_offsets.py`): grand mean +4.21,
+star-to-star 2.00, line-to-line 1.13, unexplained 2.30 km/s. The constant
+dominates, so it is applied as a zero point with a per-star departure clipped at
+±2 km/s — the star-to-star term is only 2 km/s and some stars have as few as one
+usable line, so an unclipped per-star value would fit noise (HD164967, an
+astrometric binary at RUWE = 8.32, comes out at +10.1 km/s from two lines).
+Applying it moves the mean residual from **+4.21 to +0.31 km/s**. For scale it
+is 0.4 of an XSL pixel and a seventh of a resolution element, so it matters for
+line-centre residuals and not for line depths.
+
+Offsets measured in *blended* windows are excluded from that average: when the
+model gets the relative strengths of a close pair wrong, the composite minimum
+moves, which looks identical to a shift but is not one.
+
 **Balmer: Hα, Hβ, Hγ, Hδ, each ±50 Å with the core ±6 Å masked.** These are the
 dust-immune Teff / log g diagnostic. Measured at XSL resolution, the wing merges
 back into the continuum by 37–41 Å, and the 50%-depth core runs 0.8 Å (Hα) to

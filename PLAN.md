@@ -182,15 +182,11 @@ these lines.
 
 ## Things to chase
 
-* **XSL sits ~+2.6 km/s redward of the model on isolated lines**, consistently
-  across five stars (Si II 4129 gives +4.2 ± 2.1 km/s; Ti II 4535 gives
-  +0.6 ± 3.1). It is NOT air/vacuum — that would be +84 km/s — and it is not a
-  per-star RV, since the offset differs between lines within one star. It is a
-  quarter of an XSL pixel (10 km/s) and a twelfth of the resolution element
-  (31 km/s FWHM), so it will not bias line depths much, but `rv_fixed = 0.0`
-  for XSL is over-confident given that the rest-frame reduction has finite
-  accuracy. **Decide:** let XSL carry a free RV with a tight prior, or fit one
-  offset per star and record it.
+* ~~XSL sits redward of the model~~ — **DONE**. Measured at +4.21 km/s grand
+  mean over 12 stars × 6 isolated lines, and applied as a zero point plus a
+  per-star departure clipped at ±2 km/s (`fitting.observations.xsl_rv`). Residual
+  mean +0.31 km/s. Two stars remain offset by design: HD164967 (clipped binary)
+  and HD174240 (one usable line). It is NOT air/vacuum, which would be +84 km/s.
 * **Apparent shifts in the BLENDED panels are a line-ratio effect, not a
   wavelength error.** Fe II 4410 shows +15.1 km/s with another Fe II 0.61 Å
   away, and 4827 shows +3.6 km/s with O I 1.30 Å away, while every isolated line
