@@ -72,10 +72,10 @@ def main():
     a = ap.parse_args()
 
     row, grid = sample_row(a.star), Grid()
-    # 'all' windows, not the fitted subset: features excluded from the fit
-    # because the models get them wrong are exactly the ones worth LOOKING
-    # at, so the prediction panels keep them.
-    obs = load_xsl(a.star, metals='all')
+    # 'all' windows AND drop_bad=False: features excluded from the fit because
+    # the models get them wrong are exactly the ones worth LOOKING at, so the
+    # prediction panels keep every one of them.
+    obs = load_xsl(a.star, metals='all', drop_bad=False)
     feats = top_features(a.n)
 
     teff = float(grid.teff[np.argmin(np.abs(grid.teff - float(row['teff_ngsl'])))])

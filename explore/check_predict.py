@@ -215,7 +215,7 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
     if xs is not None:
         for col, (lo, hi, ttl) in enumerate((
                 (4292., 4392., r'XSL: H$\gamma$ wings — core masked (NLTE)'),
-                (4122., 4139., 'XSL: Si II 4129/4132 + Fe II — fitted window'))):
+                (4125., 4139., 'XSL: Si II 4129/4132 + Fe II — fitted window'))):
             axx = fig.add_subplot(gs[3, col])
             style(axx)
             inrange = (xs.wavelength > lo) & (xs.wavelength < hi)

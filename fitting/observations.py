@@ -177,6 +177,22 @@ XSL_METAL_ORDER = 3             # one polynomial per arm across the metal window
 XSL_ARM_SPLIT = 5600.0          # UVB / VIS
 
 
+# Regions dropped from XSL fitting no matter which window contains them.
+#
+# A metal-window edge is not enough on its own: the 4127-4137 window lies wholly
+# inside H-delta's +/-50 A window, so narrowing it changed nothing -- those
+# pixels are masked in through H-delta's red wing regardless. Anything the models
+# get wrong has to be excluded explicitly.
+MODEL_BAD_REGIONS = [
+    (4401.0, 4407.0, 'predicted (K13) O I 3p 5P -> 16s 5S; the level is '
+                     'dissolved at photospheric density, see CAVEATS.md'),
+    (4824.0, 4831.0, 'predicted (K13) O I 3p 3P -> 15d 3D and -> 16s 3S, same'),
+    (4120.0, 4127.0, 'Fe II 4123.8 / 4125.9 poorly predicted: residual reaches '
+                     '3.7-5.6% against ~1.5% across the rest of the window'),
+    (4137.5, 4143.0, 'red edge of the Si II window, residual 2.8%'),
+]
+
+
 def subtract_intervals(interval, blocked, min_width=1.0):
     """(lo, hi) minus a list of blocked ranges -> the surviving pieces."""
     pieces = [list(interval)]
@@ -210,7 +226,12 @@ XSL_METAL_KEEP = {
 # interesting lines are Si II 4129.22 and 4132.06 -- the Si II 4128/4131 doublet
 # in the usual AIR naming, a signature of late-B/early-A stars -- plus Fe II
 # 4129.90 and Fe I 4133.22. Shifting blueward centres the window on those four.
-XSL_METAL_WINDOW = {4134.2: (4123.0, 4138.0)}
+#
+# Trimmed to 4127-4137 after looking at the residual bin by bin. The model is
+# poorly predictive at both edges: 4123-4126 reaches 3.7-5.6% (Fe II 4123.82 and
+# 4125.95) and 4138 reaches 2.8%, while 4127-4137 holds all four target lines and
+# the inter-line continuum stays within ~1.5%.
+XSL_METAL_WINDOW = {4134.2: (4127.0, 4137.0)}
 #
 # NOTE this window lies wholly inside H-delta's +/-50 A window, so those pixels
 # are fitted under H-DELTA's local continuum rather than the metal polynomial.
@@ -266,7 +287,8 @@ def xsl_fit_windows(core_mask=XSL_CORE_MASK, half_width=XSL_BALMER_HALFWIDTH,
 
 
 def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
-             half_width=XSL_BALMER_HALFWIDTH, metals='selected'):
+             half_width=XSL_BALMER_HALFWIDTH, metals='selected',
+             drop_bad=True):
     """XSL DR3 spectrum: vacuum, rest-frame, fitted only in named windows.
 
     Rest-frame means the RV is already removed, so it is FIXED at 0 -- unlike
@@ -329,6 +351,13 @@ def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
             covered |= (w >= lo_) & (w <= hi_)
     ok &= covered
 
+    # ... minus the regions the models are known to get wrong. Gated, because
+    # those regions must not drive a FIT but are exactly what a prediction plot
+    # exists to show: drop_bad=False keeps them visible.
+    if drop_bad:
+        for lo_, hi_, _why in MODEL_BAD_REGIONS:
+            ok &= ~((w >= lo_) & (w <= hi_))
+
     return Observation(
         name='xsl', star=star, wavelength=w, flux=f, uncertainty=e, mask=ok,
         resolution=('R_segments', xsl_resolution_segments()),
@@ -336,6 +365,7 @@ def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
         rv_fixed=0.0,
         meta=dict(xslid=row['xslid'], n_balmer=len(bal), n_metal=len(met),
                   core_mask=core_mask, half_width=half_width,
+                  bad_regions=[(a_, b_) for a_, b_, _ in MODEL_BAD_REGIONS],
                   segments=[(s['name'], s['order'], len(s['ranges']))
                             for s in segs]))
 

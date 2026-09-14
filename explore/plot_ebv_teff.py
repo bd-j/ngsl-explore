@@ -153,7 +153,7 @@ def main():
         style(ax)
         d = d - np.nanmin(d)
         from matplotlib.colors import LogNorm
-        im = ax.pcolormesh(X, Y, np.clip(d, 0.3, 300), cmap='viridis_r',
+        im = ax.pcolormesh(X, Y, np.clip(d, 0.3, 300), cmap='magma',
                            shading='nearest', alpha=.9,
                            norm=LogNorm(vmin=0.3, vmax=300))
         cs = ax.contour(X, Y, d, levels=LEVELS, colors='w', linewidths=1.1)

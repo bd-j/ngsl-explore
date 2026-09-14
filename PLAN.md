@@ -156,9 +156,11 @@ plasma microfield dissolves, and the Si II entries the same scan flags are false
 positives (doubly excited, not Rydberg). Both windows are rejected from fitting
 in `XSL_METAL_REJECT` and kept in the prediction plots.
 
-Still to do: make that scan a standing exclusion so a predicted Rydberg line
-cannot enter a fit window silently, and check whether SYNTHE has an occupation
-probability cutoff that should already have removed them.
+Done: `MODEL_BAD_REGIONS` in `fitting/observations.py` now excludes both O I
+regions from XSL fitting regardless of which window contains them, gated by
+`drop_bad` so the prediction plots still show them. Still to do: check whether
+SYNTHE has an occupation probability cutoff that should already have removed
+these lines.
 
 ## Open decisions
 
