@@ -42,6 +42,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as xsl_load, ARMS, C_KMS
+from common.lines import hydrogen_lines
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -132,25 +133,154 @@ def xsl_resolution_segments():
     return [(lo, hi, C_KMS / (2.3548 * sig)) for _, lo, hi, sig in ARMS]
 
 
-def load_xsl(star, poly_order=4, exclude=None):
-    """XSL DR3 spectrum: vacuum, rest-frame, continuum marginalised.
+# --- XSL fit regions ------------------------------------------------------
+#
+# XSL is fitted only inside named windows, not across its whole range. Two kinds:
+#
+#   BALMER   H-alpha, H-beta, H-gamma, H-delta, each +/- XSL_BALMER_HALFWIDTH
+#            with the CORE masked. These are the dust-immune Teff / log g
+#            diagnostic -- a locally normalised profile cannot be changed by a
+#            smooth reddening law -- and they are why XSL is in the analysis.
+#
+#            H-epsilon and higher orders are excluded. They blend into one
+#            another, so a local continuum is not defined for them: measured at
+#            XSL resolution the wing of H8 does not return to within 2% of the
+#            continuum until 122 A from centre, against 37-41 A for these four.
+#            They also sit inside the held-out break window.
+#
+#   METAL    from data/xsl_metal_windows.csv, chosen by measured [M/H]
+#            sensitivity (explore/metal_sensitivity.py) rather than by
+#            reputation. That measurement is why Mg I b is NOT used: at
+#            ~10,000 K magnesium is largely ionised, so Mg I b 5167 changes by
+#            -0.090 in depth against Mg II 4481 at -0.121, and both trail the
+#            Fe II blends. Ca II H and K are excluded despite being the most
+#            sensitive features in the optical: they sit in the held-out window
+#            and carry an interstellar component, so they would bias [M/H] in
+#            the same direction as the reddening and look self-consistent.
+#
+# The windows are a UNION over 9000 / 10000 / 11000 K because the ranking is
+# NOT stable in Teff -- at 9000 K only 11-17 of the reference top 30 survive,
+# with Spearman -0.04 to 0.22 -- while it is stable in log g. The sample spans
+# 8759-10885 K, so one temperature's optimum is wrong at the ends of it. The
+# union costs little (a window where the line is weak simply contributes little)
+# whereas omitting one loses a star's metallicity constraint outright.
+
+# Core masked because the observed Balmer cores carry a flux excess of ~10% of
+# the line EW relative to these LTE models -- almost certainly NLTE in hydrogen,
+# which the code does not treat for H. Measured core half-width (50% depth) runs
+# 0.8 A at H-alpha to 4.7 A at H-delta, so 6 A covers it with margin. For a fast
+# rotator this should grow: v sin i = 200 km/s adds 2.9 A at H-gamma.
+XSL_BALMER_HALFWIDTH = 50.0     # wing merges into continuum by 37-41 A
+XSL_CORE_MASK = 6.0
+XSL_BALMER_ORDER = 1            # local continuum per Balmer window
+XSL_METAL_ORDER = 3             # one polynomial per arm across the metal windows
+XSL_ARM_SPLIT = 5600.0          # UVB / VIS
+
+
+def subtract_intervals(interval, blocked, min_width=1.0):
+    """(lo, hi) minus a list of blocked ranges -> the surviving pieces."""
+    pieces = [list(interval)]
+    for blo, bhi in sorted(blocked):
+        out = []
+        for lo, hi in pieces:
+            if bhi <= lo or blo >= hi:
+                out.append([lo, hi])
+                continue
+            if blo > lo:
+                out.append([lo, min(blo, hi)])
+            if bhi < hi:
+                out.append([max(bhi, lo), hi])
+        pieces = out
+    return [(lo, hi) for lo, hi in pieces if hi - lo >= min_width]
+
+
+def xsl_metal_windows(path=None):
+    """-> [(lo, hi)] from data/xsl_metal_windows.csv (explore/metal_sensitivity.py)."""
+    p = Path(path or ROOT / 'data' / 'xsl_metal_windows.csv')
+    if not p.exists():
+        return []
+    return [(float(r['lo']), float(r['hi'])) for r in csv.DictReader(open(p))]
+
+
+def xsl_fit_windows(core_mask=XSL_CORE_MASK, half_width=XSL_BALMER_HALFWIDTH,
+                    metals=True):
+    """-> (balmer_windows, metal_windows), each a list of (lo, hi)."""
+    from common.lines import BALMER, line_windows
+    bal = line_windows(sorted(BALMER.values()), half_width, core_mask)
+    met = xsl_metal_windows() if metals else []
+    return bal, met
+
+
+def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
+             half_width=XSL_BALMER_HALFWIDTH, metals=True):
+    """XSL DR3 spectrum: vacuum, rest-frame, fitted only in named windows.
 
     Rest-frame means the RV is already removed, so it is FIXED at 0 -- unlike
-    NGSL. The continuum gets a marginalised polynomial because XSL is
-    ground-based and slit-loss corrected; what survives is the line profiles.
+    NGSL. The continuum is marginalised per segment, which is what removes
+    continuum shape and leaves the line profiles.
     """
     row = _sample_row(star)
     w, f, e, hdr = xsl_load(row['xslid'])          # nm->A, air->vacuum
     ok = (np.isfinite(w) & np.isfinite(f) & np.isfinite(e) & (f > 0) & (e > 0)
           & (w >= MODEL_RANGE[0]) & (w <= MODEL_RANGE[1]))
+
+    bal, met = xsl_fit_windows(core_mask, half_width, metals)
+    inwin = np.zeros_like(w, bool)
+    for lo, hi in bal + met:
+        inwin |= (w >= lo) & (w <= hi)
+    ok &= inwin
     for lo, hi in (exclude or []):
         ok &= ~((w >= lo) & (w <= hi))
+
+    # Calibration segments. Each states the pixels it APPLIES to separately
+    # from its polynomial DOMAIN: a Balmer line gets a local continuum over its
+    # own +/-half_width, while the metal windows are 5-35 A wide, cannot each
+    # support a continuum, and so share one polynomial per arm evaluated across
+    # the whole arm. Applicability and domain must be separate or the arm
+    # polynomial would also claim the Balmer pixels and the design matrix goes
+    # rank-deficient.
+    from common.lines import BALMER
+    from fitting.calibration import check_segments
+    segs = []
+    for lam in sorted(BALMER.values()):
+        segs.append(dict(name=f'balmer_{lam:.0f}', order=XSL_BALMER_ORDER,
+                         domain=(lam - half_width, lam + half_width),
+                         ranges=[(lam - half_width, lam - core_mask),
+                                 (lam + core_mask, lam + half_width)]))
+    balmer_span = [(lam - half_width, lam + half_width)
+                   for lam in BALMER.values()]
+    for arm, lo, hi in (('UVB', 0.0, XSL_ARM_SPLIT),
+                        ('VIS', XSL_ARM_SPLIT, np.inf)):
+        # Metal windows in this arm with the Balmer windows SUBTRACTED, not
+        # dropped. Discarding any window that touched a Balmer span threw away
+        # the whole 4382.5-4421.8 window -- which contains the single most
+        # [M/H]-sensitive feature in the spectrum -- because it clipped the
+        # H-gamma window by 9 A at one end.
+        rng = [x for l, h in met if lo <= 0.5 * (l + h) < hi
+               for x in subtract_intervals((l, h), balmer_span)]
+        if len(rng) > XSL_METAL_ORDER:
+            segs.append(dict(name=f'metal_{arm}', order=XSL_METAL_ORDER,
+                             domain=(min(l for l, _ in rng),
+                                     max(h for _, h in rng)),
+                             ranges=rng))
+    check_segments(segs)
+
+    # the mask must match what the segments actually cover
+    covered = np.zeros_like(w, bool)
+    for seg in segs:
+        for lo_, hi_ in seg['ranges']:
+            covered |= (w >= lo_) & (w <= hi_)
+    ok &= covered
+
     return Observation(
         name='xsl', star=star, wavelength=w, flux=f, uncertainty=e, mask=ok,
         resolution=('R_segments', xsl_resolution_segments()),
-        calibration=('poly', poly_order),
+        calibration=('segments', segs),
         rv_fixed=0.0,
-        meta=dict(xslid=row['xslid'], poly_order=poly_order))
+        meta=dict(xslid=row['xslid'], n_balmer=len(bal), n_metal=len(met),
+                  core_mask=core_mask, half_width=half_width,
+                  segments=[(s['name'], s['order'], len(s['ranges']))
+                            for s in segs]))
 
 
 # Gaia DR3 integrated photometry. Space-based, so trusted for absolute
@@ -272,7 +402,6 @@ def ngsl_band_edges(h_mask=NGSL_H_MASK_A, break_window=None,
     single point. One band there gives one colour against the red; two give an
     internal colour across the steepest part of CCM89 as well.
     """
-    from fitting.fit import hydrogen_lines
     if break_window is None:
         break_window = BREAK_WINDOW
     lines = hydrogen_lines(wrange[0] - 200.0, wrange[1] + 200.0, series=(2, 3))

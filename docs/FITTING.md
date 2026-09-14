@@ -16,7 +16,7 @@ deliverable is a prediction residual with an honest uncertainty, not a best-fit
 | role | data | constrains |
 |---|---|---|
 | **condition** | NGSL collapsed into 13 synthetic bands, 3220–8180 Å | E(B−V), continuum shape |
-| **condition** | XSL, continuum marginalised away | Teff, log g, [M/H], v sin i |
+| **condition** | XSL in named windows, continuum marginalised per segment | Teff, log g, [M/H], v sin i |
 | **predict** | NGSL 3550–4000 Å (Balmer) | the answer |
 | **predict** | NGSL 8180–9500 Å (Paschen) | a second, free test |
 | *neither* | the hydrogen lines in NGSL | XSL resolves them ~16× better |
@@ -94,6 +94,53 @@ one add almost no leverage (0.0017 mag per 0.01 mag E(B−V) internally, against
 would point at the near-UV specifically — blanketing, CCM89's near-UV shape, or
 G430L calibration at its blue edge — rather than at reddening.
 
+## The XSL fit regions
+
+XSL is fitted only inside named windows, not across its whole range.
+
+**Balmer: Hα, Hβ, Hγ, Hδ, each ±50 Å with the core ±6 Å masked.** These are the
+dust-immune Teff / log g diagnostic. Measured at XSL resolution, the wing merges
+back into the continuum by 37–41 Å, and the 50%-depth core runs 0.8 Å (Hα) to
+4.7 Å (Hδ), so ±50/±6 covers wings and excludes cores with margin. For a fast
+rotator the core mask should grow — v sin i = 200 km/s adds 2.9 Å at Hγ.
+
+The cores are masked because the observed Balmer cores carry a flux excess of
+~10% of the line EW relative to these LTE models — almost certainly NLTE in
+hydrogen, which the code does not treat for H. Fitting them would drag Teff and
+log g to absorb physics the models are missing.
+
+**Hε and higher orders are excluded.** They blend into one another so a local
+continuum is not defined: the wing of H8 does not return to within 2% of the
+continuum until **122 Å** from centre, against 37–41 Å for the four used. They
+also sit inside the held-out break window.
+
+**Metal windows chosen by measurement**, not reputation
+(`explore/metal_sensitivity.py` → `data/xsl_metal_windows.csv`): two grid models
+differing only in [M/H], broadened to XSL resolution, continuum-normalised, and
+ranked by change in line *depth*. Depth and normalised, because the fit
+marginalises XSL's continuum away — a feature that only shifts the continuum
+level carries no information once that is done.
+
+That measurement overturned two expectations:
+
+* **Mg I b is the wrong magnesium diagnostic here.** At ~10,000 K magnesium is
+  largely ionised: Mg I b 5167 gives −0.090 against Mg II 4481 at −0.121, and
+  both trail the Fe II blends. Sensitivity is concentrated in **4000–4600 Å**,
+  from Fe II, Ti II and Cr II — 65% of the final window coverage.
+* **The ranking is not stable in Teff.** At 9000 K only 11–17 of the reference
+  top 30 survive, with Spearman −0.04 to 0.22; in log g it is stable (0.80–1.00).
+  The sample spans 8759–10885 K, so the windows are a **union over 9000 / 10000 /
+  11000 K** — 40 windows, 765 Å. A window where the line happens to be weak
+  simply contributes little; omitting one loses a star's constraint outright, so
+  the risk is asymmetric.
+
+**Ca II H and K are excluded** despite K being the single most [M/H]-sensitive
+feature in the optical (−0.209). They sit inside the held-out window *and* carry
+an interstellar component on these sightlines. Being the strongest feature is
+what made K dangerous rather than useful: an ISM line read as stellar
+metallicity biases [M/H] in the same direction as the reddening, so the error
+would look self-consistent. Na I D is out for the same reason.
+
 ## The linear calibration, solved in closed form
 
 Every calibration policy is linear in its coefficients:
@@ -103,9 +150,19 @@ model_i = M_i * sum_k c_k B_k(lambda_i)
 ```
 
 * `'scalar'` — one column. For a star this is (R/d)², plus any grey calibration
-  error. NGSL bands and the photometry get this.
-* `'poly', n` — n+1 Chebyshev columns. XSL gets this.
+  error. NGSL bands get this.
+* `'poly', n` — n+1 Chebyshev columns across the whole fitted range.
+* `'segments'` — an independent Chebyshev per segment. **XSL gets this**: each
+  Balmer window carries its own local continuum (order 1), while the metal
+  windows are 5–35 Å wide, cannot each support one, and share a polynomial per
+  arm (order 3). 16 coefficients over ~6400 pixels.
 * `'none'` — no free columns.
+
+A segment states the pixels it **applies to** separately from its polynomial
+**domain**, because the metal windows are scattered across a whole arm while
+sharing one polynomial, and must not also claim the Balmer pixels. Defining a
+segment by its domain alone made those overlap and the design matrix went
+rank-deficient; `check_segments` now raises on any overlap.
 
 So χ² is quadratic in **c** and one weighted least-squares solve covers all of
 them (`fitting/calibration.py`). Writing it once is the point: NGSL's
@@ -155,6 +212,10 @@ Per library:
 ## Code
 
 ```
+common/lines.py           hydrogen line positions, named Balmer members, ISM
+                          lines. ONE definition -- hydrogen_lines previously
+                          existed twice, in fitting/fit.py and again in
+                          explore/plot_ngsl_vs_model.py.
 fitting/observations.py   one record per dataset: data + resolution +
                           calibration + mask. conditioning_set() / heldout().
 fitting/predict.py        predict(theta, observations) -> one prediction each.
@@ -163,6 +224,8 @@ fitting/predict.py        predict(theta, observations) -> one prediction each.
 fitting/calibration.py    the linear solve.
 common/photometry.py      sedpy filter projection, shared by model and data.
 explore/check_predict.py  the end-to-end smoke test on one star.
+explore/metal_sensitivity.py  ranks features by [M/H] sensitivity; --union
+                          writes the XSL metal windows.
 ```
 
 `predict()` agrees with interpolation to 6×10⁻⁸ at a node and is 5× faster
@@ -198,7 +261,9 @@ Still to write: `likelihood.py` (marginal, with the log-det term) and `scan.py`
 The earlier design fitted the whole NGSL spectrum with emcee over free Teff,
 log g, [M/H], E(B−V), v sin i, `inst`, RV and an error scale, with the break
 *included* in the fit and a `DustPrior` doing the work of separating Teff from
-reddening. `fitting/fit.py` still implements it.
+reddening. It lived in `fitting/fit.py`, which has been **deleted** — it kept a
+second copy of the forward model, which is exactly the drift that once turned a
+request for R = 600 into R = 83.
 
 Two things killed it. A Gaussian dust prior **does not bite**: with 1466 pixels
 and a free error scale the likelihood formally measures E(B−V) to ~0.001, so

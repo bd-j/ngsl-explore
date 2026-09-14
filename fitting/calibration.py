@@ -4,9 +4,14 @@ Every calibration policy in observations.py is LINEAR in its coefficients:
 
     model_i = M_i * sum_k c_k B_k(lambda_i)
 
-- 'scalar'  is one column, B_0 = 1.  This is the (R/d)^2 of the star.
-- 'poly', n is n+1 Chebyshev columns.
-- 'none'    is no columns at all.
+- 'scalar'    is one column, B_0 = 1.  This is the (R/d)^2 of the star.
+- 'poly', n   is n+1 Chebyshev columns across the whole fitted range.
+- 'segments'  is an independent Chebyshev per named wavelength segment, each
+              zero outside its own segment. This is what XSL needs: a Balmer
+              window wants its own local continuum, while the metal windows are
+              5-35 A wide and cannot support one each, so they share a low-order
+              polynomial per arm.
+- 'none'      is no columns at all.
 
 So chi^2 is quadratic in c and the best-fit coefficients come from one weighted
 least-squares solve -- no sampling, no optimiser. That is the whole reason the
@@ -22,6 +27,39 @@ Marginalising rather than profiling these coefficients adds a -0.5*ln|A| term
 This module stops at the point estimate, which is what a residual plot needs.
 """
 import numpy as np
+
+
+def segment_pixels(w, seg):
+    """Pixels a calibration segment APPLIES to.
+
+    Separate from the polynomial's domain on purpose. The XSL metal windows are
+    scattered across a whole arm and share one polynomial, so the domain is the
+    arm while the applicable pixels are only the windows -- and they must
+    exclude the Balmer windows, which carry their own local continuum. Defining
+    a segment by its domain alone made those overlap, giving pixels columns from
+    two segments and a rank-deficient design matrix.
+    """
+    w = np.asarray(w, float)
+    sel = np.zeros_like(w, bool)
+    for lo, hi in seg['ranges']:
+        sel |= (w >= lo) & (w <= hi)
+    return sel
+
+
+def segment_x(w, seg):
+    """Chebyshev variable on [-1, 1] over the segment's DOMAIN."""
+    lo, hi = seg['domain']
+    return 2.0 * (np.asarray(w, float) - lo) / (hi - lo) - 1.0
+
+
+def check_segments(segs):
+    """Raise if two segments claim the same wavelength -- see segment_pixels."""
+    flat = [(lo, hi, i) for i, s in enumerate(segs) for lo, hi in s['ranges']]
+    flat.sort()
+    for (lo1, hi1, i1), (lo2, hi2, i2) in zip(flat, flat[1:]):
+        if lo2 < hi1 and i1 != i2:
+            raise ValueError(f'calibration segments {i1} and {i2} overlap at '
+                             f'{lo2:.1f}-{min(hi1, hi2):.1f} A')
 
 
 def usable(obs, model):
@@ -52,6 +90,26 @@ def design_matrix(obs, model):
         return mod[:, None], 0
     if kind == 'scalar':
         return mod[:, None], 1
+    if kind == 'segments':
+        if obs.wavelength is None:
+            raise ValueError("'segments' calibration needs a wavelength axis")
+        w = np.asarray(obs.wavelength, float)[m]
+        cols = []
+        for seg in obs.calibration[1]:
+            inseg = segment_pixels(w, seg)
+            order = int(seg['order'])
+            if inseg.sum() <= order:
+                continue          # not enough points to define this continuum
+            x = segment_x(w, seg)
+            for k in range(order + 1):
+                c = np.zeros_like(w)
+                c[inseg] = mod[inseg] * np.polynomial.chebyshev.chebval(
+                    x[inseg], np.eye(order + 1)[k])
+                cols.append(c)
+        if not cols:
+            raise ValueError(f'{obs.star}/{obs.name}: no usable calibration segment')
+        return np.vstack(cols).T, len(cols)
+
     if kind == 'poly':
         order = int(obs.calibration[1])
         if obs.wavelength is None:
@@ -99,6 +157,21 @@ def solve(obs, model, rcond=None):
         x = 2.0 * (w - lo) / (hi - lo) - 1.0
         poly = np.polynomial.chebyshev.chebval(x, c)
         return full * poly, c
+    if kind == 'segments':
+        w = np.asarray(obs.wavelength, float)
+        wm = w[m]
+        out = np.full_like(full, np.nan)
+        i = 0
+        for seg in obs.calibration[1]:
+            order = int(seg['order'])
+            if segment_pixels(wm, seg).sum() <= order:
+                continue
+            n = order + 1
+            sel = segment_pixels(w, seg)
+            x = segment_x(w, seg)
+            out[sel] = full[sel] * np.polynomial.chebyshev.chebval(x[sel], c[i:i + n])
+            i += n
+        return out, c
     raise ValueError(kind)
 
 

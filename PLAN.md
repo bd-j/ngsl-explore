@@ -87,67 +87,16 @@ degree-1 extrapolated to 3646) needs checking against the band edges: its slope
 is fitted over a range that overlaps the 3385-3550 band, so the "independent"
 claim needs the windows to be disjoint.
 
-### 4. Define the XSL fit regions properly
+### 4. ~~Define the XSL fit regions~~ — DONE 2026-09-14
 
-Right now XSL gets one degree-4 Chebyshev across 3501-9500 A, which is a very
-long baseline for five terms and eats Teff information indiscriminately.
-Replace it with explicit windows at order 1-2 each, of two kinds.
+Balmer windows (Hα, Hβ, Hγ, Hδ, ±50 Å, cores ±6 Å masked) plus 40 metal windows
+chosen by measured [M/H] sensitivity, with a segmented calibration: order 1 per
+Balmer window, order 3 per arm across the metal windows. 16 coefficients,
+~6400 pixels. `explore/metal_sensitivity.py` generates the windows.
 
-**Balmer lines.** These are the dust-immune Teff / log g diagnostic and the
-reason XSL is in the analysis at all -- a locally normalised profile cannot be
-changed by a smooth reddening law. XSL covers H-alpha 6563, H-beta 4861,
-H-gamma 4341 and H-delta 4102 with clean separation, so each gets its own window
-with a low-order local continuum. Two cautions:
-
-* The high-order members (H-epsilon 3970 down to the series limit) are blended,
-  so a "local continuum" there is ill-defined and the polynomial may absorb or
-  inject break-like structure. Use them only after checking that.
-* Those same members sit inside the NGSL held-out window. That is *not* double
-  counting -- XSL's continuum is marginalised away, so it contributes line
-  SHAPE and carries no information about the jump amplitude -- but it should be
-  stated rather than assumed, since it looks like a violation at first glance.
-* H-alpha's red wing approaches the telluric B band at 6860 A; keep the window
-  clear of it.
-
-**Metal lines, chosen by measured [M/H] sensitivity.** Seed measurement done:
-grid models at 10200 K / log g 3.8, [M/H] = -0.5 vs +0.3, broadened to R = 9800
-and continuum-normalised, ranked by change in line depth. Excluded up front:
-hydrogen +/-25 A, the **held-out window 3550-4000 A**, and **Na I D** (ISM).
-213 features still exceed 0.02; the strongest:
-
-| feature | lambda (vac) | width | d(depth) |
-|---|---|---|---|
-| Fe II / Ti II blend | 4410.1 | 19 | -0.246 |
-| Cr II / Fe II | 4827.3 | 5 | -0.196 |
-| Fe II 4549 | 4550.7 | 1 | -0.158 |
-| Fe II | 4535.3 | 1 | -0.155 |
-| Fe II / Ti II | 4390.8 | 13 | -0.145 |
-| Fe II | 4134.2 | 11 | -0.136 |
-| blend | 4287.6 | 8 | -0.133 |
-| blend | 4183.0 | 21 | -0.124 |
-| **Mg II 4481** | 4482.5 | 2 | -0.121 |
-| Fe II | 5057.5 | 1 | -0.119 |
-| **Si II 6347** | 6348.7 | 2 | -0.113 |
-
-Three things to carry forward:
-
-* **The sensitivity is concentrated in 4000-4600 A**, dominated by Fe II, Ti II
-  and Cr II blends -- 50 of the 213 features sit blueward of 4600 A, and they
-  include every one of the strongest. Any XSL metallicity constraint comes
-  mostly from there. Si II 6347 is the best feature redward of 5100 A.
-* **Mg I b is the wrong magnesium diagnostic at these temperatures.** At
-  ~10,000 K magnesium is largely ionised: Mg I b 5167 gives -0.090 against
-  Mg II 4481 at -0.121, and both trail the Fe II blends. Use Mg II 4481.
-* **Ca II H and K are excluded**, on two independent grounds: they sit at
-  3934.8 / 3969.6 A, inside the held-out window, and they carry an
-  interstellar component on these sightlines. K was the most sensitive feature
-  in the whole spectrum before exclusion (-0.209), which is exactly why it
-  needed excluding rather than using -- an ISM line masquerading as stellar
-  metallicity would bias [M/H] in the direction of the reddening. Na I D is out
-  for the same ISM reason.
-
-Redo the ranking at more than one node before fixing the windows -- the seed is
-one Teff / log g, and the answer may move across the sample.
+Still open from it: the core mask should scale with v sin i (200 km/s adds
+2.9 Å at Hγ), and the ranking should be re-derived once [M/H] is actually fitted
+rather than assumed at the grid midpoint.
 
 ### 5. `likelihood.py`
 
@@ -185,10 +134,6 @@ residual level.
   tension is real and needs explaining.
 * **v sin i for the sample** — measure from XSL, where it is measurable over
   ~15–100 km/s. None of the sample has a published value in hand.
-* **`fitting/fit.py`** still holds the superseded emcee path and two live bugs
-  (walkers initialised outside the prior; burn-in hardcoded at 500 rather than
-  τ-based). Either fix or retire it — it must not keep a second copy of the
-  forward model.
 * **The grid's raw `.spec` files exist only on Cannon**; `models/grid/` holds
   35 `.atm` locally. Repacking at a different resolution, or extending in
   [M/H], needs that machine. `pack_grid.py` is also not incremental — it globs

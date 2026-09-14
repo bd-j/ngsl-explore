@@ -27,6 +27,7 @@ from scipy.ndimage import gaussian_filter1d
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.balmer_metric import balmer_discontinuity
+from common.lines import hydrogen_lines
 from common.lsf import broaden, broaden_ngsl, NGSL_LSF
 from grid.make_model import hnu_to_flam
 from common.ngsl_wavecal import apply_wavecal, load_table
@@ -56,16 +57,6 @@ WINS_P = [(7700., 8150.)]
 
 OBS_C, MOD_C, SURFACE = '#2a78d6', '#eb6834', '#fcfcfb'
 INK, MUTED, GRID = '#22262b', '#6b7280', '#dfe3e8'
-
-
-def hydrogen_lines(wmin, wmax, series=(2, 3), nmax=40):
-    out = []
-    for m in series:
-        for n in range(m + 1, nmax):
-            lam = 911.7635 / (1.0 / m ** 2 - 1.0 / n ** 2)
-            if wmin <= lam <= wmax:
-                out.append(lam)
-    return np.array(out)
 
 
 def norm_mask(wo, wins):
