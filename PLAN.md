@@ -182,6 +182,22 @@ these lines.
 
 ## Things to chase
 
+* **XSL sits ~+2.6 km/s redward of the model on isolated lines**, consistently
+  across five stars (Si II 4129 gives +4.2 ± 2.1 km/s; Ti II 4535 gives
+  +0.6 ± 3.1). It is NOT air/vacuum — that would be +84 km/s — and it is not a
+  per-star RV, since the offset differs between lines within one star. It is a
+  quarter of an XSL pixel (10 km/s) and a twelfth of the resolution element
+  (31 km/s FWHM), so it will not bias line depths much, but `rv_fixed = 0.0`
+  for XSL is over-confident given that the rest-frame reduction has finite
+  accuracy. **Decide:** let XSL carry a free RV with a tight prior, or fit one
+  offset per star and record it.
+* **Apparent shifts in the BLENDED panels are a line-ratio effect, not a
+  wavelength error.** Fe II 4410 shows +15.1 km/s with another Fe II 0.61 Å
+  away, and 4827 shows +3.6 km/s with O I 1.30 Å away, while every isolated line
+  sits at +0.7 to +4.2. When the model gets the relative strengths of a close
+  pair wrong, the composite minimum moves. Do not correct these with a
+  wavelength shift.
+
 * **Ti II 4287.6 A is deeper in HD194453 than any grid [M/H] can produce**
   (observed depth 0.035 against 0.009 at [M/H] = -0.5 and 0.027 at +0.3). The
   other seven of the top eight sit inside the grid's reach, so this is not a
