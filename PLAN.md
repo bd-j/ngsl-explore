@@ -31,15 +31,36 @@ under both held-out breaks.
 
 ## Tomorrow
 
-### 1. E(B−V) sweep, minimum χ² — the immediate task
+### 1. ~~E(B−V) sweep, minimum χ²~~ — DONE 2026-09-14
 
-Sweep E(B−V) at fixed node and plot χ²(E(B−V)) for the bands, with the minimum
-and its curvature marked. Then the same sweep in 2-D against Teff, because the
-two are covariant at +126 K per 0.01 mag and a 1-D sweep hides that.
+`explore/plot_ebv_teff.py` → `figures/ebv_teff_<star>.png`. Three panels, Teff on
+the grid's own nodes × E(B−V), at fixed log g and [M/H]. It behaves as the design
+requires:
 
-Outputs: one panel per star, plus a summary of `E(B−V)_best` and σ from the
-curvature. Watch for the minimum sitting at a *grid edge* rather than a turning
-point — that is a failure, not a measurement.
+* **NGSL bands**: a long diagonal degeneracy valley, as expected — both
+  parameters tilt the continuum. Measured ridge slope **+93 K per 0.01 mag**,
+  against **+126** from the earlier synthetic test. Same sign and order, 26%
+  apart, and the difference is explicable: the synthetic number came from the
+  full 3300–9400 Å spectrum, this one from 13 bands stopping at 8180 Å, so they
+  weight wavelengths differently. Neither is wrong; quote the banded one for the
+  banded fit.
+* **XSL lines**: a **vertical stripe**. Insensitive to E(B−V), exactly as the
+  dust-immunity argument requires. Its E(B−V) minimum is meaningless and the
+  figure says so rather than printing a number.
+* **Combined**: the intersection closes, at **10300 K, E(B−V) = 0.039**.
+
+Error inflation is floored at 1, so it may widen an error bar and never shrink
+one: the bands come out at χ²/n = 0.14 and rescaling that to 1 would deflate
+them by 2.7×, claiming a precision the 1% calibration floor exists to disclaim.
+
+**The dust tension is still there and is now sharper.** With Teff free over the
+whole grid the fit still wants E(B−V) ≈ 0.039, against a photometric value of
+−0.01 (i.e. consistent with zero). It sits comfortably under the SF11 upper
+bound of 0.0896, so it is not impossible — but 0.04 mag of unexplained reddening
+is 8× the precision the break prediction needs. Either the photometry is wrong
+for this star, or something else tilts the NGSL continuum by ~1.5%. Next: run
+this for the whole sample and see whether the offset is common to all of them,
+which would point at NGSL rather than at the stars.
 
 ### 2. More grid points — the node scan
 

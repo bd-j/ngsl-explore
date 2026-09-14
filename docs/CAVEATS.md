@@ -100,6 +100,30 @@ at 3200 to 4.37 A at 4200 (31%) against a true LSF varying 2%. Harmless inside
 one grating, off by ~3x for anyone extending below 3058 A.
 See `broaden_ngsl()` in `common/lsf.py`.
 
+### Gaia XP has a flux discontinuity at the BP/RP join
+
+**Symptom:** a model fitted to Gaia XP bands shows a step in the residual near
+6400 A rather than the smooth tilt a reddening error would give.
+
+**Cause:** BP and RP are separately calibrated and their join is imperfect.
+Integrating XP and NGSL through identical bands over 10 stars, the ratio falls
+monotonically across BP (1.033 at 3459 A to 0.952 at 6097 A) and then **jumps
++3.1% at the changeover** (0.982 at 6688 A), V-shaped with the minimum at the
+join. The common pattern reaches 4.8% while star-to-star scatter is only 1.2%,
+and the sample spans E(B-V) from ~0 to 0.125 -- real reddening differences would
+show as scatter, not as a shape every star shares. So it is instrumental.
+
+**Why it matters:** the BP-side tilt alone is worth **dE(B-V) = 0.040 mag**
+against the ~0.005 mag the break prediction needs, so it would be read as
+reddening, 8x the error budget.
+
+**Do:** do not use Gaia XP as an independent dust lever against NGSL. The dust
+constraint here comes from NGSL alone. A median flux ratio of 1.011 between the
+two, which is what tempted us, validates the mean LEVEL and says nothing about
+the colour -- and the colour is the entire constraint. If XP is ever needed, the
+1.2% reproducibility means the pattern can be divided out
+(`data/xp_ngsl_bandratio.csv`), but then XP is no longer independent of NGSL.
+
 ### UVES-POP has real coverage gaps, and they are not where you expect
 The delivered spectra have holes. Blanking them with NaN is mandatory: drawing
 a line across a gap previously produced an apparent flux feature at 8500 A that

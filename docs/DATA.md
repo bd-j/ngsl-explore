@@ -223,12 +223,48 @@ range, with no slit and no atmosphere. What matters is the lever arm:
 XP sampled spectra are 343 points, 336–1020 nm at 2 nm, externally calibrated to
 ~1–2%. Retrieved for 11 of 13 stars; HD143459 (V = 5.53) and HD174240 have no XP.
 
-**Verified, not assumed:** XP against NGSL for HD194453 gives a median flux ratio
-of **1.011** over 4000–9000 Å — two independent space observatories agreeing to
-1.1% in absolute flux, which validates both calibrations and the unit conversion.
-The 10.7% scatter about that is XP's very low resolution smearing lines
-differently, not a calibration disagreement; the ratio at 4000 Å drops to 0.91
-because Hδ/Hγ sit there.
+**The absolute level agrees; the colour does not.** XP against NGSL for
+HD194453 gives a median flux ratio of **1.011** over 4000–9000 Å, which
+validates the mean level and the unit conversion. It does **not** validate the
+colour, and the colour is the whole dust lever — see
+[the BP/RP discontinuity](#gaia-xp-has-a-discontinuity-at-the-bprp-join) below.
+An earlier version of this section read that 1.011 as validating both
+calibrations, which was too strong a conclusion from a median.
+
+### Gaia XP has a discontinuity at the BP/RP join
+
+Integrating XP and NGSL through **identical** tophat bands removes resolution
+from the comparison entirely (a band integral is conserved under convolution),
+so what is left is pure spectrophotometry. Over the 10 sample stars with both
+(`explore/xp_vs_ngsl.py` → `data/xp_ngsl_bandratio.csv`, normalised at 4293 Å):
+
+| band λ_eff | arm | XP / NGSL | star-to-star scatter |
+|---|---|---|---|
+| 3459 | BP | 1.033 | 0.039 |
+| 4293 | BP | 1.000 | — |
+| 4864 | BP | 0.979 | 0.005 |
+| 5539 | BP | 0.963 | 0.005 |
+| 6097 | BP | **0.952** | 0.009 |
+| 6688 | RP | **0.982** | 0.012 |
+| 7489 | RP | 0.985 | 0.013 |
+| 8654 | RP | 0.987 | 0.012 |
+
+The ratio falls monotonically across BP and then **jumps by +3.1% at the
+BP/RP changeover near 6400 Å**, giving a V-shaped pattern with its minimum at
+the join — which is what two arms with independent flux calibrations look like
+when the join is imperfect.
+
+**It is instrumental, not astrophysical.** The common pattern reaches 4.8% while
+the star-to-star scatter is 1.2%, and these stars span E(B−V) from ~0 to 0.125 —
+real reddening differences would appear as scatter, not as a shape shared by
+every star.
+
+**Why it matters:** the BP-side tilt alone is equivalent to **ΔE(B−V) = 0.040
+mag**, against the ~0.005 mag the Balmer-break prediction needs. Left in, it
+would have been read as reddening. This is why the dust constraint comes from
+NGSL alone (see [FITTING.md](FITTING.md)) and XP is not used as an independent
+lever. The 1.2% reproducibility does mean the pattern could be divided out if XP
+were ever needed, at the cost of XP no longer being independent of NGSL.
 
 **Units.** XP flux is W m⁻² nm⁻¹; NGSL and the models are erg s⁻¹ cm⁻² Å⁻¹. The
 factor is 10², and the wavelengths are **vacuum** — Gaia has no air path, so
