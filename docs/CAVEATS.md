@@ -229,6 +229,59 @@ vs the default Stehle-Hutcheon Stark profiles) is the obvious A/B.
 does minimize the residual (7.5 A, "R ~ 486"), but it launders physics into an
 instrumental parameter and that number is not a resolution measurement.
 
+### Predicted O I Rydberg lines put spurious absorption in the models
+
+The Kurucz list contains **predicted** (computed, not laboratory) transitions as
+well as measured ones, and two of them land hard in the blue where the [M/H]
+diagnostics are.
+
+**Symptom:** the model shows a strong absorption feature the data does not have.
+At 4403.4 A the model over-absorbs by **21.6% in flux**; in locally normalised
+line depth it is 0.132 against an observed 0.012. A second, weaker case sits at
+4827 (model 0.077, observed 0.022). For contrast, a real line in the same
+spectrum behaves normally: Fe II 4550 gives model 0.085 against observed 0.108.
+
+**Cause:** in each case a cluster of O I lines flagged `K13` whose UPPER LEVEL is
+a very high Rydberg state.
+
+| feature | transition | upper level | below the O I limit |
+|---|---|---|---|
+| 4403.6 / 4404.0 / 4404.7 | `(4S)3p 5P -> (4S)16s 5S` | 109334.4 cm-1 | 503 cm-1 |
+| 4826.6 / 4826.8 | `(4S)3p 3P -> (4S)15d 3D` | 109348.9 cm-1 | 488 cm-1 |
+| 4828.5 / 4828.6 | `(4S)3p 3P -> (4S)16s 3S` | 109341.0 cm-1 | 496 cm-1 |
+
+Those levels cannot exist in a photosphere. At the line-forming electron density
+of these models, N_e = 2.7e14 cm-3 at tau_5000 = 2/3, the Inglis-Teller estimate
+puts the last surviving level at **n ~ 15**, so n = 15-16 is dissolved into the
+continuum by the plasma microfield. The tabulated log gf of -0.27 to -0.83 is
+also far too strong for a 3p -> 16s transition, where the oscillator strength
+should fall off roughly as n^-3.
+
+**Do:** exclude these regions from any fit window. `XSL_METAL_REJECT` in
+`fitting/observations.py` records 4410.1 and 4827.3 as rejected on exactly this
+ground. They are kept in the PREDICTION plots, because a feature the models get
+wrong is worth looking at -- it just must not be allowed to drive a fit.
+
+**How widespread:** scanning 3500-9500 A for lines with log gf > -2 whose upper
+level is within 1500 cm-1 of the ionization limit returns 35 candidates, and the
+strongest O I ones are exactly the two features already noticed. So this is a
+small closed set, not a pervasive problem.
+
+**The Si II entries that scan also returns are FALSE POSITIVES**, and the reason
+matters for anyone repeating the test. Si II 5708.0 and 6701.3 (`KEP`, log gf
+-0.23 and -0.25) sit only 53 cm-1 below the Si II ground-state limit, which looks
+far worse than the O I cases -- but they are `3s3p4p 4D`, a **doubly excited**
+configuration belonging to a series that converges on an EXCITED Si III limit,
+not a high-n Rydberg state of the ground configuration. Their levels are barely
+populated and they produce no measurable feature: model depth 0.004 and 0.003
+against observed 0.015 and 0.009, where the real Si II 6347 gives 0.070. A
+proximity-to-the-limit test alone therefore over-flags; the term designation has
+to be read to tell a single-electron Rydberg series from a doubly excited one.
+
+**Not yet checked:** whether SYNTHE has a level-dissolution or occupation
+probability cutoff that should have removed the O I lines and is not being
+applied.
+
 ### Rotation is not the explanation, but must still be applied
 Rotational broadening was tested for the NGSL core excess and rejected: it needs
 an implausible 300 km/s and still fits worse than a plain Gaussian, because a

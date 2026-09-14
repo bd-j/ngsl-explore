@@ -129,36 +129,15 @@ assumed at the grid midpoint.
 
 ### Predicted O I Rydberg lines contaminate the models
 
-The two windows that looked worst against the data are the same problem. The
-model over-absorbs at **4403.4 Å by 21.6%**, and the culprit is three Kurucz
-**predicted** (K13) O I lines, `(4S)3p 5P → (4S)16s 5S`, whose upper level sits
-**503 cm⁻¹ below the O I ionization limit**. At Nₑ = 2.7×10¹⁴ cm⁻³ the
-Inglis–Teller estimate puts the last surviving level at n ≈ 15, so an n = 16
-level is dissolved into the continuum by the plasma microfield and cannot carry
-a photospheric line at all. The listed log gf of −0.47 to −0.83 is also far too
-strong for a 3p → 16s transition.
+Written up in [docs/CAVEATS.md](docs/CAVEATS.md#model-physics) -- the 4403 and
+4827 features are Kurucz predicted O I transitions to n = 15/16 levels that the
+plasma microfield dissolves, and the Si II entries the same scan flags are false
+positives (doubly excited, not Rydberg). Both windows are rejected from fitting
+in `XSL_METAL_REJECT` and kept in the prediction plots.
 
-**4827 is identical**: predicted (K13) O I `3p 3P → 15d 3D` and `→ 16s 3S`,
-upper levels 488–496 cm⁻¹ below the limit. The Cr II line that leads that blend
-is real (LSND, E_low 3.87 eV) but cannot be separated from them.
-
-Scanning 3500–9500 Å for lines with log gf > −2 whose upper level is within
-1500 cm⁻¹ of the ionization limit returns **35 lines: 31 O I and 4 Si II** — and
-the strongest O I ones are exactly at 4403–4405 and 4826–4829. So this is a
-small, closed set rather than a pervasive problem, and the two features already
-noticed are its two worst instances in the optical.
-
-Worth doing: build that list into a standing exclusion so a predicted Rydberg
-line can never enter a fit window silently, and check whether SYNTHE has a
-level-dissolution cutoff that should have removed them.
-
-### 5. `likelihood.py`
-
-`marginalize_linear(design, y, ivar)` — generalising `calibration.solve` with the
-−½ln|A| term and a prior on the coefficients. Plus the analytic error-scale
-profile (ŝ² = χ²/N, so node ranking is by N·ln(χ²/N)), which removes `lnerr`
-from the parameter vector and calibrates the confidence scaling to the actual
-residual level.
+Still to do: make that scan a standing exclusion so a predicted Rydberg line
+cannot enter a fit window silently, and check whether SYNTHE has an occupation
+probability cutoff that should already have removed them.
 
 ## Open decisions
 
