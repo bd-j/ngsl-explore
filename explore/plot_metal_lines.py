@@ -34,6 +34,8 @@ from fitting.model import Grid
 from fitting.observations import load_xsl
 from fitting.predict import predict
 from fitting.calibration import solve
+from common.species import (atmosphere_point, abundances, species_label,
+                            dominant_species)
 
 ROOT = Path(__file__).resolve().parent.parent
 OBS_C, MOD_C, BAND_C = '#2a78d6', '#eb6834', '#7a3fa8'
@@ -88,11 +90,29 @@ def main():
 
     cal_node, cal_lo, cal_hi = model_for(mh), model_for(mh_lo), model_for(mh_hi)
 
+    # Dominant species per window, DERIVED from the Kurucz list with a full
+    # Saha-Boltzmann weight at the model's own line-forming conditions -- not
+    # assigned from memory. Ranking on log gf alone would return Co I and Nb I,
+    # which have the most transitions in this range and are entirely ionised
+    # away at 11,600 K.
+    atm = ROOT / 'models' / 'work' / f'{a.star}.atm'
+    species = {}
+    if atm.exists():
+        T_line, ne_line = atmosphere_point(atm)
+        eps = abundances(atm)
+        print(f'  line-forming point: T={T_line:.0f} K, Ne={ne_line:.2e} cm^-3')
+        for f in feats:
+            species[float(f['lam_center'])] = species_label(
+                float(f['lam_lo']), float(f['lam_hi']), T_line, ne_line, eps)
+    else:
+        print(f'  no {atm.name}: species not identified')
+
     # Where does the observed depth sit relative to what the grid can reach?
     # Eyeballing the band is not enough: a feature the model gets wrong at EVERY
     # grid metallicity is a line-list problem, not a metallicity measurement,
     # and the two look similar in a plot.
-    print(f'\n  {"lambda":>9}{"obs":>9}{"[M/H]=-0.5":>12}{"[M/H]=+0.3":>12}  verdict')
+    print(f'\n  {"species":>12}{"lambda":>9}{"obs":>9}{"[M/H]=-0.5":>12}'
+          f'{"[M/H]=+0.3":>12}  verdict')
     verdicts = {}
     for f in feats:
         lo, hi = float(f['lam_lo']), float(f['lam_hi'])
@@ -112,7 +132,8 @@ def main():
         else:
             v = 'within grid range'
         verdicts[float(f['lam_center'])] = v
-        print(f'  {float(f["lam_center"]):>9.1f}{d_obs:>9.3f}{d_lo:>12.3f}'
+        print(f'  {species.get(float(f["lam_center"]), "?"):>12}'
+              f'{float(f["lam_center"]):>9.1f}{d_obs:>9.3f}{d_lo:>12.3f}'
               f'{d_hi:>12.3f}  {v}')
     n_out = sum(1 for v in verdicts.values() if 'grid can reach' in v)
     print(f'\n  {n_out}/{len(verdicts)} features fall outside the grid\'s '
@@ -152,7 +173,8 @@ def main():
         ax.set_xlim(x0, x1)
         v = verdicts.get(cen, '')
         flag = '  \u2014 outside grid' if 'grid can reach' in v else ''
-        ax.set_title(f'{cen:.1f} $\\AA$   ($\\Delta$depth {dd:+.3f}, '
+        sp = species.get(cen, '')
+        ax.set_title(f'{sp}   {cen:.1f} $\\AA$   ($\\Delta$depth {dd:+.3f}, '
                      f'{hi - lo:.0f} $\\AA$ wide){flag}', fontsize=9,
                      color=(HELD_C if flag else INK))
         ax.set_ylabel(r'F$_\lambda$', fontsize=8, color=INK)
