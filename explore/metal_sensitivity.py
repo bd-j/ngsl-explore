@@ -25,6 +25,12 @@ Excluded up front, each for a stated reason:
                              so the error would look self-consistent.
   Na I D                     interstellar for the same reason
 
+Each feature is also labelled with its dominant species, DERIVED from the
+Kurucz line list with a full Saha-Boltzmann weight at the model atmosphere's own
+line-forming conditions (common/species.py). Identifications must not be
+assigned from memory: an earlier version of this analysis carried labels written
+from expectation and half of them were wrong.
+
 Writes data/metal_sensitivity.csv
 
     python3 explore/metal_sensitivity.py
@@ -42,6 +48,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid
 from fitting.observations import BREAK_WINDOW, xsl_resolution_segments
 from common.lines import hydrogen_lines, ISM_LINES
+from common.species import (atmosphere_point, abundances, species_label,
+                            dominant_species)
 
 ROOT = Path(__file__).resolve().parent.parent
 XSL_RANGE = (3501.0, 9500.0)
@@ -122,6 +130,9 @@ def main():
     ap.add_argument('--union-top', type=int, default=40)
     ap.add_argument('--pad', type=float, default=2.0,
                     help='A added to each side of a feature to make a window')
+    ap.add_argument('--atm', default='models/work/HD194453.atm',
+                    help='model atmosphere supplying T, N_e and abundances for '
+                         'the species identification')
     a = ap.parse_args()
 
     grid = Grid()
@@ -129,24 +140,39 @@ def main():
     w, d = sensitivity(grid, a.teff, a.logg, a.mh_lo, a.mh_hi, res)
     feat = features(w, d)
 
+    atm = ROOT / a.atm
+    ident = {}
+    if atm.exists():
+        T_line, ne_line = atmosphere_point(atm)
+        eps = abundances(atm)
+        print(f'species from {atm.name}: T={T_line:.0f} K, '
+              f'Ne={ne_line:.2e} cm^-3 at tau_5000 = 2/3')
+        for f in feat:
+            ident[f[0]] = species_label(f[0], f[1], T_line, ne_line, eps)
+    else:
+        print(f'{atm} not found: species not identified')
+
     print(f'[M/H] sensitivity at {a.teff:.0f} K / log g {a.logg}, '
           f'{a.mh_lo:+.1f} vs {a.mh_hi:+.1f}, XSL resolution')
     print(f'excluded: H +/-{H_EXCLUDE:.0f} A, break window '
           f'{BREAK_WINDOW[0]:.0f}-{BREAK_WINDOW[1]:.0f} A, '
           f'{", ".join(ISM_LINES)} (ISM)\n')
-    print(f'  {"lambda":>9} {"width":>7} {"d(depth)":>9}')
+    print(f'  {"lambda":>9} {"width":>7} {"d(depth)":>9}  species')
     for f in feat[:a.top]:
-        print(f'  {0.5 * (f[0] + f[1]):>9.1f} {f[1] - f[0]:>7.1f} {f[2]:>9.3f}')
+        print(f'  {0.5 * (f[0] + f[1]):>9.1f} {f[1] - f[0]:>7.1f} {f[2]:>9.3f}'
+              f'  {ident.get(f[0], "?")}')
     blue = sum(1 for f in feat if f[0] < 4600)
     print(f'\n  {len(feat)} features above {MIN_DEPTH_CHANGE}; '
           f'{blue} blueward of 4600 A')
 
     with open(ROOT / 'data' / 'metal_sensitivity.csv', 'w', newline='') as fh:
         wr = csv.writer(fh)
-        wr.writerow(['lam_center', 'lam_lo', 'lam_hi', 'width', 'depth_change'])
+        wr.writerow(['lam_center', 'lam_lo', 'lam_hi', 'width', 'depth_change',
+                     'species'])
         for f in feat:
             wr.writerow([f'{0.5 * (f[0] + f[1]):.2f}', f'{f[0]:.2f}',
-                         f'{f[1]:.2f}', f'{f[1] - f[0]:.2f}', f'{f[2]:.4f}'])
+                         f'{f[1]:.2f}', f'{f[1] - f[0]:.2f}', f'{f[2]:.4f}',
+                         ident.get(f[0], '')])
     print(f'  -> data/metal_sensitivity.csv ({len(feat)} rows)')
 
     if a.check_stability:

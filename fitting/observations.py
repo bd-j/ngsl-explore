@@ -194,25 +194,79 @@ def subtract_intervals(interval, blocked, min_width=1.0):
     return [(lo, hi) for lo, hi in pieces if hi - lo >= min_width]
 
 
-def xsl_metal_windows(path=None):
-    """-> [(lo, hi)] from data/xsl_metal_windows.csv (explore/metal_sensitivity.py)."""
+# Metal windows actually FITTED, by feature centre. The sensitivity ranking says
+# which features carry [M/H]; this says which of them the models can be trusted
+# to reproduce, which is a different question and has to be answered against the
+# data. Everything else stays available for prediction plots -- a feature the
+# models get wrong is worth LOOKING at and must not be allowed to drive the fit.
+XSL_METAL_KEEP = {
+    4550.7: 'Fe II',
+    4535.3: 'Ti II + Fe II',
+    4134.2: 'Fe II + Si II 4129',
+}
+
+# The auto-generated window for the 4134 feature (4126.6-4141.6) is centred
+# redward of the lines that actually matter, so it is overridden. In vacuum the
+# interesting lines are Si II 4129.22 and 4132.06 -- the Si II 4128/4131 doublet
+# in the usual AIR naming, a signature of late-B/early-A stars -- plus Fe II
+# 4129.90 and Fe I 4133.22. Shifting blueward centres the window on those four.
+XSL_METAL_WINDOW = {4134.2: (4123.0, 4138.0)}
+#
+# NOTE this window lies wholly inside H-delta's +/-50 A window, so those pixels
+# are fitted under H-DELTA's local continuum rather than the metal polynomial.
+# That is the right way round: the model supplies the Stark wing and the
+# polynomial is only a slow correction to it, whereas giving these lines their
+# own continuum would have it fight the wing shape.
+
+# Rejected, with the reason, so the choice is reviewable rather than implicit.
+XSL_METAL_REJECT = {
+    4410.1: 'model over-absorbs at 4403.4 by 21.6%: three PREDICTED (K13) O I '
+            'lines 3p 5P -> 16s 5S, upper level 503 cm^-1 below the O I limit',
+    4827.3: 'same pathology: predicted (K13) O I 3p 3P -> 15d 3D and -> 16s 3S, '
+            'upper levels 488-496 cm^-1 below the limit; the Cr II line that '
+            'leads the blend is real but cannot be separated from them',
+    4287.6: 'Ti II, deeper than any grid [M/H] can produce, which conflicts '
+            'with the Fe II windows -- unresolved, so it cannot carry weight',
+    4390.9: 'not needed once 4535/4550 are in; revisit if [M/H] is unconstrained',
+    4183.0: 'as 4390.9',
+}
+
+
+def xsl_metal_windows(path=None, which='selected'):
+    """-> [(lo, hi)] metal windows.
+
+    which='selected' keeps only XSL_METAL_KEEP; 'all' returns every window from
+    data/xsl_metal_windows.csv (explore/metal_sensitivity.py), which is what the
+    prediction plots want.
+    """
     p = Path(path or ROOT / 'data' / 'xsl_metal_windows.csv')
     if not p.exists():
         return []
-    return [(float(r['lo']), float(r['hi'])) for r in csv.DictReader(open(p))]
+    wins = [(float(r['lo']), float(r['hi'])) for r in csv.DictReader(open(p))]
+    if which == 'all':
+        return wins
+    if which != 'selected':
+        raise ValueError(f"which must be 'selected' or 'all', got {which!r}")
+    out = []
+    for lo, hi in wins:
+        for c in XSL_METAL_KEEP:
+            if lo <= c <= hi:
+                out.append(XSL_METAL_WINDOW.get(c, (lo, hi)))
+                break
+    return sorted(out)
 
 
 def xsl_fit_windows(core_mask=XSL_CORE_MASK, half_width=XSL_BALMER_HALFWIDTH,
-                    metals=True):
+                    metals='selected'):
     """-> (balmer_windows, metal_windows), each a list of (lo, hi)."""
     from common.lines import BALMER, line_windows
     bal = line_windows(sorted(BALMER.values()), half_width, core_mask)
-    met = xsl_metal_windows() if metals else []
+    met = xsl_metal_windows(which=metals) if metals else []
     return bal, met
 
 
 def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
-             half_width=XSL_BALMER_HALFWIDTH, metals=True):
+             half_width=XSL_BALMER_HALFWIDTH, metals='selected'):
     """XSL DR3 spectrum: vacuum, rest-frame, fitted only in named windows.
 
     Rest-frame means the RV is already removed, so it is FIXED at 0 -- unlike
@@ -258,7 +312,10 @@ def load_xsl(star, exclude=None, core_mask=XSL_CORE_MASK,
         # H-gamma window by 9 A at one end.
         rng = [x for l, h in met if lo <= 0.5 * (l + h) < hi
                for x in subtract_intervals((l, h), balmer_span)]
-        if len(rng) > XSL_METAL_ORDER:
+        # `rng` counts RANGES, not pixels -- comparing it against the polynomial
+        # order dropped the whole metal segment whenever few windows survived.
+        # calibration.design_matrix already skips a segment with too few pixels.
+        if rng:
             segs.append(dict(name=f'metal_{arm}', order=XSL_METAL_ORDER,
                              domain=(min(l for l, _ in rng),
                                      max(h for _, h in rng)),

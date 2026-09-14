@@ -108,9 +108,49 @@ against the Kurucz list, not assigned from memory):
 | **Ti II** | 4287.6 | 8 | -0.133 | **deeper than any grid [M/H]** |
 | Fe II | 4183.0 | 20 | -0.124 | |
 
-Still open from it: the core mask should scale with v sin i (200 km/s adds
-2.9 Å at Hγ), and the ranking should be re-derived once [M/H] is actually fitted
-rather than assumed at the grid midpoint.
+**Only three metal windows are fitted** (`XSL_METAL_KEEP`), with the rejections
+recorded in `XSL_METAL_REJECT`:
+
+| fitted | why |
+|---|---|
+| Fe II 4550.7 | clean isolated line, model matches |
+| Ti II + Fe II 4535.3 | model matches |
+| Fe II + Si II 4129 (4123–4138) | shifted blueward onto the Si II 4128/4131 doublet |
+
+Rejected: **4410.1 and 4827.3 are line-list artifacts** (see below); **4287.6**
+(Ti II) is deeper than any grid [M/H] and conflicts with the Fe II windows;
+4390.9 and 4183.0 are simply not needed. All of them stay in the prediction
+plots — a feature the models get wrong is worth looking at and must not drive
+the fit.
+
+Still open: the core mask should scale with v sin i (200 km/s adds 2.9 Å at Hγ),
+and the ranking should be re-derived once [M/H] is actually fitted rather than
+assumed at the grid midpoint.
+
+### Predicted O I Rydberg lines contaminate the models
+
+The two windows that looked worst against the data are the same problem. The
+model over-absorbs at **4403.4 Å by 21.6%**, and the culprit is three Kurucz
+**predicted** (K13) O I lines, `(4S)3p 5P → (4S)16s 5S`, whose upper level sits
+**503 cm⁻¹ below the O I ionization limit**. At Nₑ = 2.7×10¹⁴ cm⁻³ the
+Inglis–Teller estimate puts the last surviving level at n ≈ 15, so an n = 16
+level is dissolved into the continuum by the plasma microfield and cannot carry
+a photospheric line at all. The listed log gf of −0.47 to −0.83 is also far too
+strong for a 3p → 16s transition.
+
+**4827 is identical**: predicted (K13) O I `3p 3P → 15d 3D` and `→ 16s 3S`,
+upper levels 488–496 cm⁻¹ below the limit. The Cr II line that leads that blend
+is real (LSND, E_low 3.87 eV) but cannot be separated from them.
+
+Scanning 3500–9500 Å for lines with log gf > −2 whose upper level is within
+1500 cm⁻¹ of the ionization limit returns **35 lines: 31 O I and 4 Si II** — and
+the strongest O I ones are exactly at 4403–4405 and 4826–4829. So this is a
+small, closed set rather than a pervasive problem, and the two features already
+noticed are its two worst instances in the optical.
+
+Worth doing: build that list into a standing exclusion so a predicted Rydberg
+line can never enter a fit window silently, and check whether SYNTHE has a
+level-dissolution cutoff that should have removed them.
 
 ### 5. `likelihood.py`
 
