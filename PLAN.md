@@ -94,6 +94,20 @@ chosen by measured [M/H] sensitivity, with a segmented calibration: order 1 per
 Balmer window, order 3 per arm across the metal windows. 16 coefficients,
 ~6400 pixels. `explore/metal_sensitivity.py` generates the windows.
 
+Dominant species, derived by `common/species.py` (Saha-Boltzmann weighted
+against the Kurucz list, not assigned from memory):
+
+| species | lambda (vac) | width | d(depth) | note |
+|---|---|---|---|---|
+| Fe II | 4410.1 | 19 | -0.246 | |
+| Cr II + O I | 4827.3 | 5 | -0.196 | separated by only 0.06 dex |
+| Fe II | 4550.7 | 1 | -0.158 | |
+| Ti II + Fe II | 4535.3 | 1 | -0.155 | |
+| Fe II | 4390.9 | 13 | -0.145 | |
+| Fe II | 4134.2 | 11 | -0.136 | |
+| **Ti II** | 4287.6 | 8 | -0.133 | **deeper than any grid [M/H]** |
+| Fe II | 4183.0 | 20 | -0.124 | |
+
 Still open from it: the core mask should scale with v sin i (200 km/s adds
 2.9 Å at Hγ), and the ranking should be re-derived once [M/H] is actually fitted
 rather than assumed at the grid midpoint.
@@ -126,12 +140,15 @@ residual level.
 
 ## Things to chase
 
-* **4287.6 A is deeper in HD194453 than any grid [M/H] can produce** (observed
-  depth 0.035 against 0.009 at [M/H] = -0.5 and 0.027 at +0.3). The other seven
-  of the top eight sit inside the grid's reach, so this is not a metallicity
-  result -- it points at the line list, or at an element that does not scale
-  with [M/H]. Identify the species before the metal windows are trusted for
-  [M/H]; `explore/plot_metal_lines.py` flags it.
+* **Ti II 4287.6 A is deeper in HD194453 than any grid [M/H] can produce**
+  (observed depth 0.035 against 0.009 at [M/H] = -0.5 and 0.027 at +0.3). The
+  other seven of the top eight sit inside the grid's reach, so this is not a
+  metallicity result. Now that the species is identified as **Ti II**, the
+  candidates are a gf problem in the Kurucz list, or titanium not scaling with
+  [M/H] in this star -- the second would be consistent with the alpha-enhancement
+  already suspected from the Fe/Mg EW split. Worth checking whether the other
+  Ti II windows (4535.3, and Ti II as second at 4390.9) run the same way, which
+  would point at the element rather than at one line.
 
 * **The Paschen residual was +6.4% at E(B−V) = 0** and collapses to +1.1% at
   0.03. Worth confirming it is the dust solution and not the G750L wavecal

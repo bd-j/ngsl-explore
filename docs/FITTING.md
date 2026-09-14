@@ -126,7 +126,19 @@ That measurement overturned two expectations:
 * **Mg I b is the wrong magnesium diagnostic here.** At ~10,000 K magnesium is
   largely ionised: Mg I b 5167 gives −0.090 against Mg II 4481 at −0.121, and
   both trail the Fe II blends. Sensitivity is concentrated in **4000–4600 Å**,
-  from Fe II, Ti II and Cr II — 65% of the final window coverage.
+  65% of the final window coverage.
+
+**Species are derived, never assigned from memory** (`common/species.py`). Of
+the top eight windows: five Fe II, one Ti II (4287.6), one Ti II + Fe II
+(4535.3), one Cr II + O I (4827.3). Ranking on log gf alone would be worse than
+useless here — the most numerous species over 4100–4900 Å are Co I (18,500
+lines), V I (18,273) and Nb I (15,438), every one of them ionised below a
+fraction of 10⁻⁴ at the line-forming temperature — so the weight is full
+Saha–Boltzmann at the model atmosphere's own T and Nₑ (11,596 K, 2.7×10¹⁴ cm⁻³
+at τ₅₀₀₀ = 2/3), with abundances read from its own table. A second species is
+reported only within 0.3 dex, the partition-function uncertainty of the method:
+Cr II leads O I at 4827 by 0.06 dex and is not separable, while Fe II leads by
+1.15 dex at 4410 and is unambiguous.
 * **The ranking is not stable in Teff.** At 9000 K only 11–17 of the reference
   top 30 survive, with Spearman −0.04 to 0.22; in log g it is stable (0.80–1.00).
   The sample spans 8759–10885 K, so the windows are a **union over 9000 / 10000 /
