@@ -126,6 +126,13 @@ residual level.
 
 ## Things to chase
 
+* **4287.6 A is deeper in HD194453 than any grid [M/H] can produce** (observed
+  depth 0.035 against 0.009 at [M/H] = -0.5 and 0.027 at +0.3). The other seven
+  of the top eight sit inside the grid's reach, so this is not a metallicity
+  result -- it points at the line list, or at an element that does not scale
+  with [M/H]. Identify the species before the metal windows are trusted for
+  [M/H]; `explore/plot_metal_lines.py` flags it.
+
 * **The Paschen residual was +6.4% at E(B−V) = 0** and collapses to +1.1% at
   0.03. Worth confirming it is the dust solution and not the G750L wavecal
   (constant-only, 0.6–0.9 Å rms) or a red-end model issue.

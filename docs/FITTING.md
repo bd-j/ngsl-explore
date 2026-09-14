@@ -226,6 +226,8 @@ common/photometry.py      sedpy filter projection, shared by model and data.
 explore/check_predict.py  the end-to-end smoke test on one star.
 explore/metal_sensitivity.py  ranks features by [M/H] sensitivity; --union
                           writes the XSL metal windows.
+explore/plot_metal_lines.py   one panel per top [M/H]-sensitive feature,
+                          with a band showing what the grid can reach.
 ```
 
 `predict()` agrees with interpolation to 6×10⁻⁸ at a node and is 5× faster
