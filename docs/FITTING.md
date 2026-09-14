@@ -244,18 +244,25 @@ common/lines.py           hydrogen line positions, named Balmer members, ISM
                           lines. ONE definition -- hydrogen_lines previously
                           existed twice, in fitting/fit.py and again in
                           explore/plot_ngsl_vs_model.py.
+common/species.py         dominant species per window, Saha-Boltzmann weighted
+                          against the Kurucz line list.
+common/photometry.py      sedpy filter projection, shared by model and data.
+common/specplot.py        the shared spectrum panel, so the figures keep one
+                          faded-masked / solid-fitted convention.
 fitting/observations.py   one record per dataset: data + resolution +
                           calibration + mask. conditioning_set() / heldout().
 fitting/predict.py        predict(theta, observations) -> one prediction each.
                           Node-exact lookup when on grid nodes, trilinear
                           otherwise, same code path either way.
 fitting/calibration.py    the linear solve.
-common/photometry.py      sedpy filter projection, shared by model and data.
 explore/check_predict.py  the end-to-end smoke test on one star.
 explore/metal_sensitivity.py  ranks features by [M/H] sensitivity; --union
                           writes the XSL metal windows.
-explore/plot_metal_lines.py   one panel per top [M/H]-sensitive feature,
-                          with a band showing what the grid can reach.
+explore/plot_metal_lines.py   one panel per top [M/H]-sensitive feature, with
+                          a band showing what the grid can reach.
+explore/plot_ebv_teff.py  the chi^2 surface in Teff and E(B-V), per leg.
+explore/xsl_line_offsets.py   velocity offset per line per star.
+explore/xp_vs_ngsl.py     the XP/NGSL band ratio that ruled XP out.
 ```
 
 `predict()` agrees with interpolation to 6×10⁻⁸ at a node and is 5× faster
@@ -264,8 +271,8 @@ tolerance is **absolute** (10⁻³ K): a step-scaled tolerance would have accept
 10241 K as the 10200 K node and returned the wrong spectrum while reporting an
 exact lookup.
 
-Still to write: `likelihood.py` (marginal, with the log-det term) and `scan.py`
-(the 1705-node driver). See [../PLAN.md](../PLAN.md).
+Still to write: `likelihood.py` (marginalised, with the log-det term) and
+`scan.py` (the 1705-node driver). See [../PLAN.md](../PLAN.md).
 
 ## Traps, all hit before being fixed
 

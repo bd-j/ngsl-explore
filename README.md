@@ -28,8 +28,9 @@ since catalog values may carry systematics of their own. The Paschen break
 |---|---|
 | [docs/DATA.md](docs/DATA.md) | the spectral libraries and the selected sample |
 | [docs/GRID.md](docs/GRID.md) | the 1705-node ATLAS12 model grid |
-| [docs/FITTING.md](docs/FITTING.md) | fitting parameters, priors, degeneracies |
+| [docs/FITTING.md](docs/FITTING.md) | what conditions on what, held-out design, error budget |
 | [docs/CAVEATS.md](docs/CAVEATS.md) | **known issues and traps — read before trusting any number** |
+| [PLAN.md](PLAN.md) | current state and what comes next |
 
 Most of the work in this project turned out to be identifying ways the
 comparison goes silently wrong: wavelength conventions, resolution mismatches,
@@ -39,13 +40,17 @@ with symptoms and fixes.
 ## Layout
 
 ```
-common/    shared: extinction (CCM89), break metric, LSF kernels, IO
+common/    shared: extinction (CCM89), break metric, LSF kernels, line lists
+           and species identification, sedpy photometry, panel plotting, IO
 grid/      model grid construction (make_model.py, build_grid.py, pack_grid.py)
-fitting/   forward model and fitter (model.py, fit.py)
-explore/   survey and comparison scripts
+fitting/   observations, forward model, calibration
+             observations.py  one record per dataset + conditioning_set/heldout
+             predict.py       predict(theta, observations) -> predictions
+             calibration.py   the linear nuisance solve
+explore/   survey, selection and figure scripts
 data/      catalogs, derived CSVs, selected-star spectra
 docs/      this documentation, plus NGSL delivery docs in ngsl_delivery/
-figures/   comparison and coverage figures
+figures/   comparison and diagnostic figures
 models/    ATLAS12 output and the packed grid (gitignored, ~25 GB)
 ```
 
@@ -71,8 +76,21 @@ python3 explore/build_sample.py          # rerun: folds Gaia RUWE into the binar
 python3 grid/build_grid.py --workers 9   # the model grid (~25 h, resumable)
 python3 grid/pack_grid.py                # collapse it into models/grid.npz
 
-python3 explore/plot_ngsl_vs_model.py     # NGSL comparison figures
-python3 explore/plot_uves_vs_model.py    # UVES-POP comparison figures
+python3 explore/plot_ngsl_vs_model.py    # NGSL comparison figures
+python3 explore/plot_uves_vs_model.py    # UVES-POP comparison figures (superseded)
+```
+
+Fitting — see [docs/FITTING.md](docs/FITTING.md) for what conditions on what:
+
+```bash
+python3 explore/metal_sensitivity.py --union   # XSL metal windows, by measured
+                                               # [M/H] sensitivity + species
+python3 explore/xsl_line_offsets.py      # XSL velocity offset per line per star
+python3 explore/xp_vs_ngsl.py            # XP vs NGSL band ratios (why XP is not used)
+
+python3 explore/check_predict.py  --star HD194453   # end-to-end smoke test
+python3 explore/plot_metal_lines.py --star HD194453 # per-feature model vs data
+python3 explore/plot_ebv_teff.py  --star HD194453   # chi2 surface, Teff vs E(B-V)
 ```
 
 Single model for one star:
@@ -88,7 +106,15 @@ H_nu, not f_lambda.
 ## Findings so far
 
 - The **continuum across the break is reproduced well**: away from hydrogen
-  lines the residual is ~1%, and D_Balmer agrees to 0.02-0.08 mag.
+  lines the residual is ~1%, and D_Balmer agrees to 0.02-0.08 mag. With the
+  break **held out and predicted** rather than fitted (see
+  [FITTING.md](docs/FITTING.md)), HD194453 comes out at **+1.2% (Balmer)** and
+  **+1.1% (Paschen)** at the band-preferred reddening — with v sin i pinned and
+  only one node tried, so a hint rather than a result.
+- The experiment is **Teff-limited, not dust-limited**. dD/dTeff = −0.017 mag
+  per 100 K against dD/dE(B−V) = +0.0027 per 0.01 mag at fixed Teff, so the
+  binding requirement is σ(Teff) ≈ 100 K — about 3× better than published values
+  for these stars.
 - The **Balmer line cores are systematically filled** relative to the LTE
   models, by ~10% of the line equivalent width, in every star. A
   flux-conservation test rules out a broadening mismatch. Most likely NLTE in
@@ -96,7 +122,13 @@ H_nu, not f_lambda.
   the Paschen lines.
 - **NGSL is in air**, not vacuum, with a linear-in-lambda residual per grating
   that is recalibrated against the models.
-- **NGSL's `STATERR` is optimistic by ~3x** and its resolution is R = 939 at the
-  break, not the ~665 implied by pixel sampling.
-- **Reddening is the main selection risk**: two of nine candidates were dropped
-  on it alone.
+- **NGSL's `STATERR` is optimistic by ~3x**, and its delivered resolution is
+  **R = 600**, measured against XSL. (Earlier versions of this file said R = 939
+  from the STIS tables and ~665 from pixel sampling; both are wrong — see
+  [CAVEATS.md](docs/CAVEATS.md).)
+- **The models carry line-list artifacts.** Predicted (K13) O I transitions to
+  n = 15–16 Rydberg levels put absorption at 4403 and 4827 Å that is absent from
+  the data — the upper levels are dissolved by the plasma microfield at
+  photospheric density and cannot carry a line at all.
+- **Reddening is the main selection risk**, and map columns are upper bounds
+  only, overshooting by up to 8× for stars this close.
