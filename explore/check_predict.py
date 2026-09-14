@@ -161,11 +161,15 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
     ax.set_xlabel(r'Wavelength [$\AA$, vacuum]', fontsize=9, color=INK)
     ax.legend(fontsize=8, loc='upper right', framealpha=.92)
 
-    for col, (nm, win, lam0) in enumerate((('Balmer', BREAK_WINDOW, BALMER),
-                                           ('Paschen', PASCHEN_WINDOW, PASCHEN))):
+    # Panel limits are per-break, not a uniform offset: the Balmer panel starts
+    # at 3450 A so the sub-limit continuum band that anchors the prediction is
+    # visible without the rest of the blue squeezing the break itself.
+    panels = (('Balmer', BREAK_WINDOW, BALMER, (3450., 4150.)),
+              ('Paschen', PASCHEN_WINDOW, PASCHEN, (7830., 9650.)))
+    for col, (nm, win, lam0, xlim) in enumerate(panels):
         axz = fig.add_subplot(gs[1, col])
         axr = fig.add_subplot(gs[2, col], sharex=axz)
-        lo, hi = win[0] - 350, win[1] + 150
+        lo, hi = xlim
         sel = m & (spec.wavelength > lo) & (spec.wavelength < hi)
         for a_ in (axz, axr):
             style(a_)
