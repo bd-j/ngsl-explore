@@ -34,6 +34,7 @@ from fitting.model import Grid
 from fitting.observations import load_xsl
 from fitting.predict import predict
 from fitting.calibration import solve
+from common.specplot import spectrum_panel, style, BAND_C, HELD_C
 from common.species import (atmosphere_point, abundances, species_label,
                             dominant_species)
 
@@ -149,39 +150,26 @@ def main():
     axes = np.atleast_1d(axes).ravel()
 
     for ax, f in zip(axes, feats):
-        style(ax)
         lo, hi = float(f['lam_lo']), float(f['lam_hi'])
         cen, dd = float(f['lam_center']), float(f['depth_change'])
         pad = max(6.0, 0.6 * (hi - lo))
-        x0, x1 = lo - pad, hi + pad
-        inr = (obs.wavelength > x0) & (obs.wavelength < x1)
-        fit = obs.mask & inr
-        if inr.sum() < 5:
-            ax.set_visible(False)
-            continue
-
-        ax.fill_between(obs.wavelength[inr], cal_lo[inr], cal_hi[inr],
-                        color=BAND_C, alpha=.22, lw=0,
-                        label=f'grid [M/H] {mh_lo:+.1f} to {mh_hi:+.1f}')
-        ax.plot(obs.wavelength[inr], obs.flux[inr], color=OBS_C, lw=.8, alpha=.30)
-        ax.plot(obs.wavelength[fit], obs.flux[fit], color=OBS_C, lw=1.2,
-                label='XSL (solid = fitted)')
-        ax.plot(obs.wavelength[inr], cal_node[inr], color=MOD_C, lw=1.1,
-                label=f'model [M/H]={mh:+.1f}')
-        gap = inr & ~obs.mask
-        if gap.any():
-            ax.axvspan(obs.wavelength[gap].min(), obs.wavelength[gap].max(),
-                       color=HELD_C, alpha=.08, lw=0)
-        ax.axvspan(lo, hi, color=MUTED, alpha=.06, lw=0)
-        ax.set_xlim(x0, x1)
         v = verdicts.get(cen, '')
         flag = '  \u2014 outside grid' if 'grid can reach' in v else ''
         sp = species.get(cen, '')
-        ax.set_title(f'{sp}   {cen:.1f} $\\AA$   ($\\Delta$depth {dd:+.3f}, '
-                     f'{hi - lo:.0f} $\\AA$ wide){flag}', fontsize=9,
-                     color=(HELD_C if flag else INK))
-        ax.set_ylabel(r'F$_\lambda$', fontsize=8, color=INK)
-        ax.set_xlabel(r'$\lambda$ [$\AA$, vacuum]', fontsize=8, color=INK)
+        drawn = spectrum_panel(
+            ax, obs, [(f'model [M/H]={mh:+.1f}', cal_node)], lo - pad, hi + pad,
+            title=f'{sp}   {cen:.1f} $\\AA$   ($\\Delta$depth {dd:+.3f}, '
+                  f'{hi - lo:.0f} $\\AA$ wide){flag}',
+            band=(lo, hi))
+        if not drawn:
+            continue
+        ax.set_title(ax.get_title(), fontsize=9,
+                     color=(HELD_C if flag else '#22262b'))
+        # the band the grid can reach, which is what this figure is for
+        inr = (obs.wavelength > lo - pad) & (obs.wavelength < hi + pad)
+        ax.fill_between(obs.wavelength[inr], cal_lo[inr], cal_hi[inr],
+                        color='#7a3fa8', alpha=.22, lw=0, zorder=0,
+                        label=f'grid [M/H] {mh_lo:+.1f} to {mh_hi:+.1f}')
 
     for ax in axes[len(feats):]:
         ax.set_visible(False)

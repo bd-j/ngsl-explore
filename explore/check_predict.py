@@ -31,6 +31,7 @@ from fitting.observations import (load_ngsl, conditioning_set, heldout,
                                   ngsl_band_edges, BREAK_WINDOW, PASCHEN_WINDOW)
 from fitting.predict import predict
 from fitting.calibration import solve, residual, chi2, usable
+from common.specplot import spectrum_panel
 
 ROOT = Path(__file__).resolve().parent.parent
 BALMER, PASCHEN = 3646.0, 8205.9
@@ -216,28 +217,9 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
         for col, (lo, hi, ttl) in enumerate((
                 (4292., 4392., r'XSL: H$\gamma$ wings — core masked (NLTE)'),
                 (4125., 4139., 'XSL: Si II 4129/4132 + Fe II — fitted window'))):
-            axx = fig.add_subplot(gs[3, col])
-            style(axx)
-            inrange = (xs.wavelength > lo) & (xs.wavelength < hi)
-            fitted = xs.mask & inrange
-            # everything in range, faded, so the masked core is visible as a
-            # deliberate exclusion rather than looking like missing data
-            axx.plot(xs.wavelength[inrange], xs.flux[inrange], color=OBS_C,
-                     lw=.8, alpha=.30)
-            axx.plot(xs.wavelength[fitted], xs.flux[fitted], color=OBS_C, lw=1.1,
-                     label='XSL (solid = fitted)')
-            for lab, c in zip(labels, (MOD_C, MOD2_C)):
-                axx.plot(xs.wavelength[fitted], xsl_cal[lab][fitted], color=c,
-                         lw=.9, label=f'model, {lab}')
-            gap = inrange & ~xs.mask
-            if gap.any():
-                axx.axvspan(xs.wavelength[gap].min(), xs.wavelength[gap].max(),
-                            color=HELD_C, alpha=.10, lw=0)
-            axx.set_xlim(lo, hi)
-            axx.set_title(ttl, fontsize=9, color=INK)
-            axx.set_xlabel(r'$\lambda$ [$\AA$]', fontsize=8, color=INK)
-            if col == 0:
-                axx.legend(fontsize=7, loc='lower left', framealpha=.92)
+            spectrum_panel(fig.add_subplot(gs[3, col]), xs,
+                           [(f'model, {lab}', xsl_cal[lab]) for lab in labels],
+                           lo, hi, title=ttl, legend=(col == 0))
 
     axb = fig.add_subplot(gs[4, :])
     style(axb)
