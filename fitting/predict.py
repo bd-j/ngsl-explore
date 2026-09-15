@@ -71,8 +71,16 @@ def spectrum_at(grid, teff, logg, mh):
         if not grid.filled[i, j, k]:
             raise ValueError(f'node ({grid.teff[i]:.0f}, {grid.logg[j]:.2f}, '
                              f'{grid.mh[k]:+.2f}) is missing from the cube')
-        return 10.0 ** grid.logflux[i, j, k]
-    return grid.interp(teff, logg, mh)
+        # float64 explicitly. The cube is stored float32 to keep it under
+        # 400 MB, but returning float32 made the forward model's PRECISION
+        # depend on the dust: with ebv = 0 the spectrum stayed float32 through
+        # the convolution, while any nonzero ebv promoted it to float64 inside
+        # redden(). Two runs of the same model then differed by 1e-9 depending
+        # on a parameter value, which is the sort of thing that surfaces later
+        # as an unreproducible number. The cast is 435 kB and the float64
+        # convolution measures the same speed as the float32 one.
+        return 10.0 ** np.asarray(grid.logflux[i, j, k], dtype=float)
+    return np.asarray(grid.interp(teff, logg, mh), dtype=float)
 
 
 def instrument(w, f, resolution):
