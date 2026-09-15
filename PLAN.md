@@ -24,10 +24,21 @@ the project's question may be *yes* — but v sin i is pinned at 0, Teff is pinn
 at the nearest node, log g and [M/H] are fixed, and nothing has been
 marginalised. It is a hint, not a result.
 
-The 2-D χ² surface (`explore/plot_ebv_teff.py`) behaves as the design requires:
-a diagonal degeneracy valley from the NGSL bands, a **vertical stripe** from XSL
-confirming its dust immunity, and a closed intersection at **10300 K,
-E(B−V) = 0.039**. Measured ridge slope +93 K per 0.01 mag.
+The χ² sweep (`explore/plot_ebv_teff.py --all`) has now been run on **all 12
+non-rejected stars**. It behaves as the design requires: a diagonal degeneracy
+valley from the NGSL bands, a **vertical stripe** from XSL confirming its dust
+immunity, and a closed intersection. Ridge slope +88 to +97 K per 0.01 mag
+across the sample.
+
+At HD194453's **self-consistent** solution (Teff = 10400 K, E(B−V) = 0.045 — the
+scan fits them jointly, so they must be quoted together) both held-out breaks
+are predicted to better than half a percent:
+
+| | catalog Teff, E(B−V)=0 | scan solution |
+|---|---|---|
+| NGSL bands rms | 5.6% tilt | **0.72%** |
+| Balmer, **held out** | −2.68% | **+0.39%** |
+| Paschen, **held out** | +6.41% | **+0.15%** |
 
 **Done:** sample (13 stars, NGSL ∩ XSL); Gaia photometry + XP; all XSL spectra
 extracted; `observations.py`, `predict.py`, `calibration.py`,
@@ -186,14 +197,42 @@ Error inflation is floored at 1, so it may widen an error bar and never shrink
 one: the bands come out at χ²/n = 0.14 and rescaling that to 1 would deflate
 them by 2.7×, claiming a precision the 1% calibration floor exists to disclaim.
 
-**The dust tension is still there and is now sharper.** With Teff free over the
-whole grid the fit still wants E(B−V) ≈ 0.039, against a photometric value of
-−0.01 (i.e. consistent with zero). It sits comfortably under the SF11 upper
-bound of 0.0896, so it is not impossible — but 0.04 mag of unexplained reddening
-is 8× the precision the break prediction needs. Either the photometry is wrong
-for this star, or something else tilts the NGSL continuum by ~1.5%. Next: run
-this for the whole sample and see whether the offset is common to all of them,
-which would point at NGSL rather than at the stars.
+**Is the dust offset common to the sample? Not cleanly — so it does not indict
+NGSL.** Over the 8 primary stars whose solution is not on a boundary:
+
+    fitted - photometric E(B-V) = +0.029 +/- 0.014 (sem), scatter 0.041
+
+A ~2σ mean offset, but the **star-to-star scatter of 0.041 is the headline
+number**: it is 8× the ~0.005 mag the break prediction needs, and it is far too
+large for a shared calibration error, which would show as an offset with small
+scatter. The scatter, not the mean, is what has to be explained.
+
+Two solutions are **unphysical**: HD117880 (0.142 vs an SF11 total Galactic
+column of 0.077) and HD128801 (0.055 vs 0.023). SF11 integrates to infinity, so
+a star inside the Galaxy cannot exceed it. **Both are [M/H]-clamped**, which
+makes the grid's −0.5 floor the first thing to suspect rather than the dust.
+`report()` now checks this on every run.
+
+**v sin i is a measurement for only 8 of the 12** (`explore/vsini_mask_test.py`).
+Refitting at core-mask half-widths of 6, 10, 15 and 25 Å, four stars move with
+the mask — HD117880 runs 110 → 250 km/s, HD128801 and HD106304 into the 300
+ceiling. A rotation cannot depend on where the mask edge is, so those four are
+measuring the NLTE core mismatch. Two checks that came out negative and are
+worth not repeating: dropping the three metal windows changes v sin i in *no*
+star (it never goes down, so the metal windows are not driving it), and at Hγ a
+200 km/s rotation is 2.9 Å against Stark wings hundreds of Å wide — so whatever
+sets v sin i is the metal lines *inside* the Balmer windows, not the wings.
+
+**A trap that cost an hour, now closed.** `check_predict.py --ebv` defaulted to
+**0.0**, so the committed figure showed the null-dust case: its 13 conditioning
+bands ran −5.6% to +5.0%, and the held-out break panels inherited that tilt. It
+reads as a broken normalisation, but the giveaway is that the two blue sides
+have **opposite signs** (−3.68% at Balmer, +5.64% at Paschen) — a mis-solved
+scalar shifts every panel the same way; only a tilt can do that. The scalar is
+one number and cannot absorb a slope, which is the entire point: that slope is
+the dust signal. `--ebv` now defaults to the scan solution, and takes **Teff
+from the scan with it** — pairing scan dust with catalog Teff double-counts the
+degeneracy and moved the predicted Balmer residual from +0.4% to +2.9%.
 
 ### The XSL fit regions
 
