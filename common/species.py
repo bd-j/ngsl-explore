@@ -63,18 +63,50 @@ U_DEFAULT = 20.0
 SAHA_CONST = 2.414e15        # (2 pi m_e k / h^2)^{3/2} in cgs, per cm^3 K^-3/2
 
 
-def atmosphere_point(atm_path, tau=2.0 / 3.0):
-    """-> (T, N_e) at a given tau_5000 in an ATLAS12 .atm file."""
+def _deck(atm_path):
+    """-> (deck array, n_columns) from an ATLAS12 .atm file."""
     rows = []
     for line in open(atm_path):
         p = line.split()
-        if len(p) >= 11:
-            try:
-                rows.append([float(x) for x in p[:11]])
-            except ValueError:
-                pass
-    a = np.array(rows)
-    i = int(np.argmin(np.abs(a[:, 10] - tau)))
+        if len(p) < 9:
+            continue
+        try:
+            rows.append([float(x) for x in p])
+        except ValueError:
+            continue                      # a header line, not deck data
+    if not rows:
+        raise ValueError(f'{atm_path}: no atmosphere deck found')
+    n = min(len(r) for r in rows)
+    return np.array([r[:n] for r in rows]), n
+
+
+def atmosphere_point(atm_path, tau=2.0 / 3.0):
+    """-> (T, N_e) at a given optical depth in an ATLAS12 .atm file.
+
+    Uses the tabulated TAU5000 column when the file has it -- the
+    post-processed models/work/ atmospheres, which carry 11 columns. The RAW
+    grid atmospheres in models/grid/ carry only 9 (RHOX..VCONV) and have no
+    optical-depth column at all, so tau is integrated from the Rosseland
+    opacity instead: tau = int ABROSS dRHOX. Without this, species labels were
+    available only for the handful of stars that happened to have a bespoke
+    atmosphere in models/work/.
+
+    The two scales are NOT the same: on HD194453, tau_Ross = 2/3 lands two
+    layers deeper and 950 K cooler than tau_5000 = 2/3. Measured effect on what
+    this function is actually for -- 6 of the 8 metal windows get an identical
+    species label either way, and the other two differ only in whether a
+    secondary blend partner is named. The dominant species never changes.
+    """
+    a, n = _deck(atm_path)
+    if n >= 11:
+        depth = a[:, 10]                          # tabulated TAU5000
+    else:
+        rhox, abross = a[:, 0], a[:, 4]
+        first = abross[0] * rhox[0]               # top layer, tau ~ kappa * m
+        depth = np.concatenate([
+            [first],
+            first + np.cumsum(0.5 * (abross[1:] + abross[:-1]) * np.diff(rhox))])
+    i = int(np.argmin(np.abs(depth - tau)))
     return float(a[i, 1]), float(a[i, 3])
 
 
