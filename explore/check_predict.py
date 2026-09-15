@@ -61,12 +61,42 @@ def sample_row(star):
     raise KeyError(star)
 
 
+def scan_row(star):
+    """The star's row from the E(B-V)-Teff sweep, if it has been run."""
+    p = ROOT / 'data' / 'ebv_teff_scan.csv'
+    if not p.exists():
+        return None
+    for r in csv.DictReader(open(p)):
+        if r['star'] == star:
+            return r
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--star', default='HD194453')
-    ap.add_argument('--vsini', type=float, default=0.0)
-    ap.add_argument('--ebv', type=float, default=0.0)
+    # Defaults of None, not 0. E(B-V) = 0 produced a figure whose 13
+    # conditioning bands ran -5.5% to +5.0% across the spectrum -- the
+    # unreddened tilt, which a single scalar cannot absorb and is not meant to
+    # -- and the held-out break panels inherited it, which reads as a broken
+    # normalisation rather than as the null dust hypothesis it is. So the
+    # default is now the sweep's own solution when it exists, and the figure
+    # says which it used.
+    ap.add_argument('--vsini', type=float, default=None)
+    ap.add_argument('--ebv', type=float, default=None)
+    ap.add_argument('--no-scan', action='store_true',
+                    help='ignore data/ebv_teff_scan.csv; E(B-V)=0 unless given')
     a = ap.parse_args()
+
+    sc = None if a.no_scan else scan_row(a.star)
+    src = 'command line'
+    if sc is not None and (a.ebv is None or a.vsini is None):
+        src = f'ebv_teff_scan.csv (fitted at Teff={float(sc["teff"]):.0f} K)'
+        a.ebv = float(sc['ebv']) if a.ebv is None else a.ebv
+        a.vsini = float(sc['vsini']) if a.vsini is None else a.vsini
+    a.ebv = 0.0 if a.ebv is None else a.ebv
+    a.vsini = 0.0 if a.vsini is None else a.vsini
+    print(f'  E(B-V)={a.ebv:.3f}, v sin i={a.vsini:.0f} km/s  <- {src}')
 
     row, grid = sample_row(a.star), Grid()
     bands = ngsl_band_edges()
@@ -86,10 +116,20 @@ def main():
 
     t0 = (float(row['teff_ngsl']), float(row['logg_ngsl']), float(row['mh_ngsl']))
     tn = nearest_node(grid, *t0)
+    # If the dust came from the scan, the Teff must come with it. They sit on
+    # the same degeneracy ridge (+93 K per 0.01 mag), so pairing the scan's
+    # E(B-V) with the catalog's Teff double-counts the reddening -- it moved the
+    # predicted Balmer residual from +1.2% to +2.5% on HD194453 for no physical
+    # reason.
+    if sc is not None and a.ebv == float(sc['ebv']):
+        tn = (float(sc['teff']), float(sc['logg_node']), float(sc['mh_node']))
+        node_label = 'scan solution'
+    else:
+        node_label = 'nearest node'
     thetas = [('nominal (interp)', dict(teff=t0[0], logg=t0[1], mh=t0[2],
                                         ebv=a.ebv, vsini=a.vsini)),
-              ('nearest node', dict(teff=tn[0], logg=tn[1], mh=tn[2],
-                                    ebv=a.ebv, vsini=a.vsini))]
+              (node_label, dict(teff=tn[0], logg=tn[1], mh=tn[2],
+                                ebv=a.ebv, vsini=a.vsini))]
     print(f'\n  nominal Teff={t0[0]:.0f} logg={t0[1]:.2f} [M/H]={t0[2]:+.2f}  '
           f'-> node Teff={tn[0]:.0f} logg={tn[1]:.2f} [M/H]={tn[2]:+.2f}')
 
