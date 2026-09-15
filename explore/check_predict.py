@@ -137,12 +137,16 @@ def run(star, a):
     else:
         tn = nearest_node(grid, *t0)
         node_label = 'nearest node'
-    # The catalog curve is drawn at the SAME dust, which was not fitted for it
-    # -- it is a comparison, not a competing fit, and the label says so.
-    thetas = [(f'{node_label}', dict(teff=tn[0], logg=tn[1], mh=tn[2],
-                                     ebv=ebv, vsini=vsini)),
-              ('catalog params, same dust',
-               dict(teff=t0[0], logg=t0[1], mh=t0[2], ebv=ebv, vsini=vsini))]
+    # ONE model: the fitted solution. A second curve at the catalog parameters
+    # used to be drawn alongside it, but it had to borrow this fit's E(B-V) and
+    # v sin i -- nothing refit them for the catalog node -- so its residuals
+    # were not those of any fit that was actually performed, and printing them
+    # next to the real ones invited reading a handicapped comparison as a
+    # result. The catalog values are in data/sample.csv; the node-scan figures
+    # (scan_<star>.png) mark them against the likelihood surface, which is the
+    # honest place for that comparison.
+    thetas = [(node_label, dict(teff=tn[0], logg=tn[1], mh=tn[2],
+                                ebv=ebv, vsini=vsini))]
     print(f'\n  catalog Teff={t0[0]:.0f} logg={t0[1]:.2f} [M/H]={t0[2]:+.2f}  '
           f'-> used Teff={tn[0]:.0f} logg={tn[1]:.2f} [M/H]={tn[2]:+.2f}')
     return _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas,
@@ -340,9 +344,8 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
                  f'v sin i={node["vsini"]:.0f} km/s   — all fitted together '
                  f'over 1705 nodes'
                  + ('   ⚠ [M/H] AT THE GRID FLOOR' if node['at_mh_floor'] else ''))
-        line3 = (f'catalog: Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
-                 f'[M/H]={row["mh_ngsl"]}   (drawn at the SAME dust, which was '
-                 f'not refitted for it)')
+        line3 = ('E(B−V) and v sin i are fitted at every node; the held-out '
+                 'Balmer and Paschen windows are never fitted')
     else:
         line2 = (f'nominal Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
                  f'[M/H]={row["mh_ngsl"]}')
