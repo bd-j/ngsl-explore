@@ -45,45 +45,44 @@ extracted; `observations.py`, `predict.py`, `calibration.py`,
 `common/{lines,species,photometry,specplot}.py`; XSL fit regions with measured
 metal windows and a measured velocity zero point; `fitting/fit.py` retired.
 
-**Figures:** `predict_check_<star>.png` (conditioning vs held-out),
+**Figures:** `predict_check_<star>.png` and `metal_lines_<star>.png` are now
+produced for **every star at its node-scan ML parameters** (`--all` on both
+scripts; Teff, log g, [M/H], E(B−V) and v sin i all from the same fit, via the
+shared `fitting.scan.best_node`). Species labels come from the nearest grid
+atmosphere rather than a bespoke `models/work/` run, so all 12 are labelled
+instead of the 3 that happened to have one.
+
+`predict_check_<star>.png` (conditioning vs held-out),
 `metal_lines_<star>.png` (per-feature, species-labelled),
 `ebv_teff_<star>.png` (χ² surface).
 
 ## Next
 
-### 1. More grid points — the node scan
+### 1. Extend the grid below [M/H] = −0.5
 
-Scale from one node to all 1705. At 0.1 ms per node lookup plus the band and
-XSL projections this is minutes per star, local.
+**This is now the binding limitation, measured rather than suspected.** The node
+scan splits the sample exactly on it:
 
-Per node, store the **whole conditional likelihood curve**, not the argmax:
+| | n | held-out Balmer (median) | band χ²/N |
+|---|---|---|---|
+| [M/H] interior | 5 | **+0.95%** | 0.17–6.3 |
+| [M/H] pressed to the grid floor | 7 | **+10.5%** | 18–85 |
 
-```
-results/<star>/scan.npz
-  teff, logg, mh, ebv_grid, vsini_grid
-  lnl_bands[nt,ng,nm,nE]     NGSL bands vs E(B-V)
-  lnl_xsl[nt,ng,nm,nV]       XSL lines vs v sin i
-  resid_balmer[nt,ng,nm,nE]  held out
-  resid_paschen[nt,ng,nm,nE] held out
-```
-
-~53k floats per array — trivially small and fully inspectable. Keeping the
-curves rather than point estimates is what lets the break prediction be
-*marginalised* over the nuisance parameters instead of evaluated at a plug-in
-value, which is the difference between an honest envelope and a misleadingly
-tight curve.
-
-The separability that makes this cheap is verified: v sin i changes broadband
-band fluxes by ≤0.006 mmag, and a degree-4 polynomial absorbs CCM89 over an XSL
-window to 3×10⁻⁵. So the two conditionals are ~57 evaluations per node, not 806.
+Needs Cannon: the raw `.spec` files exist only there, and `pack_grid.py` is not
+incremental. α-enhancement is the harder half — Fe II/Mg EWs already say these
+stars are not scaled-solar, which no `afe+0.0` node can represent at any [M/H].
 
 ### 2. Split the held-out residual into continuum and line cores
 
-The residual panels (now in the figure) show that inside 3550-4000 A the
-residual is dominated by the high-order **Balmer line cores**, at +5 to +10%,
-while the continuum either side of the break sits near 0-2%. The same is true
-of the Paschen window. A single median over the window therefore mixes two
-different things:
+Unchanged and still the right next analysis step, now with more reason: the
+interior stars sit at +0.95% median Balmer, and until the core excess is
+separated from the continuum it is not clear how much of even that is the known
+NLTE hydrogen problem rather than a continuum error.
+
+The residual panels show that inside 3550-4000 A the residual is dominated by
+the high-order **Balmer line cores**, at +5 to +10%, while the continuum either
+side of the break sits near 0-2%. The same is true of the Paschen window. A
+single median over the window therefore mixes two different things:
 
 * the **continuum shape across the break** -- the actual question, and
 * the **line-core excess**, already known and understood: the observed cores
@@ -91,42 +90,31 @@ different things:
   NLTE in hydrogen, which the code does not treat for H (CAVEATS.md).
 
 Report them separately -- continuum median, core median, and the break metric
-D from `common.balmer_metric` -- or a genuine NLTE signature will be read as a
-continuum failure. This also means `balmer_metric`'s blue window (3350-3630 A,
-degree-1 extrapolated to 3646) needs checking against the band edges: its slope
-is fitted over a range that overlaps the 3385-3550 band, so the "independent"
-claim needs the windows to be disjoint.
+D from `common.balmer_metric`. This also means `balmer_metric`'s blue window
+(3350-3630 A, degree-1 extrapolated to 3646) needs checking against the band
+edges: its slope is fitted over a range that overlaps the 3385-3550 band, so the
+"independent" claim needs the windows to be disjoint.
 
-### 3. `likelihood.py`
+### 3. Calibrate the error model
 
-The last piece both the scan and any future sampler need, and the only one still
-missing.
-
-`marginalize_linear(design, y, ivar)` generalises `calibration.solve` with the
-−½ln|A| term (A = BᵀC⁻¹B) and a prior on the coefficients, so the nuisance
-parameters are **marginalised** rather than profiled. That matters most for XSL,
-which now carries 12 calibration coefficients: profiling them understates the
-uncertainty on everything they are covariant with.
-
-Plus the analytic error-scale profile — ŝ² = χ²/N, so node ranking is by
-N·ln(χ²/N) — which removes `lnerr` from the parameter vector and calibrates the
-confidence scaling to the actual residual level. Inflation must be **floored at
-1**, for the reason `plot_ebv_teff.py` already records: the NGSL bands sit at
-χ²/n = 0.14 and rescaling to 1 would deflate their errors by 2.7×, claiming
-exactly the precision the 1% calibration floor exists to disclaim.
-
-This was dropped from an earlier revision of this file by a renumbering
-accident, not by a decision.
+The node scan makes this unavoidable rather than optional. Independent-pixel χ²
+with XSL's ~2400 correlated pixels gives a nominal Δχ² ≤ 1 interval of a single
+grid node. `fitting/likelihood.py` now carries the error-scale profile, but the
+correlation length is not in it. Until it is, quote the SPREAD of the held-out
+prediction over acceptable models — which the scan stores — and not the
+curvature at the minimum.
 
 ## Open decisions
 
-* **[M/H] floor.** 8 of 13 stars fall outside the grid, almost all in [M/H]
-  (grid stops at −0.5, sample reaches −1.92). Agreed: **try the current grid
-  first**, and see where the scan piles up on the boundary. Fe II EW measurements
-  confirm HD117880 / HD128801 / HD106304 really are metal-poor (3–4× weaker than
-  the −0.5 model) — and that Mg is *not* correspondingly weak, i.e.
-  α-enhancement, which a scaled-solar `afe+0.0` grid cannot represent at any
-  [M/H]. Only 3 primary stars sit fully inside the grid.
+* ~~**[M/H] floor**~~ — **DECIDED, by running it.** "Try the current grid first"
+  was the right call and it has now returned a clear answer: 7 of 12 stars press
+  against −0.5 and those are exactly the ones whose break prediction fails
+  (+10.5% median against +0.95%) and whose reddening goes unphysical (4 of 7
+  exceed their whole SF11 Galactic column). Extending the grid is now task 1.
+  Fe II EW measurements independently confirm HD117880 / HD128801 / HD106304
+  really are metal-poor (3–4× weaker than the −0.5 model) — and that Mg is *not*
+  correspondingly weak, i.e. α-enhancement, which a scaled-solar `afe+0.0` grid
+  cannot represent at any [M/H].
 * **Error model.** Independent-pixel χ² overstates confidence on any smooth
   parameter. Cheapest honest treatment: a ~1% systematic floor for the bands
   (already applied) plus reporting the envelope under ±1% continuum tilt
@@ -150,7 +138,15 @@ accident, not by a decision.
   pair wrong, the composite minimum moves. Do not correct these with a
   wavelength shift.
 
-* **Ti II 4287.6 A is deeper in HD194453 than any grid [M/H] can produce**
+* **Ti II 4287.6 A**: at the node-scan ML parameters this is no longer out of
+  reach. Held at the CATALOG node (10241 K / 3.9 / +0.0) the observed depth
+  0.035 sat above the grid's whole 0.009-0.027 span; at the ML node
+  (9900 K / 3.60 / -0.10) the span is 0.011-0.032 and **0 of 8 features fall
+  outside the grid**, against 1 of 8 before. So part of what looked like a line
+  list or abundance problem was the fixed log g. Still worth watching -- it is
+  the closest to the edge of the eight -- but it is no longer evidence of
+  anything on its own. Original note follows.
+
   (observed depth 0.035 against 0.009 at [M/H] = -0.5 and 0.027 at +0.3). The
   other seven of the top eight sit inside the grid's reach, so this is not a
   metallicity result. Now that the species is identified as **Ti II**, the
@@ -166,14 +162,65 @@ accident, not by a decision.
 * **HD194453's preferred E(B−V) ≈ 0.03** against a photometric value of −0.01.
   Once Teff is free this will move along the degeneracy; if it does not, the
   tension is real and needs explaining.
-* **v sin i for the sample** — measure from XSL, where it is measurable over
-  ~15–100 km/s. None of the sample has a published value in hand.
+* **v sin i for the sample** — measured from XSL, but the value depends on what
+  else is held fixed, and that is now quantified. The fixed-[M/H] sweep and the
+  free node scan disagree badly for exactly the stars whose other parameters
+  moved:
+
+  | star | sweep (log g, [M/H] fixed) | node scan (free) |
+  |---|---|---|
+  | HD074721 | 200 | **10** |
+  | HD106304 | 200 | **30** |
+  | HD128801 | 250 | **60** |
+  | HD117880 | 110 | **40** |
+
+  Three of those four were the ones `explore/vsini_mask_test.py` flagged as
+  mask-driven, so the earlier suspicion was right in substance — v sin i was
+  absorbing parameter error — even though the mask test could not confirm the
+  mechanism. Quote v s in i from the node scan, not from the sweep. None of the
+  sample has a published value to check against.
 * **The grid's raw `.spec` files exist only on Cannon**; `models/grid/` holds
   35 `.atm` locally. Repacking at a different resolution, or extending in
   [M/H], needs that machine. `pack_grid.py` is also not incremental — it globs
   `models/grid/*.spec` and would re-read everything.
 
 ## Done
+
+### The node scan — all 1705 nodes, 12 stars
+
+`fitting/scan.py` → `results/<star>/scan.npz` (gitignored, ~4 MB each, ~10 min
+per star). `explore/plot_scan.py` → `scan_<star>.png`, `scan_sample.png`.
+
+**The project's question, answered where the grid can answer it:** for the 5
+stars whose [M/H] lands inside the grid, both held-out breaks are predicted to
+**~1%** (Balmer median +0.95%, range −0.36 to +2.97) from a scalar solved only
+on bands that exclude those regions.
+
+**A failed prediction is visible in the conditioning data.** Band χ²/N — 13
+points the fit *did* see — tracks the held-out Balmer error at **r = +0.87
+(log–log, +0.96 linear)**. That is what makes this a prediction rather than a
+hope: it is checkable before looking at the held-out region.
+
+**XSL is blind to this failure** (r = −0.17). It fits the catastrophic stars at
+χ²/N = 0.6–1.1 while their break prediction is off by 15%, because its continuum
+is marginalised away by construction — so it constrains line shapes and cannot
+see a wrong continuum. This is the direct argument for keeping the bands leg: a
+line-based Teff alone would have looked fine on every one of them.
+
+**HD194453's dust tension was an artifact of fixing log g and [M/H].** With them
+free it lands at 9900 K, log g 3.60, [M/H] −0.10, **E(B−V) = 0.005** against a
+photometric −0.01. The 0.045 from the fixed-[M/H] sweep came from pinning the
+other two at catalog values. Held out: Balmer +1.11%, Paschen +2.25% — against
++0.39%/+0.15% for the fixed sweep's 10400 K solution, so the two sit at
+different points along the degeneracy and neither is settled.
+
+Design notes worth keeping. The scan stores **χ², ln|A| and the pixel count, not
+lnL** — the error model is still open, and a stored likelihood would freeze a
+convention that a 2 h re-run would be needed to change. ln|A| had to be stored
+because it depends on the model at each node and cannot be recovered afterwards.
+`verify()` checks the scan's hoisted fast path against `predict()` on random
+real nodes and requires **bitwise** agreement; it caught two real bugs (below).
+
 
 ### E(B−V) sweep and the Teff–E(B−V) χ² surface
 

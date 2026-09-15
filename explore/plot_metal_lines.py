@@ -21,6 +21,7 @@ being compared is line depth and not continuum placement.
 """
 import argparse
 import csv
+import re
 import sys
 from pathlib import Path
 
@@ -65,26 +66,63 @@ def top_features(n):
     return rows[:n]
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--star', default='HD194453')
-    ap.add_argument('--n', type=int, default=8)
-    ap.add_argument('--vsini', type=float, default=0.0)
-    ap.add_argument('--ebv', type=float, default=0.0)
-    a = ap.parse_args()
+def nearest_atm(teff, logg):
+    """Closest grid atmosphere to (Teff, log g) -> Path, or None.
 
-    row, grid = sample_row(a.star), Grid()
+    The species weights need a T and an electron density at the line-forming
+    depth, so they should come from the atmosphere of the MODEL BEING PLOTTED
+    rather than from whichever star happened to have one lying in models/work/.
+    Using the grid's own atmospheres makes every star's panel labelled the same
+    way instead of only the one star with a bespoke run.
+
+    All 35 are feh+0.00. That is fine for RANKING species: scaling every metal
+    together moves all the candidate lines by the same factor, so which species
+    dominates a window does not change. It would not be fine for absolute
+    depths, which this is not used for.
+    """
+    best, bd = None, None
+    for q in sorted((ROOT / 'models' / 'grid').glob('at12_feh*_t*g*.atm')):
+        m = re.search(r'_t(\d+)g([0-9.]+)\.atm$', q.name)
+        if not m:
+            continue
+        d = ((float(m.group(1)) - teff) / 500.0) ** 2 + \
+            ((float(m.group(2)) - logg) / 0.5) ** 2
+        if bd is None or d < bd:
+            best, bd = q, d
+    return best
+
+
+def run(star, a):
+    """One star, at the node-scan maximum-likelihood parameters if available."""
+    row, grid = sample_row(star), Grid()
+    node = None
+    if not a.no_scan and (ROOT / 'results' / star / 'scan.npz').exists():
+        from fitting.scan import best_node
+        node = best_node(star)
+    a = argparse.Namespace(**vars(a))     # per-star copy; do not mutate the shared one
+    if node is not None:
+        a.ebv = node['ebv'] if a.ebv is None else a.ebv
+        a.vsini = node['vsini'] if a.vsini is None else a.vsini
+    a.ebv = 0.0 if a.ebv is None else a.ebv
+    a.vsini = 0.0 if a.vsini is None else a.vsini
+    a.star = star
     # 'all' windows AND drop_bad=False: features excluded from the fit because
     # the models get them wrong are exactly the ones worth LOOKING at, so the
     # prediction panels keep every one of them.
     obs = load_xsl(a.star, metals='all', drop_bad=False)
     feats = top_features(a.n)
 
-    teff = float(grid.teff[np.argmin(np.abs(grid.teff - float(row['teff_ngsl'])))])
-    logg = float(grid.logg[np.argmin(np.abs(grid.logg - float(row['logg_ngsl'])))])
-    mh = float(grid.mh[np.argmin(np.abs(grid.mh - float(row['mh_ngsl'])))])
+    if node is not None:
+        teff, logg, mh = node['teff'], node['logg'], node['mh']
+        src = 'node-scan ML'
+    else:
+        teff = float(grid.teff[np.argmin(np.abs(grid.teff - float(row['teff_ngsl'])))])
+        logg = float(grid.logg[np.argmin(np.abs(grid.logg - float(row['logg_ngsl'])))])
+        mh = float(grid.mh[np.argmin(np.abs(grid.mh - float(row['mh_ngsl'])))])
+        src = 'nearest node to catalog'
     mh_lo, mh_hi = float(grid.mh.min()), float(grid.mh.max())
-    print(f'{a.star}: node Teff={teff:.0f} log g={logg:.2f} [M/H]={mh:+.2f}; '
+    print(f'{a.star}: {src} Teff={teff:.0f} log g={logg:.2f} [M/H]={mh:+.2f}, '
+          f'E(B-V)={a.ebv:.3f}, v sin i={a.vsini:.0f}; '
           f'grid [M/H] spans {mh_lo:+.1f} to {mh_hi:+.1f}')
     print(f'  XSL n={obs.ndata}; {len(feats)} features')
 
@@ -100,9 +138,9 @@ def main():
     # assigned from memory. Ranking on log gf alone would return Co I and Nb I,
     # which have the most transitions in this range and are entirely ionised
     # away at 11,600 K.
-    atm = ROOT / 'models' / 'work' / f'{a.star}.atm'
+    atm = nearest_atm(teff, logg)
     species, marks = {}, {}
-    if atm.exists():
+    if atm is not None and atm.exists():
         T_line, ne_line = atmosphere_point(atm)
         eps = abundances(atm)
         print(f'  line-forming point: T={T_line:.0f} K, Ne={ne_line:.2e} cm^-3')
@@ -113,7 +151,7 @@ def main():
                 float(f['lam_lo']) - 2, float(f['lam_hi']) + 2,
                 T_line, ne_line, eps, n=4)
     else:
-        print(f'  no {atm.name}: species not identified')
+        print('  no grid atmosphere near this node: species not identified')
 
     # Where does the observed depth sit relative to what the grid can reach?
     # Eyeballing the band is not enough: a feature the model gets wrong at EVERY
@@ -196,15 +234,37 @@ def main():
 
     fig.suptitle(
         f'{a.star} — the {len(feats)} most [M/H]-sensitive features in XSL\n'
-        f'node Teff={teff:.0f} / log g={logg:.2f} / [M/H]={mh:+.2f}    '
-        f'held fixed: E(B-V)={a.ebv:.3f}, v sin i={a.vsini:.0f} km/s    '
-        f'shaded band = what the grid can reach',
+        f'{src}: Teff={teff:.0f} / log g={logg:.2f} / [M/H]={mh:+.2f} / '
+        f'E(B−V)={a.ebv:.3f} / v sin i={a.vsini:.0f} km/s'
+        + ('   ⚠ [M/H] AT THE GRID FLOOR' if node and node['at_mh_floor'] else '')
+        + '\nshaded band = what the grid can reach',
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 1 - 0.055 * (6.0 / nrow)])
     out = ROOT / 'figures' / f'metal_lines_{a.star}.png'
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')
     plt.close(fig)
     print(f'  -> {out.relative_to(ROOT)}')
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--star', default='HD194453')
+    ap.add_argument('--all', action='store_true',
+                    help='every primary + secondary star in the sample')
+    ap.add_argument('--n', type=int, default=8)
+    # None, not 0: the default is the node scan's own solution when it exists.
+    ap.add_argument('--vsini', type=float, default=None)
+    ap.add_argument('--ebv', type=float, default=None)
+    ap.add_argument('--no-scan', action='store_true')
+    a = ap.parse_args()
+    stars = ([r['star'] for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv'))
+              if r['tier'] in ('primary', 'secondary')] if a.all else [a.star])
+    for st in stars:
+        try:
+            run(st, a)
+        except Exception as exc:
+            print(f'{st}: FAILED {type(exc).__name__}: {exc}')
+        print()
 
 
 if __name__ == '__main__':

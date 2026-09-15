@@ -72,9 +72,88 @@ def scan_row(star):
     return None
 
 
+def scan_params(star):
+    """Maximum-likelihood node from the full node scan, or None.
+
+    This is the preferred source: unlike data/ebv_teff_scan.csv it has Teff,
+    log g, [M/H], E(B-V) and v sin i all determined TOGETHER, so the figure
+    shows a single self-consistent model rather than one parameter borrowed
+    from a fit that held the others fixed.
+    """
+    if not (ROOT / 'results' / star / 'scan.npz').exists():
+        return None
+    from fitting.scan import best_node
+    return best_node(star)
+
+
+def run(star, a):
+    """One star: fit, report, and draw its figure."""
+    ebv, vsini = a.ebv, a.vsini
+    node = None if a.no_scan else scan_params(star)
+    sc = None if (a.no_scan or node is not None) else scan_row(star)
+    if node is not None:
+        src = (f'node scan ML: Teff={node["teff"]:.0f} log g={node["logg"]:.2f} '
+               f'[M/H]={node["mh"]:+.2f}')
+        ebv = node['ebv'] if ebv is None else ebv
+        vsini = node['vsini'] if vsini is None else vsini
+    elif sc is not None:
+        src = f'ebv_teff_scan.csv (fitted at Teff={float(sc["teff"]):.0f} K)'
+        ebv = float(sc['ebv']) if ebv is None else ebv
+        vsini = float(sc['vsini']) if vsini is None else vsini
+    else:
+        src = 'command line'
+    ebv = 0.0 if ebv is None else ebv
+    vsini = 0.0 if vsini is None else vsini
+
+    row, grid = sample_row(star), Grid()
+    bands = ngsl_band_edges()
+    print(f'{star}: {len(bands)} NGSL bands, '
+          f'{bands[0][1]:.0f}-{bands[-1][2]:.0f} A')
+    print(f'  E(B-V)={ebv:.3f}, v sin i={vsini:.0f} km/s  <- {src}')
+    print(f'  held out: Balmer {BREAK_WINDOW}, Paschen {PASCHEN_WINDOW}')
+
+    cond = conditioning_set(star)
+    nb = cond[0]
+    xs = next((o for o in cond if o.name == 'xsl'), None)
+    spec = load_ngsl(star)
+    held = {'Balmer': heldout(star, window=BREAK_WINDOW),
+            'Paschen': heldout(star, window=PASCHEN_WINDOW)}
+    print('  conditioning: ' + ', '.join(f'{o.name}(n={o.ndata})' for o in cond))
+    print('  held out    : ' + ', '.join(f'{k}(n={v.ndata})'
+                                         for k, v in held.items()))
+
+    t0 = (float(row['teff_ngsl']), float(row['logg_ngsl']), float(row['mh_ngsl']))
+    # The stellar parameters must come from the SAME fit as the dust. They sit
+    # on a common degeneracy ridge (+93 K per 0.01 mag), so pairing one fit's
+    # E(B-V) with another's Teff double-counts the reddening -- it moved the
+    # predicted Balmer residual from +1.2% to +2.5% on HD194453 for no physical
+    # reason.
+    if node is not None:
+        tn = (node['teff'], node['logg'], node['mh'])
+        node_label = 'ML node (scan)'
+    elif sc is not None and ebv == float(sc['ebv']):
+        tn = (float(sc['teff']), float(sc['logg_node']), float(sc['mh_node']))
+        node_label = 'scan solution'
+    else:
+        tn = nearest_node(grid, *t0)
+        node_label = 'nearest node'
+    # The catalog curve is drawn at the SAME dust, which was not fitted for it
+    # -- it is a comparison, not a competing fit, and the label says so.
+    thetas = [(f'{node_label}', dict(teff=tn[0], logg=tn[1], mh=tn[2],
+                                     ebv=ebv, vsini=vsini)),
+              ('catalog params, same dust',
+               dict(teff=t0[0], logg=t0[1], mh=t0[2], ebv=ebv, vsini=vsini))]
+    print(f'\n  catalog Teff={t0[0]:.0f} logg={t0[1]:.2f} [M/H]={t0[2]:+.2f}  '
+          f'-> used Teff={tn[0]:.0f} logg={tn[1]:.2f} [M/H]={tn[2]:+.2f}')
+    return _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas,
+                         ebv, vsini, node)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--star', default='HD194453')
+    ap.add_argument('--all', action='store_true',
+                    help='every primary + secondary star in the sample')
     # Defaults of None, not 0. E(B-V) = 0 produced a figure whose 13
     # conditioning bands ran -5.5% to +5.0% across the spectrum -- the
     # unreddened tilt, which a single scalar cannot absorb and is not meant to
@@ -88,51 +167,20 @@ def main():
                     help='ignore data/ebv_teff_scan.csv; E(B-V)=0 unless given')
     a = ap.parse_args()
 
-    sc = None if a.no_scan else scan_row(a.star)
-    src = 'command line'
-    if sc is not None and (a.ebv is None or a.vsini is None):
-        src = f'ebv_teff_scan.csv (fitted at Teff={float(sc["teff"]):.0f} K)'
-        a.ebv = float(sc['ebv']) if a.ebv is None else a.ebv
-        a.vsini = float(sc['vsini']) if a.vsini is None else a.vsini
-    a.ebv = 0.0 if a.ebv is None else a.ebv
-    a.vsini = 0.0 if a.vsini is None else a.vsini
-    print(f'  E(B-V)={a.ebv:.3f}, v sin i={a.vsini:.0f} km/s  <- {src}')
+    stars = ([r['star'] for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv'))
+              if r['tier'] in ('primary', 'secondary')] if a.all else [a.star])
+    out = []
+    for st in stars:
+        try:
+            out.append(run(st, a))
+        except Exception as exc:
+            print(f'{st}: FAILED {type(exc).__name__}: {exc}')
+        print()
+    return out
 
-    row, grid = sample_row(a.star), Grid()
-    bands = ngsl_band_edges()
-    print(f'{a.star}: {len(bands)} NGSL bands, '
-          f'{bands[0][1]:.0f}-{bands[-1][2]:.0f} A')
-    print(f'  held out: Balmer {BREAK_WINDOW}, Paschen {PASCHEN_WINDOW}')
 
-    cond = conditioning_set(a.star)
-    nb = cond[0]
-    xs = next((o for o in cond if o.name == 'xsl'), None)
-    spec = load_ngsl(a.star)
-    held = {'Balmer': heldout(a.star, window=BREAK_WINDOW),
-            'Paschen': heldout(a.star, window=PASCHEN_WINDOW)}
-    print('  conditioning: ' + ', '.join(f'{o.name}(n={o.ndata})' for o in cond))
-    print('  held out    : ' + ', '.join(f'{k}(n={v.ndata})'
-                                         for k, v in held.items()))
-
-    t0 = (float(row['teff_ngsl']), float(row['logg_ngsl']), float(row['mh_ngsl']))
-    tn = nearest_node(grid, *t0)
-    # If the dust came from the scan, the Teff must come with it. They sit on
-    # the same degeneracy ridge (+93 K per 0.01 mag), so pairing the scan's
-    # E(B-V) with the catalog's Teff double-counts the reddening -- it moved the
-    # predicted Balmer residual from +1.2% to +2.5% on HD194453 for no physical
-    # reason.
-    if sc is not None and a.ebv == float(sc['ebv']):
-        tn = (float(sc['teff']), float(sc['logg_node']), float(sc['mh_node']))
-        node_label = 'scan solution'
-    else:
-        node_label = 'nearest node'
-    thetas = [('nominal (interp)', dict(teff=t0[0], logg=t0[1], mh=t0[2],
-                                        ebv=a.ebv, vsini=a.vsini)),
-              (node_label, dict(teff=tn[0], logg=tn[1], mh=tn[2],
-                                ebv=a.ebv, vsini=a.vsini))]
-    print(f'\n  nominal Teff={t0[0]:.0f} logg={t0[1]:.2f} [M/H]={t0[2]:+.2f}  '
-          f'-> node Teff={tn[0]:.0f} logg={tn[1]:.2f} [M/H]={tn[2]:+.2f}')
-
+def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
+                  vsini, node=None):
     results, xsl_cal = {}, {}
     for label, th in thetas:
         print(f'\n  {label}:')
@@ -166,12 +214,16 @@ def main():
         results[label] = dict(cal_b=cal_b, rb=rb, ub=ub, scalar=c[0],
                               model_spec=model_spec, hres=hres)
 
-    figure(a.star, nb, spec, xs, held, results, xsl_cal, row, bands,
-           fixed=dict(ebv=a.ebv, vsini=a.vsini))
+    figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
+           fixed=dict(ebv=ebv, vsini=vsini), node=node)
+    labels = list(results)
+    return dict(star=star, ebv=ebv, vsini=vsini,
+                balmer=float(np.nanmedian(results[labels[0]]['hres']['Balmer'])),
+                paschen=float(np.nanmedian(results[labels[0]]['hres']['Paschen'])))
 
 
 def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
-           fixed=None):
+           fixed=None, node=None):
     labels = list(results)
     fig = plt.figure(figsize=(12.5, 14))
     gs = fig.add_gridspec(5, 2, height_ratios=[1.9, 1.5, 0.95, 1.4, 1.3],
@@ -222,9 +274,9 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
         for lab, c in zip(labels, (MOD_C, MOD2_C)):
             axz.plot(spec.wavelength[sel], results[lab]['model_spec'][sel],
                      color=c, lw=1.0, label=f'model, {lab}')
-        med = 100 * np.nanmedian(results[labels[-1]]['hres'][nm])
+        med = 100 * np.nanmedian(results[labels[0]]['hres'][nm])
         axz.set_title(f'{nm} — HELD OUT and predicted '
-                      f'(node median {med:+.2f}%)', fontsize=9, color=INK)
+                      f'({labels[0]}: {med:+.2f}%)', fontsize=9, color=INK)
         axz.set_ylabel(r'F$_\lambda$', fontsize=8, color=INK)
         axz.tick_params(labelbottom=False)
         if col == 0:
@@ -282,14 +334,24 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
     # E(B-V) and v sin i are HELD, not fitted, in this check -- and the held-out
     # residuals move a lot with both, so the title must say what they were or
     # the numbers in it cannot be compared between runs.
+    if node is not None:
+        line2 = (f'ML node: Teff={node["teff"]:.0f} / log g={node["logg"]:.2f} / '
+                 f'[M/H]={node["mh"]:+.2f} / E(B−V)={node["ebv"]:.3f} / '
+                 f'v sin i={node["vsini"]:.0f} km/s   — all fitted together '
+                 f'over 1705 nodes'
+                 + ('   ⚠ [M/H] AT THE GRID FLOOR' if node['at_mh_floor'] else ''))
+        line3 = (f'catalog: Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
+                 f'[M/H]={row["mh_ngsl"]}   (drawn at the SAME dust, which was '
+                 f'not refitted for it)')
+    else:
+        line2 = (f'nominal Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
+                 f'[M/H]={row["mh_ngsl"]}')
+        line3 = (f'held fixed: E(B−V)={fixed.get("ebv", 0.0):.3f}, '
+                 f'v sin i={fixed.get("vsini", 0.0):.0f} km/s')
     fig.suptitle(
         f'{star}   conditioning = NGSL bands + XSL lines;   '
-        f'Balmer and Paschen held out\n'
-        f'nominal Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
-        f'[M/H]={row["mh_ngsl"]}    '
-        f'held fixed: E(B-V)={fixed.get("ebv", 0.0):.3f}, '
-        f'v sin i={fixed.get("vsini", 0.0):.0f} km/s',
-        fontsize=11, color=INK, linespacing=1.5)
+        f'Balmer and Paschen held out\n{line2}\n{line3}',
+        fontsize=10.5, color=INK, linespacing=1.5)
     out = ROOT / 'figures' / f'predict_check_{star}.png'
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')
     plt.close(fig)
