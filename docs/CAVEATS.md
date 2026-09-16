@@ -232,26 +232,64 @@ a combination that should be read as a sign error, not a partial success.
 
 ## Model physics
 
-### Balmer line cores are filled relative to LTE models
-Across all NGSL stars the observed cores carry a **net flux excess of
-~10% of the line equivalent width**. This is genuine added flux, not a
-broadening mismatch: the excess is **unchanged (8.8% vs 9.0%)** whether the
-model is smoothed with a 3.85 A or a 7.0 A kernel, and broadening conserves
-flux by construction.
+### Balmer line cores in NGSL: an instrument profile, not NLTE
 
-**Interpretation:** most likely **NLTE in hydrogen** — LTE Balmer cores in A
-stars are known to come out too deep, and this code's `NLTE_MODE` covers only
-Na I, Mg I, Ca I/II and Fe I, *not* H. Chromospheric emission was considered
-and is disfavoured: these stars are at ~10,000 K, well above the granulation
-boundary (~7500 K) where convective envelopes and chromospheric indicators
-disappear.
+**This entry previously said the filled Balmer cores were "most likely NLTE in
+hydrogen". That reading does not survive, and the correction matters because it
+moved a residual out of the physics and into the instrument.**
 
-**Not yet tested:** `USE_KP_HYDROGEN` in `synthe_module.f90:1045` (Kurucz-Peterson
-vs the default Stehle-Hutcheon Stark profiles) is the obvious A/B.
+What forced it: at XSL's R ~ 9800 the same models fit the **full H-gamma
+profile, core included**, for the metal-rich stars. A physical NLTE core deficit
+cannot be present at R = 600 and absent at R = 9800.
 
-**Do not** absorb this into a fitted instrumental LSF. Fitting a broader kernel
-does minimize the residual (7.5 A, "R ~ 486"), but it launders physics into an
-instrumental parameter and that number is not a resolution measurement.
+`explore/ngsl_core_excess.py` then asks the question with no model in it at all
+— degrade XSL to NGSL's resolution, rebin to NGSL pixels, compare the two
+OBSERVATIONS. Over the resolved high-order lines (H7-H12, 3700-4000 A), median
+core-minus-continuum, eight in-grid stars:
+
+| comparison | core excess |
+|---|---|
+| NGSL vs the model, Gaussian R = 600 | **+2.34%** |
+| NGSL vs XSL degraded, same Gaussian | +0.80% |
+| NGSL vs the model, Gaussian + 0.12 broad wing | **+0.33%** |
+
+A winged instrument profile removes **86%** of it. The wing fraction and width
+are fitted against XSL in a CONTROL window at 4200-4600 A, which contains no
+Balmer line, and then applied — so the Balmer number is a prediction, not a fit
+to the thing being explained.
+
+**Why the old argument failed.** It ran: the excess is unchanged (8.8% vs 9.0%)
+whether the model is smoothed with a 3.85 A or a 7.0 A kernel, and broadening
+conserves flux, so the flux must be real. That correctly rules out a kernel
+WIDTH error and says nothing about kernel SHAPE. It also conflates two different
+measurements. Integrated EW is conserved by any symmetric kernel, so it cannot
+distinguish the two hypotheses at all — measured here, the EW difference is
+identical under both kernels (−4.0% vs −4.9%). Core depth relative to a LOCAL
+continuum is not conserved, because in a blended series the wings of neighbouring
+lines depress the continuum between them while filling the cores. That is the
+quantity the residual panels actually show.
+
+**And the EW excess itself is much smaller than recorded.** At the node-scan
+maximum-likelihood parameters it is a median **−4%** with ±7% star-to-star
+scatter and both signs, not a systematic ~10%. The older number came from fits
+with log g and [M/H] pinned at catalog values.
+
+A physically plausible mechanism exists: NGSL v2 spectra are co-adds of two
+dithered exposures resampled onto a common grid, which produces more wing power
+than a Gaussian.
+
+**What is still open.** The two-Gaussian kernel used here is a stand-in, not a
+measured profile shape; `common.lsf` still applies a pure Gaussian everywhere,
+so this is a known systematic in the fits rather than something already
+corrected. `USE_KP_HYDROGEN` in `synthe_module.f90:1045` (Kurucz-Peterson vs the
+default Stehle-Hutcheon Stark profiles) remains an untested A/B, and a residual
+NLTE contribution at the 0.3% level is not excluded — only the claim that NLTE
+is the leading explanation.
+
+The old warning still stands in a narrower form: do not fit a free LSF WIDTH
+against the models and call the result a resolution. Measuring the profile
+against XSL, in a window with no hydrogen line in it, is a different operation
+and is the one done here.
 
 ### Predicted O I Rydberg lines put spurious absorption in the models
 

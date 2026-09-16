@@ -120,10 +120,14 @@ back into the continuum by 37–41 Å, and the 50%-depth core runs 0.8 Å (Hα) 
 4.7 Å (Hδ), so ±50/±6 covers wings and excludes cores with margin. For a fast
 rotator the core mask should grow — v sin i = 200 km/s adds 2.9 Å at Hγ.
 
-The cores are masked because the observed Balmer cores carry a flux excess of
-~10% of the line EW relative to these LTE models — almost certainly NLTE in
-hydrogen, which the code does not treat for H. Fitting them would drag Teff and
-log g to absorb physics the models are missing.
+The cores are masked as a precaution against a mismatch the models might not
+reproduce, not because a specific one is established. The ~10% NLTE core excess
+this used to cite has not held up: at XSL's own resolution the models fit the
+full Hγ profile, core included, and the NGSL core residual is 86% accounted for
+by a non-Gaussian instrument profile measured against XSL
+(`docs/CAVEATS.md`, `explore/ngsl_core_excess.py`). Masking them costs little —
+they are a few per cent of the fitted pixels — and still protects Teff and log g
+from absorbing whatever is left.
 
 **Hε and higher orders are excluded.** They blend into one another so a local
 continuum is not defined: the wing of H8 does not return to within 2% of the

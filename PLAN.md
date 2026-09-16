@@ -86,7 +86,8 @@ Two things follow, and both are more important than the weighting itself:
   [M/H], E(B−V) or v sin i gets below it. That is model inadequacy or
   underestimated XSL uncertainties, not a node-selection problem, and summing
   raw χ² lets that systematic floor dominate which node is picked. Diagnosing
-  it — NLTE cores, line-list errors, XSL error bars — is the real task.
+  it — line-list errors, XSL error bars, the instrument profile — is the real
+  task. Note that "NLTE cores" is no longer on that list; see CAVEATS.md.
 * **v sin i running to the ceiling is the clean tell.** At the χ²/dof node for
   HD106304 and HD128801, XSL's χ² falls monotonically all the way to 300 km/s
   (HD106304: 6.33 → 2.22). That is not a rotation measurement; it is broadening
@@ -124,9 +125,11 @@ side of the break sits near 0-2%. The same is true of the Paschen window. A
 single median over the window therefore mixes two different things:
 
 * the **continuum shape across the break** -- the actual question, and
-* the **line-core excess**, already known and understood: the observed cores
-  carry ~10% of the line EW in excess of these LTE models, almost certainly
-  NLTE in hydrogen, which the code does not treat for H (CAVEATS.md).
+* the **line-core excess** — which is now understood differently: it is
+  mostly NGSL's instrument profile, not NLTE. A Gaussian + 12% broad wing
+  measured against XSL in a Balmer-free control window removes 86% of it, and
+  at XSL's resolution the models fit the full Hγ profile core included
+  (CAVEATS.md, `explore/ngsl_core_excess.py`).
 
 Report them separately -- continuum median, core median, and the break metric
 D from `common.balmer_metric`. This also means `balmer_metric`'s blue window
@@ -142,6 +145,38 @@ grid node. `fitting/likelihood.py` now carries the error-scale profile, but the
 correlation length is not in it. Until it is, quote the SPREAD of the held-out
 prediction over acceptable models — which the scan stores — and not the
 curvature at the minimum.
+
+### The NGSL Balmer core excess is the instrument profile, not NLTE
+
+`explore/ngsl_core_excess.py` → `data/ngsl_core_excess.csv`. Prompted by the
+observation that at XSL's R ~ 9800 the models fit the **full Hγ profile, core
+included**, for the metal-rich stars — which a physical NLTE core deficit could
+not do while also being present at R = 600.
+
+Median core-minus-continuum over the resolved H7–H12 lines, eight in-grid stars:
+
+| comparison | core excess |
+|---|---|
+| NGSL vs model, Gaussian R = 600 | **+2.34%** |
+| NGSL vs XSL degraded, same Gaussian (no model) | +0.80% |
+| NGSL vs model, Gaussian + 0.12 broad wing | **+0.33%** |
+
+**86% removed**, and the wing is fitted against XSL at 4200–4600 Å — a window
+with no Balmer line in it — then applied, so the Balmer number is a prediction.
+
+Two things this corrects in the older record. The argument that the excess was
+"genuine added flux, unchanged between a 3.85 Å and a 7.0 Å kernel" ruled out a
+kernel WIDTH error and said nothing about kernel SHAPE; and it used integrated
+EW, which any symmetric kernel conserves and which therefore cannot distinguish
+the hypotheses (measured: −4.0% vs −4.9% under the two kernels). The EW
+difference is also much smaller than recorded — median −4% with ±7% scatter and
+both signs, not a systematic ~10% — because the old number came from fits with
+log g and [M/H] pinned.
+
+**Not yet acted on:** `common.lsf` still applies a pure Gaussian everywhere, so
+this is a known systematic in every fit rather than something corrected. Whether
+to adopt a winged NGSL profile is an open decision — it would change the band
+fluxes, the held-out residuals and the XSL↔NGSL resolution comparison together.
 
 ### Conventions set while reading the figures
 
