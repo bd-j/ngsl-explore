@@ -68,8 +68,12 @@ C_KMS = 2.99792458e5
 
 ROOT = Path(__file__).resolve().parent.parent
 EBV_MAX, N_EBV = 0.30, 61
-VSINI_GRID = np.array([0., 10., 20., 30., 40., 60., 80., 110., 150., 200.,
-                       250., 300.])
+# Capped at 200 km/s. The 250 and 300 nodes were doing no useful work: the only
+# solutions that reached them were the below-grid-[M/H] stars, where broadening
+# was being spent to wash out model metal lines the grid cannot make weak enough
+# (PLAN.md), and a ceiling that high just let that go further before showing up.
+VSINI_MAX = 200.0
+VSINI_GRID = np.array([0., 10., 20., 30., 40., 60., 80., 110., 150., 200.])
 
 
 def attenuation(wave, ebvs, r_v=3.1):
@@ -327,6 +331,12 @@ def posterior(star, scale='profile', weight='inverse_dof', vsini='profile'):
                 c0=d['scalar'])
     lx = lnlike(d['chi2_xsl'], int(d['n_xsl']), d['lndetA_xsl'],
                 int(d['k_xsl']), scale=scale, coeff_prior='flat')
+    # Existing scan.npz files were written with nodes up to 300 km/s. Apply the
+    # cap at read time so the change takes effect without re-running the scan;
+    # a scan written after this will simply have no columns to drop.
+    keep = np.asarray(d['vsini'], float) <= VSINI_MAX + 1e-9
+    if not keep.all():
+        lx = lx[..., keep]
     if vsini == 'marginal' and weight is None:
         # a nuisance parameter, integrated out so a node that needs a finely
         # tuned rotation is not rewarded for the tuning
@@ -352,7 +362,10 @@ def best_node(star, scale='profile', weight='inverse_dof'):
     """
     d, lnl = posterior(star, scale, weight)
     i, j, k, e = np.unravel_index(np.nanargmax(lnl), lnl.shape)
-    v = int(np.nanargmin(d['chi2_xsl'][i, j, k]))
+    cx = d['chi2_xsl'][i, j, k]
+    vs = np.asarray(d['vsini'], float)
+    cx = np.where(vs <= VSINI_MAX + 1e-9, cx, np.nan)
+    v = int(np.nanargmin(cx))
     return dict(star=star, teff=float(d['teff'][i]), logg=float(d['logg'][j]),
                 mh=float(d['mh'][k]), ebv=float(d['ebv'][e]),
                 vsini=float(d['vsini'][v]),

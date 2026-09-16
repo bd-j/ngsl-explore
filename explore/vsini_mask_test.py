@@ -36,7 +36,7 @@ from fitting.calibration import solve, chi2
 
 ROOT = Path(__file__).resolve().parent.parent
 MASKS = (6.0, 10.0, 15.0, 25.0)
-VSINI = np.array([0., 10., 20., 30., 40., 60., 80., 110., 150., 200., 250., 300.])
+from fitting.scan import VSINI_GRID as VSINI    # one definition, capped at 200
 # Two adjacent nodes of the v sin i grid. Anything inside that is the grid step,
 # not a real dependence on the mask.
 STABLE_SPREAD = 40.0

@@ -130,7 +130,7 @@ def run(star, a):
 
     def model_for(z):
         th = dict(teff=teff, logg=logg, mh=z, ebv=a.ebv, vsini=a.vsini)
-        cal, _ = solve(obs, predict(th, [obs], grid)[0].value)
+        cal, _ = solve(obs, predict(th, [obs], grid)[0].value, fill_domains=True)
         return cal
 
     cal_node, cal_lo, cal_hi = model_for(mh), model_for(mh_lo), model_for(mh_hi)

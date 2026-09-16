@@ -126,11 +126,23 @@ def design_matrix(obs, model):
     raise ValueError(f'unknown calibration kind: {kind!r}')
 
 
-def solve(obs, model, rcond=None):
+def solve(obs, model, rcond=None, fill_domains=False):
     """Best-fit calibration coefficients -> (calibrated_model_full, coeffs).
 
     The returned model is full length (unmasked pixels included) so it can be
     plotted against the whole spectrum; only masked pixels entered the solve.
+
+    `fill_domains` matters only for 'segments'. By default a segment's
+    polynomial is evaluated on the pixels it APPLIES to, so the calibrated model
+    is NaN wherever nothing was fitted -- including inside a masked Balmer core,
+    which left a hole in the middle of the very line the panel is about. With
+    fill_domains=True each segment also fills any still-empty pixel inside its
+    own polynomial DOMAIN, narrowest domain first so a local Balmer continuum
+    wins over the arm-wide metal one. That is interpolation within the fitted
+    range, never extrapolation beyond it.
+
+    It cannot change any fit: chi2() and residual() select on `usable`, which
+    requires obs.mask, and every pixel this fills is masked out by construction.
     """
     m = usable(obs, model)
     B, ncoeff = design_matrix(obs, model)
@@ -162,6 +174,7 @@ def solve(obs, model, rcond=None):
         wm = w[m]
         out = np.full_like(full, np.nan)
         i = 0
+        placed = []
         for seg in obs.calibration[1]:
             order = int(seg['order'])
             if segment_pixels(wm, seg).sum() <= order:
@@ -170,7 +183,19 @@ def solve(obs, model, rcond=None):
             sel = segment_pixels(w, seg)
             x = segment_x(w, seg)
             out[sel] = full[sel] * np.polynomial.chebyshev.chebval(x[sel], c[i:i + n])
+            placed.append((seg, c[i:i + n]))
             i += n
+        if fill_domains:
+            # narrowest domain first, so a Balmer window's own local continuum
+            # claims its masked core before the arm-wide metal polynomial can
+            for seg, cs in sorted(placed,
+                                  key=lambda sc: sc[0]['domain'][1] - sc[0]['domain'][0]):
+                lo, hi = seg['domain']
+                gap = np.isnan(out) & (w >= lo) & (w <= hi)
+                if gap.any():
+                    x = segment_x(w, seg)
+                    out[gap] = full[gap] * np.polynomial.chebyshev.chebval(
+                        x[gap], cs)
         return out, c
     raise ValueError(kind)
 

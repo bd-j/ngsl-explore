@@ -79,9 +79,9 @@ LEVELS = (2.30, 6.17, 11.8)          # nominal 1/2/3 sigma, two parameters
 VMIN, VMAX = 0.3, 300.0              # shared colour scale across panels
 
 # Coarse near 0 because XSL's FWHM (~31 km/s in the UVB) cannot resolve a
-# rotation slower than ~15 km/s, wide at the top because A stars reach 300.
-VSINI_GRID = np.array([0., 10., 20., 30., 40., 60., 80., 110., 150., 200.,
-                       250., 300.])
+# rotation slower than ~15 km/s. Imported rather than copied so this and the
+# node scan cannot drift apart.
+from fitting.scan import VSINI_GRID, VSINI_MAX
 SCAN_CSV = ROOT / 'data' / 'ebv_teff_scan.csv'
 
 

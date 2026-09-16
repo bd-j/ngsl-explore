@@ -143,6 +143,23 @@ correlation length is not in it. Until it is, quote the SPREAD of the held-out
 prediction over acceptable models — which the scan stores — and not the
 curvature at the minimum.
 
+### Conventions set while reading the figures
+
+* **v sin i is capped at 200 km/s** (`fitting.scan.VSINI_MAX`, one definition,
+  imported by the sweep and the mask test). The 250 and 300 nodes were only ever
+  reached by the below-grid-[M/H] stars, where broadening was being spent to
+  wash out model metal lines the grid cannot make weak enough. Scans written
+  before the cap are honoured at read time, so this took effect without
+  re-running them.
+* **The break residual panels use fixed ranges** — ±15% Balmer, ±8% Paschen —
+  so the panels are comparable between stars, with a note when pixels fall
+  outside. Autoscaling made a 0.5% residual and a 15% one look identical.
+* **`calibration.solve(..., fill_domains=True)`** evaluates each segment's
+  polynomial across its domain, so the model is drawn through a masked Balmer
+  core instead of leaving a hole in the middle of the line the panel is about.
+  It is provably fit-neutral: identical coefficients, identical χ², identical
+  measured depths — every pixel it fills is masked out of `usable` anyway.
+
 ## Open decisions
 
 * ~~**[M/H] floor**~~ — **DECIDED, by running it.** "Try the current grid first"

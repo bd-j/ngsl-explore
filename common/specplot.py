@@ -64,7 +64,13 @@ def spectrum_panel(ax, obs, models, lo, hi, title=None, band=None,
     ax.plot(w[fit], np.asarray(obs.flux, float)[fit], color=OBS_C, lw=1.15,
             label=obs_label)
     for (lab, m), c in zip(models, MODEL_COLORS):
-        ax.plot(w[inr], np.asarray(m, float)[inr], color=c, lw=1.0, label=lab)
+        # same convention as the observation: faded across the whole window,
+        # solid only where it was actually fitted. Without the faded pass the
+        # model simply vanished inside a masked Balmer core, so the panel showed
+        # a hole in the middle of the line it exists to display.
+        mv = np.asarray(m, float)
+        ax.plot(w[inr], mv[inr], color=c, lw=.8, alpha=.30)
+        ax.plot(w[fit], mv[fit], color=c, lw=1.0, label=lab)
 
     ax.set_xlim(lo, hi)
     if title:

@@ -211,7 +211,9 @@ def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
         rx = None
         if xs is not None:
             px = predict(th, [xs], grid)[0]
-            cal_x, _ = solve(xs, px.value)
+            # fill_domains so the model is drawn through the masked Balmer core
+            # too; it cannot affect chi2, which selects on obs.mask
+            cal_x, _ = solve(xs, px.value, fill_domains=True)
             rx, ux = residual(xs, cal_x), usable(xs, px.value)
             xsl_cal[label] = cal_x
             print(f'    xsl     chi2/N = '
@@ -263,9 +265,14 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
     # Panel limits are per-break, not a uniform offset: the Balmer panel starts
     # at 3450 A so the sub-limit continuum band that anchors the prediction is
     # visible without the rest of the blue squeezing the break itself.
-    panels = (('Balmer', BREAK_WINDOW, BALMER, (3450., 4150.)),
-              ('Paschen', PASCHEN_WINDOW, PASCHEN, (7830., 9650.)))
-    for col, (nm, win, lam0, xlim) in enumerate(panels):
+    # Fixed residual ranges, so the break panels are comparable between stars.
+    # A per-panel autoscale made a 0.5% residual and a 15% one look identical,
+    # which is the opposite of what these panels are for. Balmer gets the wider
+    # range because the high-order line cores sit at +5 to +10% there (the known
+    # NLTE excess), while Paschen's continuum rarely leaves +/-3%.
+    panels = (('Balmer', BREAK_WINDOW, BALMER, (3450., 4150.), (-15., 15.)),
+              ('Paschen', PASCHEN_WINDOW, PASCHEN, (7830., 9650.), (-8., 8.)))
+    for col, (nm, win, lam0, xlim, rlim) in enumerate(panels):
         axz = fig.add_subplot(gs[1, col])
         axr = fig.add_subplot(gs[2, col], sharex=axz)
         lo, hi = xlim
@@ -302,12 +309,19 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
             axr.plot(spec.wavelength[hin], full[hin] * 100, color=c, lw=1.2)
             axr.axhline(100 * np.nanmedian(full[hin]), color=c, ls=':', lw=1)
         axr.axhline(0, color=MUTED, lw=1)
-        r_all = np.concatenate([
+        r_all = 100 * np.concatenate([
             (((spec.flux - results[l]['model_spec']) / results[l]['model_spec'])
              [sel & inwin]) for l in labels])
-        pad = 2.0
-        axr.set_ylim(np.nanpercentile(r_all, 1) * 100 - pad,
-                     np.nanpercentile(r_all, 99) * 100 + pad)
+        axr.set_ylim(*rlim)
+        # A fixed range can hide a point off the top. Say so rather than let the
+        # panel imply the residual stayed inside it.
+        n_out = int(np.sum(np.isfinite(r_all) & ((r_all < rlim[0]) | (r_all > rlim[1]))))
+        if n_out:
+            axr.text(0.99, 0.04, f'{n_out} px outside ±{rlim[1]:.0f}% '
+                                 f'(to {np.nanmax(np.abs(r_all)):.0f}%)',
+                     transform=axr.transAxes, ha='right', va='bottom',
+                     fontsize=6.5, color=HELD_C,
+                     bbox=dict(fc='white', ec='none', alpha=.8, pad=1.5))
         axr.set_ylabel('(obs−model)/model [%]', fontsize=8, color=INK)
         axr.set_xlabel(r'$\lambda$ [$\AA$]', fontsize=8, color=INK)
 
