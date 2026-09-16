@@ -259,9 +259,28 @@ What the excess *is* made of, separated by changing one thing at a time
 | both, with the fitted per-grating widths | 3.53% → **1.10%**, both signs |
 
 The projection was sampling the model at NGSL pixel centres rather than
-integrating across the pixel, which a detector does. At 1.4 A pixels that alone
-is larger than most of what this project measures, and it is now fixed in
+integrating across the pixel, which a detector does. At 1.4-2.7 A pixels that
+alone is larger than most of what this project measures, and it is now fixed in
 `fitting.predict.project`.
+
+**The old code was internally inconsistent about this, which is the part worth
+remembering.** Both LSF measurements — `ngsl_lsf_from_xsl.py` and
+`ngsl_lsf_shape.py` — degrade XSL with `rebin_to_pixels`, so every width they
+report is an LSF *excluding* the pixel, on the assumption that the pixel will be
+applied separately. `predict` then applied that kernel and point-sampled, so the
+model was under-smoothed by exactly the pixel. Refitting both ways shows the
+size of it:
+
+| | fitted with pixel integration | fitted with point sampling |
+|---|---|---|
+| Gaussian | 6.20 A | 6.47 A |
+| Moffat core | 4.10 A | 4.63 A |
+
+A fit that is denied pixel integration inflates its kernel to compensate (+0.53 A
+for the Moffat, against +0.58 A expected in quadrature for the 2.74 A pixel).
+So a width is only meaningful alongside the sampling convention it was fitted
+under, and mixing the two is an error that produces no symptom except a
+residual.
 
 **The evidence for the Moffat is separate, and it is good.** Fitted against XSL
 with a free width on a control window containing no Balmer line, and scored on
