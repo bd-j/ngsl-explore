@@ -300,8 +300,17 @@ A free parameter landing on an independently measured instrumental constant is
 evidence the functional form is right; a wrong form has no reason to recover it,
 and the Gaussian's does not — it misses by 1.7–1.9x.
 
-**This is not the Balmer cores, and it does not come from them.** Fitted per
-window, with the number of Balmer lines each contains:
+**Balmer lines in the fit windows are fine here**, and this is worth stating
+because the instinct to exclude them is wrong in this particular place. The fit
+compares two OBSERVATIONS of the same star -- XSL is the reference, not a model
+-- so a Balmer line in the window is simply a strong feature that helps
+constrain the profile, and there is nothing to be circular about. (The
+fit-here / score-there discipline belongs to `explore/ngsl_lsf_shape.py`, whose
+scoring step compares NGSL against the MODEL; that is where using the same
+window twice would be tuning to the thing under test.)
+
+The per-window numbers are given anyway, since they show the core width is
+consistent across the grating regardless of what is in the window:
 
 | window | Balmer lines | Gaussian | Moffat core | vs 3.85 |
 |---|---|---|---|---|
@@ -309,10 +318,11 @@ window, with the number of Balmer lines each contains:
 | 4200–4600 | 1 (Hγ) | 6.20 A | 4.10 A | 1.06x |
 | 4700–5100 | 1 (Hβ) | 6.95 A | 3.81 A | 0.99x |
 
-Dropping the window that holds the high-order series entirely gives **3.88 A,
-1.01x tabulated** — slightly BETTER agreement, not worse. The core width is set
-by the metal lines, which are narrow enough to resolve the instrument profile
-and carry no hydrogen physics at all. That resolves the disagreement
+All three agree with the tabulated value to within 9%, and the spread between
+them (3.81-4.18 A) is smaller than the star-to-star scatter of any one of them
+(±0.59 A). The adopted **4.02 A** uses all three. Dropping the high-order Balmer
+window would give 3.88 A, which is not a meaningfully different answer -- the
+point is that it does not need dropping. That resolves the disagreement
 `explore/ngsl_lsf_from_xsl.py` records as unexplained: a single Gaussian needed
 1.7–1.9x the tabulated width because it was absorbing a tail it had no way to
 represent. The width is therefore constant in **Angstroms per grating**, as the
