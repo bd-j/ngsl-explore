@@ -40,6 +40,8 @@ from matplotlib.colors import LogNorm
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.scan import posterior as scan_posterior
 
+from common.figpath import figure_path, below_grid
+
 ROOT = Path(__file__).resolve().parent.parent
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
 C_BAL, C_PAS, C_CAT = '#2a78d6', '#eb6834', '#1a9e5c'
@@ -272,9 +274,9 @@ def sample_summary(rows, out):
     x = np.array([r['chi2n_bands'] for r in rows])
     y = np.array([abs(r['balmer']) for r in rows])
     for r in rows:
-        c = C_BAL if not r['pressed'] else '#c0392b'
+        c = '#c0392b' if r['below_grid'] else C_BAL
         ax.plot(r['chi2n_bands'], abs(r['balmer']), marker=mk[r['tier']], ms=7,
-                color=c, mfc=c if not r['pressed'] else 'none', mew=1.5, lw=0)
+                color=c, mfc='none' if r['below_grid'] else c, mew=1.5, lw=0)
         ax.annotate(r['star'].replace('HD', ''),
                     (r['chi2n_bands'], abs(r['balmer'])), xytext=(5, 2),
                     textcoords='offset points', fontsize=6.5, color=MUTED)
@@ -289,8 +291,8 @@ def sample_summary(rows, out):
                  f'r = {np.corrcoef(np.log10(x), np.log10(y))[0, 1]:+.2f} '
                  f'(log–log, n={len(rows)})', fontsize=9.5, color=INK)
     ax.plot([], [], marker='o', lw=0, color='#c0392b', mfc='none', mew=1.5,
-            label='[M/H] pressed to the grid floor')
-    ax.plot([], [], marker='o', lw=0, color=C_BAL, label='[M/H] interior')
+            label='catalog [M/H] < −0.5 — below the grid')
+    ax.plot([], [], marker='o', lw=0, color=C_BAL, label='inside the grid')
     ax.legend(fontsize=7.5, loc='upper left', framealpha=.9)
 
     ax = axes[1]
@@ -304,7 +306,7 @@ def sample_summary(rows, out):
     ax.axvline(0, color=INK, lw=1.2)
     ax.axvspan(-1, 1, color=MUTED, alpha=.08, lw=0)
     ax.set_yticks(np.arange(len(order)))
-    ax.set_yticklabels([r['star'] + ('*' if r['pressed'] else '')
+    ax.set_yticklabels([r['star'] + ('*' if r['below_grid'] else '')
                         for r in order], fontsize=7.5, color=MUTED)
     ax.set_ylim(-.7, len(order) - .3)
     ax.set_xlim(-20, 32)
@@ -318,8 +320,8 @@ def sample_summary(rows, out):
     ax = axes[2]
     for n, r in enumerate(order):
         ax.plot(r['mh'], n, marker=mk[r['tier']], ms=7, lw=0,
-                color='#c0392b' if r['pressed'] else C_BAL,
-                mfc='none' if r['pressed'] else None, mew=1.5)
+                color='#c0392b' if r['below_grid'] else C_BAL,
+                mfc='none' if r['below_grid'] else None, mew=1.5)
         if r['mh_cat'] is not None:
             ax.plot(max(r['mh_cat'], -2.1), n, marker='|', ms=9, color=C_CAT)
     ax.axvline(-0.5, color='#c0392b', ls='--', lw=1.2)
@@ -335,13 +337,15 @@ def sample_summary(rows, out):
     ax.set_title('Why they fail: the grid cannot reach them', fontsize=10,
                  color=INK)
 
-    npass = sum(1 for r in rows if not r['pressed'])
+    ing = [r for r in rows if not r['below_grid']]
+    lowz = [r for r in rows if r['below_grid']]
+    mb = np.median([abs(r['balmer']) for r in ing]) if ing else float('nan')
     fig.suptitle(
         'Node scan — all 1705 grid nodes per star, no interpolation;  '
-        'E(B−V) and v sin i fitted at every node\n'
-        f'* = [M/H] pressed against the grid floor.  Where the grid can reach '
-        f'the star ({npass}/{len(rows)}), both breaks are predicted to ~1% from '
-        'data that never saw them',
+        'legs combined as χ²/dof;  E(B−V) and v sin i fitted at every node\n'
+        f'* and open symbols = catalog [M/H] < −0.5, BELOW the grid floor '
+        f'({len(lowz)} of {len(rows)}) — kept separate, not pooled.  '
+        f'Inside the grid ({len(ing)}): held-out |Balmer| median {mb:.2f}%',
         fontsize=10.5, color=INK, linespacing=1.5)
     fig.savefig(out, dpi=165, facecolor=SURFACE)
     plt.close(fig)
@@ -362,7 +366,7 @@ def main():
         except FileNotFoundError:
             print(f'{s}: no scan.npz')
             continue
-        out = ROOT / 'figures' / f'scan_{s}.png'
+        out = figure_path('scan', s)
         st = figure(s, S, out)
         d2 = S['dchi2']
         i, j, k, e = np.unravel_index(np.nanargmin(d2), d2.shape)
@@ -390,6 +394,7 @@ def main():
                    vsini=float(S['vsini'][v]),
                    mh_cat=fnum(sample_row(s).get('mh_ngsl')),
                    pressed=bool(k == 0 and (pz[1] - pz[0]) > 2.30),
+                   below_grid=bool(below_grid(s)),
                    chi2n_bands=float(d['chi2_bands'][i, j, k, e]) / int(d['n_bands']),
                    chi2n_xsl=float(d['chi2_xsl'][i, j, k, v]) / int(d['n_xsl']))
         for key, nm in (('balmer', 'Balmer'), ('paschen', 'Paschen')):
@@ -412,14 +417,27 @@ def main():
         print(f'             -> {out.relative_to(ROOT)}')
     if len(rows) > 2:
         sample_summary(rows, ROOT / 'figures' / 'scan_sample.png')
-        nf = [r['star'] for r in rows if not r['feasible']]
-        vc = [r['star'] for r in rows if r['vsini'] >= 300]
-        print(f'\n  {len(rows) - len(nf)}/{len(rows)} stars have a node fitting '
-              f'both legs at chi2/N < 1.5')
-        if nf:
-            print(f'  no joint solution: {", ".join(nf)}')
-        if vc:
-            print(f'  v sin i at the ceiling: {", ".join(vc)}')
+        # Report the two groups SEPARATELY and never pool them: a star whose
+        # catalog [M/H] is below the grid floor cannot be represented by any
+        # node, so its residuals are not measuring the same thing.
+        for lab, g in (('inside the grid', [r for r in rows if not r['below_grid']]),
+                       ('BELOW the grid [M/H] floor',
+                        [r for r in rows if r['below_grid']])):
+            if not g:
+                continue
+            b = np.abs([r['balmer'] for r in g])
+            pa = np.abs([r['paschen'] for r in g])
+            cb = [r['chi2n_bands'] for r in g]
+            nf = [r['star'] for r in g if not r['feasible']]
+            vc = [r['star'] for r in g if r['vsini'] >= 300]
+            print(f'\n  {lab} (n={len(g)}): {", ".join(r["star"] for r in g)}')
+            print(f'    held out |Balmer| median {np.median(b):.2f}%  '
+                  f'max {b.max():.2f}%   |Paschen| median {np.median(pa):.2f}%')
+            print(f'    band chi2/N median {np.median(cb):.2f}  max {max(cb):.2f}')
+            print(f'    no joint leg solution: {len(nf)}/{len(g)}'
+                  + (f' ({", ".join(nf)})' if nf else ''))
+            if vc:
+                print(f'    v sin i at the ceiling: {", ".join(vc)}')
     return rows
 
 

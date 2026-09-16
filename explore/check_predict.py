@@ -33,6 +33,8 @@ from fitting.predict import predict
 from fitting.calibration import solve, residual, chi2, usable
 from common.specplot import spectrum_panel
 
+from common.figpath import figure_path, below_grid
+
 ROOT = Path(__file__).resolve().parent.parent
 BALMER, PASCHEN = 3646.0, 8205.9
 OBS_C, MOD_C, MOD2_C = '#2a78d6', '#eb6834', '#7a3fa8'
@@ -355,7 +357,7 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
         f'{star}   conditioning = NGSL bands + XSL lines;   '
         f'Balmer and Paschen held out\n{line2}\n{line3}',
         fontsize=10.5, color=INK, linespacing=1.5)
-    out = ROOT / 'figures' / f'predict_check_{star}.png'
+    out = figure_path('predict_check', star)
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')
     plt.close(fig)
     print(f'\n  -> {out.relative_to(ROOT)}')

@@ -68,6 +68,8 @@ from fitting.observations import conditioning_set
 from fitting.predict import predict
 from fitting.calibration import solve, usable, chi2
 
+from common.figpath import figure_path, below_grid
+
 ROOT = Path(__file__).resolve().parent.parent
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
 CAT_C = {'teff_ngsl': '#2a78d6', 'teff_xsl': '#7a3fa8',
@@ -381,7 +383,7 @@ def draw_star(star, row, teffs, ebvs, vsinis, d_b, d_x, total, logg, mh,
         'contours are nominal 2-parameter levels, NOT calibrated — residuals '
         'are correlated',
         fontsize=10.5, color=INK, linespacing=1.5)
-    out = ROOT / 'figures' / f'ebv_teff_{star}.png'
+    out = figure_path('ebv_teff', star)
     fig.savefig(out, dpi=165, facecolor=SURFACE)
     plt.close(fig)
     print(f'  -> {out.relative_to(ROOT)}')
@@ -423,6 +425,10 @@ def draw_summary(rows):
             continue
         e, lo, hi = fnum(r['ebv']), fnum(r['ebv_lo']), fnum(r['ebv_hi'])
         lim_hi, lim_lo = hit(r, 'ebv_ceiling'), hit(r, 'ebv_floor')
+        if below_grid(r['star']):
+            # below the grid floor: plotted, but never in the mean offset
+            ax.plot(pv, e, marker='x', ms=7, color='#c0392b', mew=1.6)
+            continue
         if lim_hi or lim_lo:
             ax.plot(pv, e, marker='^' if lim_hi else 'v', ms=7, color=col(r),
                     mfc='none', mew=1.4)
@@ -432,7 +438,8 @@ def draw_summary(rows):
                         color=col(r), capsize=2)
             if r['tier'] == 'primary':
                 clean.append(e - pv)
-        ax.annotate(r['star'].replace('HD', '') + ('*' if r['clamped'] else ''),
+        ax.annotate(r['star'].replace('HD', '')
+                    + ('*' if below_grid(r['star']) else ''),
                     (pv, e), xytext=(4, 3), textcoords='offset points',
                     fontsize=6.5, color=MUTED)
     if clean:
@@ -443,6 +450,8 @@ def draw_summary(rows):
                          f'scatter {sd:.3f}'))
     ax.plot([], [], marker='^', lw=0, mfc='none', color=MUTED, mew=1.3,
             label='on a boundary — a limit, not a value')
+    ax.plot([], [], marker='x', lw=0, color='#c0392b', mew=1.6,
+            label='catalog [M/H] < −0.5 — excluded from the mean')
     ax.set_xlim(lim)
     ax.set_ylim(-0.01, 0.32)
     ax.set_xlabel('catalog photometric E(B−V)', fontsize=9, color=INK)
@@ -544,7 +553,7 @@ def draw_summary(rows):
     fig.suptitle(
         f'E(B−V)–Teff sweep over the sample — {len(rows)} stars '
         f'({n_p} primary, circles; {len(rows) - n_p} secondary, squares); '
-        '* = [M/H] held at the grid edge\n'
+        '* = catalog [M/H] < −0.5, below the grid floor\n'
         'log g and [M/H] held at the nearest node to the NGSL catalog value; '
         'error bars are nominal Δχ² ≤ 1 profiles, NOT calibrated — the '
         'star-to-star scatter is the honest uncertainty',
@@ -577,17 +586,22 @@ def report(rows):
               + f'{float(r["chi2_xsl"]) / max(int(r["n_xsl"]), 1):>8.2f}'
               + (f'  {flags}' if flags else ''))
     print('-' * len(hdr))
-    for tier in ('primary', 'secondary'):
-        sub = [r for r in rows if r['tier'] == tier
-               and not (r['at_boundary'] or '')
-               and fnum(r['ebv_phot']) is not None]
-        d = [fnum(r['ebv']) - fnum(r['ebv_phot']) for r in sub]
-        if not d:
-            print(f'  {tier}: no off-boundary star with photometric E(B-V)')
-            continue
-        print(f'  {tier}, off-boundary only: fitted - photometric E(B-V) = '
-              f'{np.mean(d):+.3f} +/- {np.std(d) / np.sqrt(len(d)):.3f} (sem), '
-              f'scatter {np.std(d):.3f}, n={len(d)}')
+    # Stars whose catalog [M/H] is below the grid's -0.5 floor are reported
+    # separately and never pooled: no node can represent them, so the fit pays
+    # for the mismatch somewhere else and their E(B-V) is not measuring the
+    # same thing. See common/figpath.py.
+    for grp, keep in (('inside the grid', lambda r: not below_grid(r['star'])),
+                      ('BELOW the grid [M/H] floor', lambda r: below_grid(r['star']))):
+        for tier in ('primary', 'secondary'):
+            sub = [r for r in rows if r['tier'] == tier and keep(r)
+                   and not (r['at_boundary'] or '')
+                   and fnum(r['ebv_phot']) is not None]
+            d = [fnum(r['ebv']) - fnum(r['ebv_phot']) for r in sub]
+            if not d:
+                continue
+            print(f'  {grp}, {tier}, off-boundary: fitted - photometric E(B-V) '
+                  f'= {np.mean(d):+.3f} +/- {np.std(d) / np.sqrt(len(d)):.3f} '
+                  f'(sem), scatter {np.std(d):.3f}, n={len(d)}')
     for what, msg in (('ebv_ceiling', 'E(B-V) ceiling'),
                       ('ebv_floor', 'E(B-V) floor (= consistent with zero)'),
                       ('teff_edge', 'Teff grid edge'),

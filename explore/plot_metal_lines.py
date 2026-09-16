@@ -40,6 +40,8 @@ from common.specplot import (spectrum_panel, style, BAND_C, HELD_C,
 from common.species import (atmosphere_point, abundances, species_label,
                             dominant_species, strong_lines)
 
+from common.figpath import figure_path, below_grid
+
 ROOT = Path(__file__).resolve().parent.parent
 OBS_C, MOD_C, BAND_C = '#2a78d6', '#eb6834', '#7a3fa8'
 SURFACE, INK, MUTED, GRIDC, HELD_C = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8', '#c0392b'
@@ -240,7 +242,7 @@ def run(star, a):
         + '\nshaded band = what the grid can reach',
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 1 - 0.055 * (6.0 / nrow)])
-    out = ROOT / 'figures' / f'metal_lines_{a.star}.png'
+    out = figure_path('metal_lines', a.star)
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')
     plt.close(fig)
     print(f'  -> {out.relative_to(ROOT)}')
