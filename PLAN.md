@@ -232,19 +232,34 @@ curvature at the minimum.
 `fitting/scan.py` → `results/<star>/scan.npz` (gitignored, ~4 MB each, ~10 min
 per star). `explore/plot_scan.py` → `scan_<star>.png`, `scan_sample.png`.
 
-**Results are now segregated by whether the grid can reach the star.** Six of
-the twelve have a catalog [M/H] below the grid's −0.5 floor, so no node can
-represent them and the fit pays for the mismatch somewhere else. Their figures
-live in `figures/below_grid_mh/` and their numbers are never pooled with the
-rest (`common/figpath.py`; the cut uses `mh_ngsl`, the column the pipeline
-already uses to place a star on the grid). Until there are lower-[M/H] nodes,
-**the six inside the grid are the result** and the other six are diagnostics.
+**Results are segregated by whether the grid can reach the star.** Four of the
+twelve have a metallicity below the grid's −0.5 floor, so no node can represent
+them and the fit pays for the mismatch somewhere else. Their figures live in
+`figures/below_grid_mh/` and their numbers are never pooled with the rest
+(`common/figpath.py`). Until there are lower-[M/H] nodes, **the eight inside
+the grid are the result** and the other four are diagnostics.
 
-**The project's question, answered for the six stars the grid can reach:** the
-held-out Balmer break is predicted to a median **|0.56%|** and Paschen to
-**|0.69%|**, from a scalar solved only on bands that exclude those regions —
-and Teff agrees with the published values to **91 K rms**, which is the
-σ(Teff) ≈ 100 K the error budget says the break prediction needs.
+The cut is the `mh_ngsl` catalog value, with two reviewed exceptions recorded in
+`IN_GRID_ANYWAY`: HD164967 and HD143459 are catalogued at −0.60 by NGSL but
+−0.29 and −0.19 by XSL, and their metal lines are fit by nodes the grid has
+(HD164967 has *no* feature shallower than the grid can reach; HD143459 has two,
+so it probably does sit near −0.5 — which is a node, not a metallicity the grid
+lacks). An automatic version of this test was tried and rejected: "shallower
+than the grid can reach" is the right physical signal but is confounded by
+v sin i, and would have scored HD128801 and HD106304 as well-fit because the
+300 km/s ceiling smears their model lines flat.
+
+**The project's question, answered for the eight stars the grid can reach:** the
+held-out Balmer break is predicted to a median **|0.60%|** and Paschen to
+**|0.92%|**, from a scalar solved only on bands that exclude those regions.
+
+**Teff agrees with the published values to 57 K rms** — measured against the
+NEARER of the two catalogs, and 4 of 8 land inside the range the two of them
+span. That is the only fair comparison here: NGSL and XSL disagree with each
+other by a median **533 K** on these stars (up to 2908 K for HD164257), so the
+mean of the two is not a reference worth quoting an rms against. 57 K is
+comfortably inside the σ(Teff) ≈ 100 K the error budget says the break
+prediction needs.
 
 **A CORRECTION.** This section first reported a split — 5 stars inside the grid
 predicting to ~1% and 7 pressed to the [M/H] floor failing at +10.5% — and named
@@ -257,23 +272,21 @@ continuum. Combining as χ²/dof instead:
 
 Split by group, since pooling them is what this section got wrong once already:
 
-| | \multicolumn — inside the grid (6) | | below the floor (6) | |
+| | inside the grid (8) | | below the floor (4) | |
 |---|---|---|---|---|
 | | raw χ² | **χ²/dof** | raw χ² | χ²/dof |
-| held-out \|Balmer\| median | 0.77% | **0.56%** | 10.65% | 0.25% |
-| held-out \|Paschen\| median | 1.71% | **0.69%** | 4.85% | 0.98% |
-| band χ²/N median | 0.75 | **0.23** | 49.5 | 0.33 |
-| Teff vs catalogs, rms | 301 K | **91 K** | 1374 K | 432 K |
-| Teff vs catalogs, bias | +56 K | **−42 K** | +1296 K | +149 K |
+| held-out \|Balmer\| median | 0.93% | **0.60%** | 11.95% | 0.13% |
+| held-out \|Balmer\| max | 8.17% | **3.38%** | 15.3% | 0.30% |
+| held-out \|Paschen\| median | 1.12% | **0.92%** | 5.41% | 0.53% |
+| band χ²/N median | 1.12 | **0.32** | 57.4 | 0.24 |
 | E(B−V) above the SF11 column | 1 | **0** | 4 | 1 |
 
-Teff is the independent check — neither weighting is fitted to the published
-values. Inside the grid the weighting takes it from 301 K to **91 K**.
-
-Read the below-grid columns with care: χ²/dof appears to *rescue* those stars
-(|Balmer| 10.65% → 0.25%), but it buys that with v sin i running to the 300 km/s
-ceiling and with no node satisfying both legs. The improvement is the fit
-finding somewhere else to put the error, not the model getting it right.
+Read the below-grid columns with care: χ²/dof appears to *rescue* those stars —
+their |Balmer| goes 11.95% → 0.13%, better than the in-grid group — but it buys
+that with v sin i running to the 300 km/s ceiling and with no node satisfying
+both legs. The improvement is the fit finding somewhere else to put the error,
+not the model getting it right. This is precisely why the two groups are not
+pooled: the flattering number belongs to the stars the grid cannot represent.
 
 **A failed prediction is visible in the conditioning data.** This survived the
 weighting fix and is now stated over the whole node space rather than over 12
