@@ -283,9 +283,36 @@ The pedestal is not resampling; it is a heavy-tailed halo of the kind grating
 scatter produces. Power beyond ±10 A: Gaussian 0.01%, Gaussian⊗tophat 0.01%,
 Moffat 2.9%.
 
-**And the Moffat core is the published STIS core.** Fitted per grating it gives
-**4.02 ± 0.59 A (G430L)** and **8.34 ± 0.91 A (G750L)** against the tabulated
-**3.85** and **8.09** — agreement to 3–5%. That resolves the disagreement
+**And the Moffat core is the published STIS core.** This is the actual evidence
+for the profile, so it is worth being precise about why it counts. The STIS LSF
+tables are an INSTRUMENT calibration product — FWHM in pixels x dispersion, from
+arc lamps and point sources. No A star, no stellar model, nothing from this
+project. The profile fits are given XSL and NGSL only; the tabulated number is
+never supplied to them. So:
+
+| | fitted against XSL alone | published STIS |
+|---|---|---|
+| Gaussian width, G430L | 6.2–7.3 A | 3.85 A |
+| **Moffat core, G430L** | **4.02 ± 0.59 A** | **3.85 A** |
+| **Moffat core, G750L** | **8.34 ± 0.91 A** | **8.09 A** |
+
+A free parameter landing on an independently measured instrumental constant is
+evidence the functional form is right; a wrong form has no reason to recover it,
+and the Gaussian's does not — it misses by 1.7–1.9x.
+
+**This is not the Balmer cores, and it does not come from them.** Fitted per
+window, with the number of Balmer lines each contains:
+
+| window | Balmer lines | Gaussian | Moffat core | vs 3.85 |
+|---|---|---|---|---|
+| 3700–4000 | 10 (H7–H12) | 6.10 A | 4.18 A | 1.09x |
+| 4200–4600 | 1 (Hγ) | 6.20 A | 4.10 A | 1.06x |
+| 4700–5100 | 1 (Hβ) | 6.95 A | 3.81 A | 0.99x |
+
+Dropping the window that holds the high-order series entirely gives **3.88 A,
+1.01x tabulated** — slightly BETTER agreement, not worse. The core width is set
+by the metal lines, which are narrow enough to resolve the instrument profile
+and carry no hydrogen physics at all. That resolves the disagreement
 `explore/ngsl_lsf_from_xsl.py` records as unexplained: a single Gaussian needed
 1.7–1.9x the tabulated width because it was absorbing a tail it had no way to
 represent. The width is therefore constant in **Angstroms per grating**, as the
