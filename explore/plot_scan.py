@@ -43,8 +43,15 @@ from fitting.scan import posterior as scan_posterior
 ROOT = Path(__file__).resolve().parent.parent
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
 C_BAL, C_PAS, C_CAT = '#2a78d6', '#eb6834', '#1a9e5c'
-LEVELS = (2.30, 6.17, 11.8)
-GOOD = 9.0            # Delta chi^2 within which a node counts as "acceptable"
+# The legs are combined as chi^2/dof (fitting.scan.posterior), so the displayed
+# statistic is Delta[sum of chi^2/dof], not a chi^2. Multiplying by the band
+# count puts it in BAND-EQUIVALENT chi^2 -- "how many band-pixels' worth of
+# misfit" -- which is the only unit here anyone has a feel for, and which makes
+# the usual 2-parameter levels readable again. They are still not calibrated
+# confidence regions: the residuals are correlated.
+BAND_EQUIV = 13.0
+LEVELS = tuple(x / BAND_EQUIV for x in (2.30, 6.17, 11.8))
+GOOD = 9.0 / BAND_EQUIV   # within which a node counts as "acceptable"
 
 
 def style(ax):
@@ -70,13 +77,13 @@ def fnum(x):
         return None
 
 
-def load(star, scale='profile'):
+def load(star, scale='profile', weight='inverse_dof'):
     """-> dict with the total Delta chi^2 over (node, E) and the axes.
 
     The posterior itself is built by fitting.scan.posterior, so this figure and
     explore/check_predict.py cannot disagree about which node is best.
     """
-    d, total = scan_posterior(star, scale)
+    d, total = scan_posterior(star, scale, weight)
     return dict(d=d, lnl=total, teff=d['teff'], logg=d['logg'], mh=d['mh'],
                 ebv=d['ebv'], vsini=d['vsini'],
                 dchi2=2.0 * (np.nanmax(total) - total),
@@ -92,8 +99,9 @@ def profile(dchi2, keep_axes):
 
 def heat(ax, X, Y, d):
     d = d - np.nanmin(d)
-    im = ax.pcolormesh(X, Y, np.clip(d, 0.3, 300), cmap='magma',
-                       shading='nearest', norm=LogNorm(vmin=0.3, vmax=300),
+    lo, hi = 0.3 / BAND_EQUIV, 300.0 / BAND_EQUIV
+    im = ax.pcolormesh(X, Y, np.clip(d, lo, hi), cmap='magma',
+                       shading='nearest', norm=LogNorm(vmin=lo, vmax=hi),
                        alpha=.92)
     cs = ax.contour(X, Y, d, levels=LEVELS, colors='w', linewidths=1.0)
     ax.clabel(cs, fmt=dict(zip(LEVELS, ('1σ', '2σ', '3σ'))), fontsize=7)
@@ -164,7 +172,8 @@ def figure(star, S, out):
     ax.set_ylabel('E(B−V)', fontsize=9, color=INK)
     ax.set_title('Teff × E(B−V)  (log g, [M/H] profiled)', fontsize=10, color=INK)
     ax.legend(fontsize=7.5, loc='upper left', framealpha=.88)
-    fig.colorbar(im, ax=axes[:3].tolist(), shrink=.85, label='Δχ² (log)')
+    fig.colorbar(im, ax=axes[:3].tolist(), shrink=.85,
+                 label='Δ(Σ χ²/dof)  (log)')
 
     # 4. THE POINT: held-out prediction vs how well that model fits
     ax = axes[3]
@@ -182,14 +191,14 @@ def figure(star, S, out):
             ax.axvspan(lo, hi, color=c, alpha=.10, lw=0)
     ax.axvline(0, color=INK, lw=1.2)
     ax.axhline(GOOD, color=MUTED, ls='--', lw=1)
-    ax.text(ax.get_xlim()[0], GOOD, f' Δχ²={GOOD:.0f}', fontsize=7, color=MUTED,
-            va='bottom')
+    ax.text(ax.get_xlim()[0], GOOD, f' {GOOD * BAND_EQUIV:.0f} band-equiv. χ²',
+            fontsize=7, color=MUTED, va='bottom')
     ax.set_yscale('log')
-    ax.set_ylim(0.3, 3e3)
+    ax.set_ylim(0.3 / BAND_EQUIV, 3e3 / BAND_EQUIV)
     ax.set_xlim(-12, 12)
     ax.set_xlabel('predicted held-out residual  (obs−model)/model [%]',
                   fontsize=9, color=INK)
-    ax.set_ylabel('Δχ² of that model', fontsize=9, color=INK)
+    ax.set_ylabel('Δ(Σ χ²/dof) of that model', fontsize=9, color=INK)
     ax.set_title('Held-out break prediction vs fit quality', fontsize=10,
                  color=INK)
     ax.legend(fontsize=7.5, loc='upper right', framealpha=.88)
@@ -202,12 +211,41 @@ def figure(star, S, out):
     fig.suptitle(
         f'{star} ({row.get("tier", "?")}) — all {S["lnl"][..., 0].size} grid nodes, '
         'no interpolation;  E(B−V) and v sin i fitted at every node\n'
-        'contours are nominal 2-parameter levels and are NOT calibrated — '
+        'legs combined as χ²/dof, so 13 NGSL bands carry the same total weight '
+        'as 2342 XSL pixels;  contours are nominal and NOT calibrated — '
         'the spread in panel 4, not the curvature, is the honest uncertainty',
         fontsize=10.5, color=INK, linespacing=1.5)
     fig.savefig(out, dpi=160, facecolor=SURFACE)
     plt.close(fig)
     return stats
+
+
+def leg_tension(d, thresh=1.5):
+    """Can ANY node fit both legs at once? -> dict of the weighting-free facts.
+
+    The leg weighting decides how a conflict between the continuum (bands) and
+    the line profiles (XSL) is resolved. It cannot tell you whether there is a
+    conflict. This can: it asks whether the grid contains any node at which both
+    legs reach chi^2/N < thresh, with E(B-V) and v sin i free.
+
+    Where the answer is no, the weighting is choosing WHICH failure you see
+    rather than removing it -- and the tell is v s in i running to the ceiling,
+    which is broadening being spent to wash out model lines that are too strong
+    because [M/H] is pinned at the grid floor.
+    """
+    nb, nx = int(d['n_bands']), int(d['n_xsl'])
+    cb = np.nanmin(d['chi2_bands'] / nb, axis=-1)        # best over E, per node
+    cx = np.nanmin(d['chi2_xsl'] / nx, axis=-1)          # best over v, per node
+    both = np.isfinite(cb) & np.isfinite(cx) & (cb < thresh) & (cx < thresh)
+    worst = np.maximum(cb, cx)
+    i, j, k = np.unravel_index(np.nanargmin(worst), worst.shape)
+    iv = int(np.nanargmin(np.where(np.isfinite(d['chi2_xsl'][i, j, k]),
+                                   d['chi2_xsl'][i, j, k], np.inf)))
+    return dict(n_joint=int(both.sum()), floor_bands=float(np.nanmin(cb)),
+                floor_xsl=float(np.nanmin(cx)),
+                joint_bands=float(cb[i, j, k]), joint_xsl=float(cx[i, j, k]),
+                joint_vsini=float(d['vsini'][iv]),
+                feasible=bool(both.sum() > 0))
 
 
 def sample_summary(rows, out):
@@ -349,6 +387,7 @@ def main():
         rec = dict(star=s, tier=sample_row(s).get('tier', 'primary'),
                    teff=float(S['teff'][i]), logg=float(S['logg'][j]),
                    mh=float(S['mh'][k]), ebv=float(S['ebv'][e]),
+                   vsini=float(S['vsini'][v]),
                    mh_cat=fnum(sample_row(s).get('mh_ngsl')),
                    pressed=bool(k == 0 and (pz[1] - pz[0]) > 2.30),
                    chi2n_bands=float(d['chi2_bands'][i, j, k, e]) / int(d['n_bands']),
@@ -357,10 +396,30 @@ def main():
             b = st.get(nm)
             rec[key], rec[key + '_lo'], rec[key + '_hi'] = (
                 b[0], b[1], b[2]) if b else (np.nan,) * 3
+        lt = leg_tension(d)
+        rec.update(lt)
+        vmax = float(S['vsini'][-1])
+        if rec['vsini'] >= vmax:
+            print(f'             v sin i AT THE CEILING ({vmax:.0f} km/s) — '
+                  f'broadening is absorbing a model error, not measuring rotation')
+        if not lt['feasible']:
+            print(f'             NO NODE fits both legs at chi2/N < 1.5 '
+                  f'(floors: bands {lt["floor_bands"]:.2f}, xsl '
+                  f'{lt["floor_xsl"]:.2f}; best joint {lt["joint_bands"]:.2f}/'
+                  f'{lt["joint_xsl"]:.2f}) — the leg weighting is choosing which '
+                  f'failure you see, not removing it')
         rows.append(rec)
         print(f'             -> {out.relative_to(ROOT)}')
     if len(rows) > 2:
         sample_summary(rows, ROOT / 'figures' / 'scan_sample.png')
+        nf = [r['star'] for r in rows if not r['feasible']]
+        vc = [r['star'] for r in rows if r['vsini'] >= 300]
+        print(f'\n  {len(rows) - len(nf)}/{len(rows)} stars have a node fitting '
+              f'both legs at chi2/N < 1.5')
+        if nf:
+            print(f'  no joint solution: {", ".join(nf)}')
+        if vc:
+            print(f'  v sin i at the ceiling: {", ".join(vc)}')
     return rows
 
 

@@ -58,21 +58,60 @@ instead of the 3 that happened to have one.
 
 ## Next
 
-### 1. Extend the grid below [M/H] = −0.5
+### 1. Calibrate the leg weighting properly
 
-**This is now the binding limitation, measured rather than suspected.** The node
-scan splits the sample exactly on it:
+`fitting.scan.posterior` now combines the two legs as **χ²/dof** rather than
+χ², after the raw sum was found to be choosing badly (see Done). Inverse-dof is
+a stand-in for the quantity that actually matters — the EFFECTIVE number of
+independent points. XSL's pixels are correlated over the LSF (~4 px) and by its
+continuum, so its effective dof is far below 2342; 13 banded NGSL points with a
+1% calibration floor are much closer to independent. Weighting by 1/n asserts
+the legs deserve equal total say, which is defensible but not derived.
 
-| | n | held-out Balmer (median) | band χ²/N |
-|---|---|---|---|
-| [M/H] interior | 5 | **+0.95%** | 0.17–6.3 |
-| [M/H] pressed to the grid floor | 7 | **+10.5%** | 18–85 |
+Measure it instead: the XSL residual autocorrelation length gives an effective
+dof directly, and the bands' correlation comes from the NGSL calibration
+covariance. Until that is done, quote results under both weightings when they
+disagree.
 
-Needs Cannon: the raw `.spec` files exist only there, and `pack_grid.py` is not
-incremental. α-enhancement is the harder half — Fe II/Mg EWs already say these
-stars are not scaled-solar, which no `afe+0.0` node can represent at any [M/H].
+**And the weighting is not the whole problem.** `leg_tension()` in
+`explore/plot_scan.py` asks a weighting-free question — is there ANY node at
+which both legs reach χ²/N < 1.5, with E(B−V) and v sin i free? **Only 5 of 12
+stars have one.** For the other 7 the weighting is choosing *which* failure you
+see, not removing it.
 
-### 2. Split the held-out residual into continuum and line cores
+Two things follow, and both are more important than the weighting itself:
+
+* **XSL has an irreducible χ²/N floor at every node in the grid** — 2.34 for
+  HD194453, 1.76 for HD147550, 18.3 for HD164257. No choice of Teff, log g,
+  [M/H], E(B−V) or v sin i gets below it. That is model inadequacy or
+  underestimated XSL uncertainties, not a node-selection problem, and summing
+  raw χ² lets that systematic floor dominate which node is picked. Diagnosing
+  it — NLTE cores, line-list errors, XSL error bars — is the real task.
+* **v sin i running to the ceiling is the clean tell.** At the χ²/dof node for
+  HD106304 and HD128801, XSL's χ² falls monotonically all the way to 300 km/s
+  (HD106304: 6.33 → 2.22). That is not a rotation measurement; it is broadening
+  being spent to wash out model metal lines that are too strong because [M/H]
+  is pinned at the grid floor. `plot_scan.py` now flags it.
+
+### 2. Extend the grid below [M/H] = −0.5
+
+The earlier justification here — that stars pressed to the floor were exactly
+the ones whose break prediction failed — **did not survive the weighting fix**;
+under χ²/dof the six stars still at −0.5 predict both held-out breaks to better
+than 1%. But the floor is still doing damage, in a different place: it is those
+same stars that have no node fitting both legs, and whose v sin i runs to the
+300 km/s ceiling because broadening is the only way left to weaken metal lines
+the grid cannot make weak enough. So the case for extending the grid stands —
+the symptom was misidentified, not the cause.
+
+What remains: [M/H] = −0.5 is a *boundary*, not a measurement, for half the
+sample, so no metallicity is actually being measured for them; and Fe II EWs
+say HD117880 / HD128801 / HD106304 really are metal-poor, with Mg *not*
+correspondingly weak — α-enhancement, which no scaled-solar `afe+0.0` node can
+represent at any [M/H]. Needs Cannon: the raw `.spec` files exist only there,
+and `pack_grid.py` is not incremental.
+
+### 3. Split the held-out residual into continuum and line cores
 
 Unchanged and still the right next analysis step, now with more reason: the
 interior stars sit at +0.95% median Balmer, and until the core excess is
@@ -95,7 +134,7 @@ D from `common.balmer_metric`. This also means `balmer_metric`'s blue window
 edges: its slope is fitted over a range that overlaps the 3385-3550 band, so the
 "independent" claim needs the windows to be disjoint.
 
-### 3. Calibrate the error model
+### 4. Calibrate the error model
 
 The node scan makes this unavoidable rather than optional. Independent-pixel χ²
 with XSL's ~2400 correlated pixels gives a nominal Δχ² ≤ 1 interval of a single
@@ -107,10 +146,12 @@ curvature at the minimum.
 ## Open decisions
 
 * ~~**[M/H] floor**~~ — **DECIDED, by running it.** "Try the current grid first"
-  was the right call and it has now returned a clear answer: 7 of 12 stars press
-  against −0.5 and those are exactly the ones whose break prediction fails
-  (+10.5% median against +0.95%) and whose reddening goes unphysical (4 of 7
-  exceed their whole SF11 Galactic column). Extending the grid is now task 1.
+  was the right call. Six of 12 stars sit at −0.5, but with the legs combined as
+  χ²/dof they predict the held-out breaks as well as anyone else, so the floor
+  is not currently costing the experiment anything. It does mean [M/H] is a
+  boundary rather than a measurement for half the sample. An earlier version of
+  this entry blamed the floor for a set of failures that turned out to be the
+  leg weighting — see Done.
   Fe II EW measurements independently confirm HD117880 / HD128801 / HD106304
   really are metal-poor (3–4× weaker than the −0.5 model) — and that Mg is *not*
   correspondingly weak, i.e. α-enhancement, which a scaled-solar `afe+0.0` grid
@@ -191,21 +232,53 @@ curvature at the minimum.
 `fitting/scan.py` → `results/<star>/scan.npz` (gitignored, ~4 MB each, ~10 min
 per star). `explore/plot_scan.py` → `scan_<star>.png`, `scan_sample.png`.
 
-**The project's question, answered where the grid can answer it:** for the 5
-stars whose [M/H] lands inside the grid, both held-out breaks are predicted to
-**~1%** (Balmer median +0.95%, range −0.36 to +2.97) from a scalar solved only
-on bands that exclude those regions.
+**The project's question, answered for the whole sample:** all 12 stars predict
+the held-out Balmer break to a median **|0.45%|** (max 3.4%) and Paschen to
+|0.77%|, from a scalar solved only on bands that exclude those regions.
 
-**A failed prediction is visible in the conditioning data.** Band χ²/N — 13
-points the fit *did* see — tracks the held-out Balmer error at **r = +0.87
-(log–log, +0.96 linear)**. That is what makes this a prediction rather than a
-hope: it is checkable before looking at the held-out region.
+**A CORRECTION.** This section first reported a split — 5 stars inside the grid
+predicting to ~1% and 7 pressed to the [M/H] floor failing at +10.5% — and named
+the grid's metallicity floor as the cause. **That was wrong, and the cause was
+the leg combination.** Adding the two legs' raw χ² let XSL's 2342 pixels
+outvote the 13 bands ~180:1, so node ranking was effectively XSL-only and the
+bands — the entire dust lever, and the only leg that sees the continuum — barely
+moved it. The scan was selecting models that fit the lines and wrecked the
+continuum. Combining as χ²/dof instead:
 
-**XSL is blind to this failure** (r = −0.17). It fits the catastrophic stars at
-χ²/N = 0.6–1.1 while their break prediction is off by 15%, because its continuum
-is marginalised away by construction — so it constrains line shapes and cannot
-see a wrong continuum. This is the direct argument for keeping the bands leg: a
-line-based Teff alone would have looked fine on every one of them.
+| | raw χ² sum | χ²/dof |
+|---|---|---|
+| held-out \|Balmer\| median | 2.04% | **0.45%** |
+| held-out \|Balmer\| max | 15.3% | **3.4%** |
+| band χ²/N median | 5.36 | **0.29** |
+| band χ²/N max | 84.7 | **0.69** |
+| E(B−V) above the SF11 column | 5 of 12 | **1 of 12** |
+| Teff vs catalogs, rms | 995 K | **312 K** |
+| Teff vs catalogs, median bias | +324 K | **−33 K** |
+
+The Teff row is the independent check: neither weighting is fitted to the
+published Teff values, and the weighted one agrees three times better. The one
+star still above its dust column is HD128801, at 0.025 against 0.023 — a
+0.002 mag margin on the lowest column in the sample.
+
+**A failed prediction is visible in the conditioning data.** This survived the
+weighting fix and is now stated over the whole node space rather than over 12
+selected nodes, which is the stronger form: per star, the correlation between
+band χ²/N and |held-out Balmer| is **median r = +0.52 (log–log)**, and pooled
+over all 1705 × 61 models,
+
+* models fitting the bands at χ²/N < 1 predict Balmer to a median **2.97%**
+* models at χ²/N > 10 miss it by a median **17.2%**
+
+That is what makes this a prediction rather than a hope: whether to trust the
+break is checkable from the conditioning data, before looking at it.
+
+**XSL cannot see a wrong continuum**, and that is why the weighting mattered so
+much. Its continuum is marginalised away by construction, so it constrains line
+shapes and is indifferent to the continuum shape the break prediction lives on.
+Under the raw sum it fitted the worst models at χ²/N = 0.6–1.1 while their break
+prediction was off by 15%. A line-based Teff alone would have looked fine on
+every one of them. This is the direct argument both for keeping the bands leg
+and for not letting pixel count decide how much it counts.
 
 **HD194453's dust tension was an artifact of fixing log g and [M/H].** With them
 free it lands at 9900 K, log g 3.60, [M/H] −0.10, **E(B−V) = 0.005** against a

@@ -282,8 +282,8 @@ def scan_star(star, grid, ebvs, vsinis, verify_first=False, progress=True):
     return p
 
 
-def posterior(star, scale='profile'):
-    """Read results/<star>/scan.npz -> total ln L over (node, E(B-V)).
+def posterior(star, scale='profile', weight='inverse_dof', vsini='profile'):
+    """Read results/<star>/scan.npz -> combined objective over (node, E(B-V)).
 
     Lives here, not in the plotting script, because two consumers now ask which
     node is best -- explore/plot_scan.py and explore/check_predict.py -- and a
@@ -296,6 +296,29 @@ def posterior(star, scale='profile'):
     ~ -4 ln(T) tilt across the grid. With k = 1 the scale-invariant marginal is
     closed form, so the bands use it. XSL's 12 segmented coefficients have no
     single amplitude to factor out, so that leg uses the flat prior.
+
+    LEG WEIGHTING. weight='inverse_dof' divides each leg by its own pixel count,
+    i.e. combines chi^2/dof rather than chi^2. Unweighted, XSL brings 2342
+    pixels against the bands' 13, so node ranking was determined almost entirely
+    by XSL and the bands -- the ENTIRE dust lever, and the only thing that sees
+    the continuum -- barely moved it. The symptom was concrete: on HD194453 the
+    unweighted maximum sat at band chi^2/N = 4.4 with a +3.4% kink in the two
+    bluest bands, while a solution fitting the bands at chi^2/N = 0.52 existed
+    and predicted both held-out breaks better (+0.39%/+0.15% against
+    +1.11%/+2.25%). The scan was choosing the worse model on every measure that
+    matters here.
+
+    Inverse-dof is a blunt instrument, and it is a stand-in for the real
+    quantity, which is the EFFECTIVE number of independent points. XSL's pixels
+    are correlated over the LSF (~4 px) and by its continuum, so its effective
+    dof is far below 2342; 13 banded NGSL points with a 1% calibration floor are
+    much closer to independent. Weighting by 1/n asserts the two legs deserve
+    equal total say, which is defensible but not derived. weight=None restores
+    the raw sum.
+
+    v sin i is PROFILED rather than marginalised whenever a weight is applied:
+    once a leg's ln L is scaled by 1/n it is no longer a likelihood, and a
+    logsumexp over it would be integrating something that is not a density.
     """
     from fitting.likelihood import lnlike
     d = np.load(ROOT / 'results' / star / 'scan.npz')
@@ -304,21 +327,30 @@ def posterior(star, scale='profile'):
                 c0=d['scalar'])
     lx = lnlike(d['chi2_xsl'], int(d['n_xsl']), d['lndetA_xsl'],
                 int(d['k_xsl']), scale=scale, coeff_prior='flat')
-    # v sin i is a nuisance: marginalise it rather than profile it, so a node
-    # that needs a finely tuned rotation is not rewarded for the tuning.
-    m = np.nanmax(lx, axis=-1)
-    lx_marg = m + np.log(np.nansum(np.exp(lx - m[..., None]), axis=-1))
-    return d, lb + lx_marg[..., None]
+    if vsini == 'marginal' and weight is None:
+        # a nuisance parameter, integrated out so a node that needs a finely
+        # tuned rotation is not rewarded for the tuning
+        m = np.nanmax(lx, axis=-1)
+        lx_v = m + np.log(np.nansum(np.exp(lx - m[..., None]), axis=-1))
+    else:
+        lx_v = np.nanmax(lx, axis=-1)
+    if weight == 'inverse_dof':
+        wb, wx = 1.0 / int(d['n_bands']), 1.0 / int(d['n_xsl'])
+    elif weight is None:
+        wb = wx = 1.0
+    else:
+        raise ValueError(f'unknown weight: {weight!r}')
+    return d, wb * lb + wx * lx_v[..., None]
 
 
-def best_node(star, scale='profile'):
+def best_node(star, scale='profile', weight='inverse_dof'):
     """-> dict(teff, logg, mh, ebv, vsini, ...) at the maximum of the posterior.
 
     v sin i is reported CONDITIONAL on the winning node, which is what a figure
     drawn at those parameters needs -- the marginal used for ranking has no
     single v sin i attached to it.
     """
-    d, lnl = posterior(star, scale)
+    d, lnl = posterior(star, scale, weight)
     i, j, k, e = np.unravel_index(np.nanargmax(lnl), lnl.shape)
     v = int(np.nanargmin(d['chi2_xsl'][i, j, k]))
     return dict(star=star, teff=float(d['teff'][i]), logg=float(d['logg'][j]),
