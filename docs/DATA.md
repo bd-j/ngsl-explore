@@ -285,7 +285,7 @@ counterpart chosen by brightness (for an A star G ≈ V to ~0.1 mag) because the
 library coordinates are epoch 2000 against DR3's 2016.0. Observed offsets came
 out 0.1–2.7″.
 
-## NGSL resolution: use R = 600, not the STIS tables
+## NGSL resolution: the STIS core, plus a halo the tables do not describe
 
 The STIS LSF tables give the *single-exposure optical* profile: constant in
 Angstroms within a grating (3.85 A for G430L, 8.09 A for G750L), implying
@@ -304,16 +304,34 @@ resolution — so no model, no NLTE, nothing but instrument
 | 6600 A | 12.68 A | 521 | 8.09 A |
 | 8700 A | 14.48 A | 601 | 8.09 A |
 
-**R = 600 +/- 40**, constant in velocity, with no jump at the G430L/G750L
-splice. Constant-R describes it with 7% scatter; constant-Angstrom needs 41%.
-Three stars agree independently, and the jointly fitted wavelength shifts are
-below 0.2 A in G430L, so the width is not absorbing a wavecal error. Both
-spectra are continuum-normalized per window, so the grey flux offset between
-the libraries cannot contribute either.
+As a single GAUSSIAN that gives **R = 600 +/- 40**, constant in velocity, with
+no jump at the splice; constant-R describes it with 7% scatter against 41% for
+constant-Angstrom. Three stars agree, the jointly fitted wavelength shifts are
+below 0.2 A, and both spectra are continuum-normalized per window, so neither a
+wavecal error nor the grey flux offset is contributing.
 
-The likely cause is in the delivery rather than the optics: v2 spectra are
-co-adds of two dithered exposures resampled onto a common grid, which broadens
-the profile beyond the single-exposure LSF the tables describe.
+**But a single Gaussian is the wrong functional form, and R = 600 is an artefact
+of forcing one.** Fitting a family of profiles against XSL with free widths
+(`explore/ngsl_lsf_shape.py`), a **Moffat** describes the same data with 15%
+lower rms and two parameters — and its CORE comes out at **4.02 +/- 0.59 A
+(G430L)** and **8.34 +/- 0.91 A (G750L)**, matching the tabulated 3.85 and 8.09
+to 3-5%.
+
+So the 1.7-1.8x discrepancy above is not a broader instrument. It is a Gaussian
+with no way to represent a **heavy tail**, inflating its width to compensate:
+the true profile is the published STIS core plus a halo carrying ~3% of the
+power beyond +/-10 A, where a Gaussian of the same core width puts 0.0006%.
+Width is therefore constant in **Angstroms per grating**, as the tables say.
+
+The dithered-co-add explanation offered here previously is ruled out. A Gaussian
+convolved with a tophat — the correct description of a dither offset and a pixel
+— fits a sensible 1.84 A box (~1.3 pixels) and produces no halo at all, because
+a box convolved with a Gaussian still has Gaussian-fast wings. A grating
+scattering halo is the remaining candidate.
+
+`common.lsf.broaden_ngsl_moffat` implements the measured profile and is what the
+fitter uses. `NGSL_R_MEASURED = 600` is kept only as the historical
+single-Gaussian compromise -- it is neither the core width nor a resolution.
 
 Using the correct profile matters a great deal. Switching the model convolution
 from 3.85 A to R = 600 cut the Balmer-region residual RMS by ~2.5x across the
@@ -326,8 +344,15 @@ sample and shrank every break residual:
 | HD128801 | 6.2% -> 2.4% | +0.025 -> +0.020 |
 | HD143459 | 7.3% -> 2.6% | -0.060 -> -0.007 |
 
-`common.lsf.broaden_ngsl` uses the measured profile by default;
-`tabulated=True` gives the STIS-table form.
+`common.lsf.broaden_ngsl` keeps the old single-Gaussian behaviour for reference
+(`tabulated=True` gives the STIS-table Gaussian); `broaden_ngsl_moffat` is the
+measured profile and the one `fitting/predict.py` applies.
+
+**A related fix, worth the same attention.** The model was being SAMPLED at NGSL
+pixel centres rather than INTEGRATED across the pixel, which is what a detector
+does. At 1.4 A pixels that alone moves the high-order Balmer core residual by
+1.7% -- larger than most of what this project measures. `fitting.predict.project`
+now integrates (see `common.lsf.rebin_to_pixels`).
 
 Two earlier statements are superseded. **R = 939 at the Balmer break is wrong**
 — it is ~600. And the claim that the data are *undersampled* (LSF narrower than

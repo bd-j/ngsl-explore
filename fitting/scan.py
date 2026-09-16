@@ -137,7 +137,11 @@ def node_curves(f0, w0, atten, nb, hb, hp, xs, vsinis, grid):
         d_b[e] = curvature(nb, pb)[0]
         scal[e] = c[0]
         for arr, h, wh in ((r_b, hb, w_hb), (r_p, hp, w_hp)):
-            m = np.interp(h.wavelength, wh, fi) * c[0]
+            # project(), not np.interp: the held-out windows must be sampled the
+            # same way predict() samples them, which is now pixel INTEGRATION.
+            # verify() catches this, but only because it compares against
+            # predict() rather than against a copy of this code.
+            m = project(h, wh, fi) * c[0]
             ok = h.mask & np.isfinite(m) & (m > 0)
             if ok.any():
                 arr[e] = np.nanmedian((h.flux[ok] - m[ok]) / m[ok])

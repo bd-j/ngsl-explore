@@ -8,6 +8,7 @@ the wrong thing here.
 """
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
+from scipy.signal import fftconvolve
 
 C_KMS = 2.99792458e5
 
@@ -41,6 +42,53 @@ NGSL_LSF_TABULATED = [(1675., 3058., 2.75), (3058., 5647., 3.85),
 NGSL_R_MEASURED = 600.0
 NGSL_R_SIGMA = 40.0      # star-to-star scatter of the measurement
 
+# MEASURED SHAPE. The single Gaussian above is the wrong FUNCTIONAL FORM, not
+# just the wrong width. Fitting a family of profiles against XSL -- no model
+# involved -- on a control window with no Balmer line in it, and scoring each on
+# the Balmer cores it was NOT fitted to (explore/ngsl_lsf_shape.py):
+#
+#   profile          n par   control rms   leftover Balmer core excess
+#   Gaussian             1        0.0068        +2.33%
+#   Gaussian * tophat    2        0.0067        +2.32%
+#   Gaussian + Gaussian  3        0.0059        +0.75%
+#   Gaussian + Lorentz   3        0.0058        +0.27%
+#   MOFFAT               2        0.0058        +0.04%
+#
+# The tophat is the physically obvious candidate -- NGSL v2 spectra are co-adds
+# of two DITHERED exposures resampled onto a common grid, and both the dither
+# and the pixel are boxes. It fits a sensible 1.84 A box (~1.3 pixels) and
+# changes nothing, because a box convolved with a Gaussian still has
+# Gaussian-fast wings. The pedestal is not resampling; it is a heavy-tailed
+# halo, of the kind grating scatter produces. Power beyond +/-10 A: Gaussian
+# 0.01%, Gaussian*tophat 0.01%, Moffat 2.9%.
+#
+# AND THE CORE IS THE TABULATED ONE. Fitted per grating, the Moffat core comes
+# out 4.02 +/- 0.59 A for G430L and 8.34 +/- 0.91 A for G750L, against the STIS
+# tabulated 3.85 and 8.09 -- agreement to 3-5%. That resolves the disagreement
+# explore/ngsl_lsf_from_xsl.py records as unexplained: a single Gaussian needed
+# 1.7-1.9x the tabulated width because it was absorbing a tail it had no way to
+# represent. So the profile is the PUBLISHED STIS core plus a halo, and the
+# width is constant in ANGSTROMS per grating, as the tables say -- NOT constant
+# in R. Fitting R = 1074 from one window and applying it as constant-R made the
+# kernel sharper at 3800 A than anything that had been tested, and made the
+# Balmer core excess worse rather than better.
+# WHAT THE BALMER CORES CAN AND CANNOT SETTLE. An earlier version of this note
+# claimed a Moffat removed 86% of the Balmer core excess. That was wrong: the
+# core excess is degenerate with the EFFECTIVE WIDTH, not the shape. Holding
+# everything else fixed and varying only the width, a plain Gaussian runs from
+# +16.8% at 3.85 A to -1.2% at 7.0 A. Any profile can be tuned to zero it. So
+# the cores are not evidence for this profile and are not used as such; the
+# evidence is the control-window rms at free width, and the agreement of the
+# fitted core with the independently published STIS value.
+NGSL_MOFFAT_BETA = 1.6            # beta->1 Lorentzian, beta->inf Gaussian
+# Core FWHM fitted against XSL per grating, NOT tuned on the Balmer region:
+# 4.02 +/- 0.59 A (G430L) and 8.34 +/- 0.91 A (G750L). G230LB is not fitted --
+# no sample star has XSL coverage below 3500 A -- so it keeps its tabulated
+# 2-pixel lower bound, and nothing in this project uses it (the grid starts at
+# 3200 A and the bluest band at 3220 A).
+NGSL_MOFFAT_LSF = [(1675., 3058., 2.75), (3058., 5647., 4.02),
+                   (5647., 10198., 8.34)]
+
 # Back-compatible name; now the measured profile.
 NGSL_LSF = NGSL_LSF_TABULATED
 
@@ -54,9 +102,72 @@ def broaden(w, f, fwhm_A, step=0.01):
 
 
 def broaden_R(w, f, R):
-    """Convolve to constant resolving power on a log-lambda grid."""
+    """Convolve to constant resolving power on a log-lambda grid (Gaussian)."""
     step = float(np.median(np.diff(np.log(w))))
     return gaussian_filter1d(f, (1.0 / R) / step / 2.3548, mode='nearest')
+
+
+def moffat_kernel(n_pix, fwhm_pix, beta):
+    """Normalised Moffat on a pixel grid, truncated at n_pix half-width."""
+    a = fwhm_pix / (2.0 * np.sqrt(2.0 ** (1.0 / beta) - 1.0))
+    x = np.arange(-n_pix, n_pix + 1, dtype=float)
+    k = (1.0 + (x / a) ** 2) ** (-beta)
+    return k / k.sum()
+
+
+def broaden_moffat(w, f, fwhm_A, beta=NGSL_MOFFAT_BETA, step=0.05, ntrunc=40.0):
+    """Moffat of constant FWHM in ANGSTROMS (resample to a linear grid first).
+
+    `ntrunc` is the half-width in FWHM. A beta ~ 1.6 Moffat has heavy tails, so
+    truncating early discards the very power that distinguishes it from a
+    Gaussian; the kernel is renormalised after truncation so no flux is lost.
+
+    `step` trades accuracy against speed, and the trade is steeper than it
+    looks. Measured against a 0.02 A reference, the MAX relative error (which
+    sits at the sharpest line cores) runs 1.6e-3 at 0.05 A, 7.4e-3 at 0.1 and
+    6.3e-2 at 0.4 -- so a step chosen to "oversample the 4 A kernel" is not good
+    enough, because what has to be resolved is the model's own line cores, not
+    the kernel. 0.05 A it is, at 3.7 ms per call.
+
+    The convolution is FFT-based for the same reason: at 0.05 A a direct
+    convolution with this kernel cost 4.4 s per model evaluation, which is 25
+    hours for the node scan.
+
+    Edge handling replicates the end values, matching
+    gaussian_filter1d(mode='nearest'). It matters more here than for a Gaussian:
+    this kernel is hundreds of pixels wide, and zero-padding would darken the
+    blue end of the grid -- exactly where the 3220-3385 A band sits, the longest
+    lever the fit has on reddening.
+    """
+    wl = np.arange(w[0], w[-1], step)
+    y = np.interp(wl, w, f)
+    n = int(np.ceil(ntrunc * fwhm_A / step))
+    k = moffat_kernel(n, fwhm_A / step, beta)
+    pad = np.concatenate([np.full(n, y[0]), y, np.full(n, y[-1])])
+    sm = fftconvolve(pad, k, mode='same')[n:n + y.size]
+    return np.interp(w, wl, sm)
+
+
+def broaden_ngsl_moffat(w, f, beta=NGSL_MOFFAT_BETA, segments=None, ntrunc=40.0):
+    """The measured NGSL profile: STIS core per grating plus a Moffat tail.
+
+    Each segment is convolved over its own range plus a kernel half-width of
+    margin, rather than over the whole spectrum and then masked -- the latter
+    did the full convolution once per grating for every model evaluation, which
+    the node scan does 61 times per node.
+    """
+    w = np.asarray(w, float)
+    out = np.array(f, dtype=float)
+    for lo, hi, fwhm in (segments or NGSL_MOFFAT_LSF):
+        seg = (w >= lo) & (w < hi)
+        if not seg.any():
+            continue
+        pad = ntrunc * fwhm
+        sub = (w >= lo - pad) & (w < hi + pad)
+        sm = broaden_moffat(w[sub], np.asarray(f, float)[sub], fwhm, beta,
+                            ntrunc=ntrunc)
+        out[seg] = sm[seg[sub]]
+    return out
 
 
 def broaden_ngsl(w, f, tabulated=False):

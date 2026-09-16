@@ -12,6 +12,16 @@ Balmer cores carry a genuine flux excess the LTE models cannot produce, so a
 broader kernel could be absorbing physics. Using XSL instead removes the models
 from the question entirely.
 
+RESOLVED, and neither answer was right. This script fits a GAUSSIAN, and a
+Gaussian is the wrong functional form: NGSL's profile is a sharp core plus a
+heavy halo. Allowing a Moffat instead (explore/ngsl_lsf_shape.py) returns a core
+of 4.02 +/- 0.59 A for G430L -- the tabulated 3.85 to within 5% -- plus a tail
+carrying ~3% of the power beyond +/-10 A. The 1.7-1.9x inflation this script
+measures is what a Gaussian does when it has to represent that tail with its
+width. The numbers below are still correct AS GAUSSIAN FITS, and are kept
+because the width/shift machinery and the model-free comparison are what the
+later work was built on; but R = 600 is a compromise, not a resolution.
+
 Both spectra are continuum-normalized in each window before comparison, so the
 grey flux-calibration offset between the libraries (-11% to +4%, star
 dependent) cannot influence the width. A wavelength shift is fitted jointly

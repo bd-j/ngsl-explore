@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as xsl_load, ARMS, C_KMS
 from common.lines import hydrogen_lines
+from common.lsf import NGSL_MOFFAT_BETA
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -116,7 +117,10 @@ def load_ngsl(star, exclude=None, snr_ceiling=NGSL_SNR_CEILING):
 
     return Observation(
         name='ngsl', star=star, wavelength=w, flux=f, uncertainty=e, mask=ok,
-        resolution=('R', 600.0),        # MEASURED against XSL, not tabulated
+        # MEASURED against XSL -- shape as well as width. The single Gaussian
+        # at R=600 was splitting the difference between a sharp core and a
+        # heavy tail it could not represent; see common/lsf.py.
+        resolution=('ngsl_moffat', NGSL_MOFFAT_BETA),
         calibration=('scalar',),        # shape trusted, absolute level is (R/d)^2
         rv_fixed=None,
         meta=dict(offset_px=row['offset_px'], dataqual=row['dataqual'],
@@ -605,7 +609,7 @@ def load_ngsl_bands(star, bands=None, cal_floor=0.01, **kw):
     return Observation(
         name='ngsl_bands', star=star, flux=flux, uncertainty=unc,
         mask=np.isfinite(flux), filters=[tophat(*b) for b in keep],
-        resolution=('R', 600.0),     # model must be at NGSL resolution first
+        resolution=('ngsl_moffat', NGSL_MOFFAT_BETA),
         calibration=('scalar',),
         rv_fixed=None,
         meta=dict(names=[b[0] for b in keep], bands=keep,

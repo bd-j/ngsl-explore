@@ -122,10 +122,16 @@ H_nu, not f_lambda.
   the Paschen lines.
 - **NGSL is in air**, not vacuum, with a linear-in-lambda residual per grating
   that is recalibrated against the models.
-- **NGSL's `STATERR` is optimistic by ~3x**, and its delivered resolution is
-  **R = 600**, measured against XSL. (Earlier versions of this file said R = 939
-  from the STIS tables and ~665 from pixel sampling; both are wrong — see
-  [CAVEATS.md](docs/CAVEATS.md).)
+- **NGSL's `STATERR` is optimistic by ~3x**, and its delivered line spread
+  function is the published **STIS core (3.85/8.09 A per grating) plus a heavy
+  Moffat halo** carrying ~3% of the power beyond ±10 A. A single Gaussian forced
+  on the same data lands at R = 600, which is neither the core width nor a
+  resolution — it is the compromise a Gaussian makes when it cannot represent a
+  tail. (Earlier versions of this file said R = 939 from the STIS tables and
+  ~665 from pixel sampling; both are wrong — see [DATA.md](docs/DATA.md).)
+- **Model spectra must be INTEGRATED onto detector pixels**, not sampled at
+  pixel centres. At NGSL's 1.4 A pixels the difference moves the high-order
+  Balmer core residual by 1.7%.
 - **The models carry line-list artifacts.** Predicted (K13) O I transitions to
   n = 15–16 Rydberg levels put absorption at 4403 and 4827 Å that is absent from
   the data — the upper levels are dissolved by the plasma microfield at

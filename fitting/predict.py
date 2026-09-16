@@ -27,7 +27,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.extinction_ccm import redden
-from common.lsf import broaden_rot, broaden_R
+from common.lsf import broaden_rot, broaden_R, broaden_ngsl_moffat
 
 C_KMS = 2.99792458e5
 
@@ -90,6 +90,11 @@ def instrument(w, f, resolution):
         return f
     if kind == 'R':
         return broaden_R(w, f, float(resolution[1]))
+    if kind == 'ngsl_moffat':
+        # NGSL's measured profile: the tabulated STIS core per grating plus a
+        # heavy Moffat tail. Constant in ANGSTROMS, not in R. See common/lsf.py
+        # for the family comparison and the per-grating fit that chose it.
+        return broaden_ngsl_moffat(w, f, float(resolution[1]))
     if kind == 'R_segments':
         # Each arm has its own constant-R kernel. Segments are convolved
         # separately and stitched; the model grid is log-sampled so a
@@ -104,11 +109,24 @@ def instrument(w, f, resolution):
 
 
 def project(obs, w, f):
-    """Model on the grid's wavelengths -> the observation's sampling."""
+    """Model on the grid's wavelengths -> the observation's sampling.
+
+    Spectra are INTEGRATED onto the output pixels, not sampled at pixel
+    centres. A detector pixel averages the flux falling across its width, and
+    np.interp does not: at NGSL's 1.4 A pixels that difference alone changes the
+    high-order Balmer core residual by 1.7%, which is larger than most of the
+    effects this project is trying to measure. It is also the same treatment
+    common.lsf.rebin_to_pixels already applied wherever XSL was degraded to NGSL
+    by hand, so this removes a real inconsistency between the two paths.
+    """
     if obs.filters is not None:
         from common.photometry import project as phot_project
         return phot_project(w, f, obs.filters)
-    return np.interp(obs.wavelength, w, f)
+    from common.lsf import rebin_to_pixels
+    wl = np.asarray(obs.wavelength, float)
+    if wl.size < 2:
+        return np.interp(wl, w, f)
+    return rebin_to_pixels(np.asarray(w, float), np.asarray(f, float), wl)
 
 
 def predict(theta, observations, grid):

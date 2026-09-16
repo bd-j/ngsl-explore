@@ -232,87 +232,78 @@ a combination that should be read as a sign error, not a partial success.
 
 ## Model physics
 
-### Balmer line cores in NGSL: an instrument profile, not NLTE
+### Balmer line cores in NGSL: the instrument, not NLTE
 
 **This entry previously said the filled Balmer cores were "most likely NLTE in
-hydrogen". That reading does not survive, and the correction matters because it
-moved a residual out of the physics and into the instrument.**
+hydrogen". That does not survive.** What forced the revision: at XSL's R ~ 9800
+the same models fit the **full H-gamma profile, core included**, for the
+metal-rich stars. A physical NLTE core deficit cannot be present at R = 600 and
+absent at R = 9800.
 
-What forced it: at XSL's R ~ 9800 the same models fit the **full H-gamma
-profile, core included**, for the metal-rich stars. A physical NLTE core deficit
-cannot be present at R = 600 and absent at R = 9800.
+**A second correction, to the first version of this entry.** It claimed a winged
+profile "removes 86% of the core excess". That was wrong, and wrong in an
+instructive way: **the core excess is degenerate with the effective WIDTH, not
+diagnostic of the SHAPE.** Holding everything else fixed and varying only the
+width, a plain Gaussian runs from +16.8% at 3.85 A to −1.2% at 7.0 A. Any
+profile can be tuned to zero it, so it is not evidence for any particular one
+— and the old warning in this file, that fitting a width against the models
+launders physics into an instrumental parameter, was right.
 
-`explore/ngsl_core_excess.py` then asks the question with no model in it at all
-— degrade XSL to NGSL's resolution, rebin to NGSL pixels, compare the two
-OBSERVATIONS. Over the resolved high-order lines (H7-H12, 3700-4000 A), median
-core-minus-continuum, eight in-grid stars:
+What the excess *is* made of, separated by changing one thing at a time
+(`explore/ngsl_core_excess.py`, `explore/ngsl_lsf_shape.py`):
 
-| comparison | core excess |
+| change | effect on the Balmer core residual |
 |---|---|
-| NGSL vs the model, Gaussian R = 600 | **+2.34%** |
-| NGSL vs XSL degraded, same Gaussian | +0.80% |
-| NGSL vs the model, Gaussian + 0.12 broad wing | **+0.33%** |
+| pixel INTEGRATION instead of point sampling | **−1.7%** |
+| Moffat instead of Gaussian, at its own fitted width | +1.3% |
+| both, with the fitted per-grating widths | 3.53% → **1.10%**, both signs |
 
-A winged instrument profile removes **86%** of it. The wing fraction is fitted
-against XSL in a CONTROL window at 4200-4600 A, which contains no Balmer line,
-and then applied — so the Balmer number is a prediction, not a fit to the thing
-being explained.
+The projection was sampling the model at NGSL pixel centres rather than
+integrating across the pixel, which a detector does. At 1.4 A pixels that alone
+is larger than most of what this project measures, and it is now fixed in
+`fitting.predict.project`.
 
-**How broad is the wing?** The honest answer is that the data constrain how much
-power is in it, not how far out it goes:
+**The evidence for the Moffat is separate, and it is good.** Fitted against XSL
+with a free width on a control window containing no Balmer line, and scored on
+nothing but that window:
 
-| quantity | value | stable? |
+| profile | n par | control rms |
 |---|---|---|
-| core FWHM | **5.2 A** (R ~ 840 at 4400 A) | yes |
-| power beyond ±5 A | 7–8% | fairly |
-| power beyond ±10 A | **~3%** | **yes** — 2.9% vs 3.2% under two parameterisations |
-| power beyond ±20 A | 0.2% or 1.5% | **no** — do not quote |
+| Gaussian | 1 | 0.0068 |
+| Gaussian ⊗ tophat | 2 | 0.0067 |
+| Gaussian + Gaussian | 3 | 0.0059 |
+| Gaussian + Lorentzian | 3 | 0.0058 |
+| **Moffat** | **2** | **0.0058** |
 
-A pure Gaussian of the same core width puts **0.0006%** beyond ±10 A, so the
-~3% pedestal is the whole of the effect. Freeing the wing's WIDTH as a third
-parameter sends three of eight stars to the fit bound and improves the rms by
-2%: a small fraction in a very broad wing and a larger fraction in a moderate
-one are not distinguishable once the spectrum is continuum-normalised, because a
-broad enough wing is just a pedestal.
+The tophat is the physically obvious candidate — NGSL v2 spectra are co-adds of
+two **dithered** exposures resampled onto a common grid, and both the dither and
+the pixel are boxes. It fits a sensible 1.84 A box (~1.3 pixels) and changes
+nothing, because a box convolved with a Gaussian still has Gaussian-fast wings.
+The pedestal is not resampling; it is a heavy-tailed halo of the kind grating
+scatter produces. Power beyond ±10 A: Gaussian 0.01%, Gaussian⊗tophat 0.01%,
+Moffat 2.9%.
 
-So the profile is better described as **a ~R 840 core carrying a few per cent
-pedestal out past ±10 A** than as the single R = 600 Gaussian now in
-`common.lsf` — which is also why the single-Gaussian fit lands at R = 600 rather
-than 840: it is splitting the difference between a narrower core and a wing it
-has no way to represent.
+**And the Moffat core is the published STIS core.** Fitted per grating it gives
+**4.02 ± 0.59 A (G430L)** and **8.34 ± 0.91 A (G750L)** against the tabulated
+**3.85** and **8.09** — agreement to 3–5%. That resolves the disagreement
+`explore/ngsl_lsf_from_xsl.py` records as unexplained: a single Gaussian needed
+1.7–1.9x the tabulated width because it was absorbing a tail it had no way to
+represent. The width is therefore constant in **Angstroms per grating**, as the
+STIS tables say, not constant in R. (Fitting R from one window and applying it
+as constant-R made the kernel sharper at 3800 A than anything that had been
+tested, and made the residual worse — caught before it shipped.)
 
-**Why the old argument failed.** It ran: the excess is unchanged (8.8% vs 9.0%)
-whether the model is smoothed with a 3.85 A or a 7.0 A kernel, and broadening
-conserves flux, so the flux must be real. That correctly rules out a kernel
-WIDTH error and says nothing about kernel SHAPE. It also conflates two different
-measurements. Integrated EW is conserved by any symmetric kernel, so it cannot
-distinguish the two hypotheses at all — measured here, the EW difference is
-identical under both kernels (−4.0% vs −4.9%). Core depth relative to a LOCAL
-continuum is not conserved, because in a blended series the wings of neighbouring
-lines depress the continuum between them while filling the cores. That is the
-quantity the residual panels actually show.
+`common.lsf.broaden_ngsl_moffat` now applies this, and `NGSL_R_MEASURED = 600`
+is retained only as the historical single-Gaussian compromise: it is neither the
+core width nor a resolution, but the number a Gaussian lands on when it splits
+the difference between a 4 A core and a halo.
 
-**And the EW excess itself is much smaller than recorded.** At the node-scan
-maximum-likelihood parameters it is a median **−4%** with ±7% star-to-star
-scatter and both signs, not a systematic ~10%. The older number came from fits
-with log g and [M/H] pinned at catalog values.
-
-A physically plausible mechanism exists: NGSL v2 spectra are co-adds of two
-dithered exposures resampled onto a common grid, which produces more wing power
-than a Gaussian.
-
-**What is still open.** The two-Gaussian kernel used here is a stand-in, not a
-measured profile shape; `common.lsf` still applies a pure Gaussian everywhere,
-so this is a known systematic in the fits rather than something already
-corrected. `USE_KP_HYDROGEN` in `synthe_module.f90:1045` (Kurucz-Peterson vs the
-default Stehle-Hutcheon Stark profiles) remains an untested A/B, and a residual
-NLTE contribution at the 0.3% level is not excluded — only the claim that NLTE
-is the leading explanation.
-
-The old warning still stands in a narrower form: do not fit a free LSF WIDTH
-against the models and call the result a resolution. Measuring the profile
-against XSL, in a window with no hydrogen line in it, is a different operation
-and is the one done here.
+**What is still open.** beta = 1.6 is fitted, not derived, and the tail's outer
+extent is poorly constrained (see the wing-power table above — the power beyond
+±20 A is not measured). `USE_KP_HYDROGEN` in `synthe_module.f90:1045`
+(Kurucz-Peterson vs the default Stehle-Hutcheon Stark profiles) remains an
+untested A/B, and a residual NLTE contribution at the ~1% level is not excluded
+— only the claim that NLTE is the leading explanation.
 
 ### Predicted O I Rydberg lines put spurious absorption in the models
 

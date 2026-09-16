@@ -146,6 +146,45 @@ correlation length is not in it. Until it is, quote the SPREAD of the held-out
 prediction over acceptable models — which the scan stores — and not the
 curvature at the minimum.
 
+### The NGSL line spread function: STIS core + Moffat halo
+
+`explore/ngsl_lsf_shape.py` → `data/ngsl_lsf_shape.csv`. Fitting a family of
+profiles against XSL with free widths, on a control window with no Balmer line
+in it:
+
+| profile | n par | control rms |
+|---|---|---|
+| Gaussian | 1 | 0.0068 |
+| Gaussian ⊗ tophat | 2 | 0.0067 |
+| Gaussian + Gaussian | 3 | 0.0059 |
+| Gaussian + Lorentzian | 3 | 0.0058 |
+| **Moffat** | **2** | **0.0058** |
+
+The Moffat's fitted core is **4.02 ± 0.59 Å (G430L)** and **8.34 ± 0.91 Å
+(G750L)** against the tabulated STIS **3.85** and **8.09** — so the long-standing
+"NGSL is 1.7–1.8× broader than the tables" is resolved: a Gaussian was inflating
+to absorb a halo it could not represent. Width is constant in Å per grating, not
+in R. Adopted in `common.lsf.broaden_ngsl_moffat`.
+
+The top-hat — the physically obvious candidate, since v2 spectra are co-adds of
+two dithered exposures on a common grid — fits a sensible 1.84 Å box and changes
+nothing. A box convolved with a Gaussian still has Gaussian-fast wings, so
+resampling cannot be the source; a grating scattering halo remains.
+
+**Separately, `predict.project` was sampling the model at pixel centres rather
+than integrating across the pixel.** At 1.4 Å pixels that alone is worth 1.7% on
+the Balmer core residual. Now fixed.
+
+Together these take the high-order Balmer core excess from **3.53% to 1.10%**,
+scattered both signs.
+
+**Retracted:** an earlier version of this section claimed a winged profile
+"removes 86%" of that excess. The core excess is degenerate with effective
+WIDTH — a plain Gaussian spans +16.8% to −1.2% across plausible widths — so it
+cannot discriminate shape and is not evidence for the Moffat. The evidence is
+the control-window rms at free width and the agreement with the published STIS
+core. See CAVEATS.md.
+
 ### The NGSL Balmer core excess is the instrument profile, not NLTE
 
 `explore/ngsl_core_excess.py` → `data/ngsl_core_excess.csv`. Prompted by the
