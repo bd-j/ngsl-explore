@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import minimize
+from scipy.special import erfc
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid
@@ -115,6 +116,23 @@ def fit_control(wx, fx, wn, fn, fit_wing=False):
     fw = abs(res.x[0])
     wg = float(np.clip(res.x[1], 0.0, 0.6)) if fit_wing else 0.0
     return fw, wg, float(res.fun)
+
+
+def power_beyond(fwhm_A, wing, radius_A, wing_scale=4.0):
+    """Fraction of the two-Gaussian kernel's area outside +/-radius.
+
+    This, not the wing's WIDTH, is what the data constrain. Fitting the width
+    freely sends three of eight stars to the bound and improves the rms by 2%:
+    a small fraction in a very broad wing and a larger fraction in a moderate
+    one look alike once the spectrum is continuum-normalised, because a broad
+    enough wing is just a pedestal. The power at +/-10 A is stable across both
+    parameterisations (2.9% fixed-width vs 3.2% free); the power beyond +/-20 A
+    is not (0.2% vs 1.5%) and should not be quoted.
+    """
+    s1 = fwhm_A / 2.3548
+    s2 = s1 * wing_scale
+    return ((1 - wing) * erfc(radius_A / (s1 * np.sqrt(2)))
+            + wing * erfc(radius_A / (s2 * np.sqrt(2))))
 
 
 def core_mask(w, lo, hi, half=CORE_HALF):
@@ -222,6 +240,15 @@ def main():
           f'<- no model involved')
     print(f'    NGSL vs the MODEL, Gaussian + {np.median([o["wing"] for o in g]):.2f} wing  '
           f'      {mw:+6.2f}%   <- profile measured on 4200-4600 A')
+    pw = [power_beyond(o['fwhm_wing'], o['wing'], 10.0) for o in g]
+    p5 = [power_beyond(o['fwhm_wing'], o['wing'], 5.0) for o in g]
+    gauss10 = power_beyond(float(np.median([o['fwhm_wing'] for o in g])), 0.0, 10.0)
+    print(f'\n    Profile shape: core FWHM '
+          f'{np.median([o["fwhm_wing"] for o in g]):.2f} A with '
+          f'{100 * np.median(p5):.0f}% of the power beyond +/-5 A and '
+          f'{100 * np.median(pw):.1f}% beyond +/-10 A.')
+    print(f'    A pure Gaussian of that core width would put {100 * gauss10:.4f}% '
+          f'beyond +/-10 A.')
     if mg:
         print(f'\n    A winged instrument profile removes '
               f'{100 * (1 - mw / mg):.0f}% of the excess, and the wing was '

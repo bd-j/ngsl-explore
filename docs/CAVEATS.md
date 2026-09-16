@@ -253,10 +253,33 @@ core-minus-continuum, eight in-grid stars:
 | NGSL vs XSL degraded, same Gaussian | +0.80% |
 | NGSL vs the model, Gaussian + 0.12 broad wing | **+0.33%** |
 
-A winged instrument profile removes **86%** of it. The wing fraction and width
-are fitted against XSL in a CONTROL window at 4200-4600 A, which contains no
-Balmer line, and then applied — so the Balmer number is a prediction, not a fit
-to the thing being explained.
+A winged instrument profile removes **86%** of it. The wing fraction is fitted
+against XSL in a CONTROL window at 4200-4600 A, which contains no Balmer line,
+and then applied — so the Balmer number is a prediction, not a fit to the thing
+being explained.
+
+**How broad is the wing?** The honest answer is that the data constrain how much
+power is in it, not how far out it goes:
+
+| quantity | value | stable? |
+|---|---|---|
+| core FWHM | **5.2 A** (R ~ 840 at 4400 A) | yes |
+| power beyond ±5 A | 7–8% | fairly |
+| power beyond ±10 A | **~3%** | **yes** — 2.9% vs 3.2% under two parameterisations |
+| power beyond ±20 A | 0.2% or 1.5% | **no** — do not quote |
+
+A pure Gaussian of the same core width puts **0.0006%** beyond ±10 A, so the
+~3% pedestal is the whole of the effect. Freeing the wing's WIDTH as a third
+parameter sends three of eight stars to the fit bound and improves the rms by
+2%: a small fraction in a very broad wing and a larger fraction in a moderate
+one are not distinguishable once the spectrum is continuum-normalised, because a
+broad enough wing is just a pedestal.
+
+So the profile is better described as **a ~R 840 core carrying a few per cent
+pedestal out past ±10 A** than as the single R = 600 Gaussian now in
+`common.lsf` — which is also why the single-Gaussian fit lands at R = 600 rather
+than 840: it is splitting the difference between a narrower core and a wing it
+has no way to represent.
 
 **Why the old argument failed.** It ran: the excess is unchanged (8.8% vs 9.0%)
 whether the model is smoothed with a 3.85 A or a 7.0 A kernel, and broadening
