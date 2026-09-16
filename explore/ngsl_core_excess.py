@@ -22,10 +22,20 @@ Balmer region entirely, then applied to it. So the Balmer comparison is a
 prediction of the control fit, not a fit to the thing being tested -- otherwise
 a free width would simply absorb whatever it found there.
 
-A Gaussian is also tested against a Gaussian + broad Lorentzian wing. NGSL v2
-spectra are co-adds of two dithered exposures resampled onto a common grid, so
-a profile with more wing power than a Gaussian is physically plausible, and
-wings are exactly what fills in a line core.
+HISTORICAL NOTE, and a correction. This script was written to test whether a
+winged profile explains the core excess, and an earlier version of it concluded
+that one "removes 86%" of it. THAT CONCLUSION WAS WRONG. The core excess is
+degenerate with the profile's effective WIDTH, not diagnostic of its SHAPE:
+holding all else fixed, a plain Gaussian spans +16.8% at 3.85 A to -1.2% at
+7.0 A. Any profile can be tuned to zero it, so it is evidence for none of them.
+
+The profile actually adopted (common.lsf.broaden_ngsl_moffat) was chosen on
+different grounds -- control-window rms at free width, and the fitted core
+matching the independently published STIS value -- see explore/ngsl_lsf_shape.py
+and docs/CAVEATS.md. What this script still establishes, and what it was worth
+writing for, is the MODEL-FREE half: NGSL's cores are only ~0.8% shallower than
+XSL degraded to the same resolution, so whatever fills them is instrumental and
+not NLTE.
 
     python3 explore/ngsl_core_excess.py
 """
@@ -243,17 +253,23 @@ def main():
     pw = [power_beyond(o['fwhm_wing'], o['wing'], 10.0) for o in g]
     p5 = [power_beyond(o['fwhm_wing'], o['wing'], 5.0) for o in g]
     gauss10 = power_beyond(float(np.median([o['fwhm_wing'] for o in g])), 0.0, 10.0)
-    print(f'\n    Profile shape: core FWHM '
-          f'{np.median([o["fwhm_wing"] for o in g]):.2f} A with '
-          f'{100 * np.median(p5):.0f}% of the power beyond +/-5 A and '
-          f'{100 * np.median(pw):.1f}% beyond +/-10 A.')
-    print(f'    A pure Gaussian of that core width would put {100 * gauss10:.4f}% '
-          f'beyond +/-10 A.')
-    if mg:
-        print(f'\n    A winged instrument profile removes '
-              f'{100 * (1 - mw / mg):.0f}% of the excess, and the wing was '
-              f'fitted\n    in a control window with no Balmer line in it -- '
-              f'so this is a prediction,\n    not a fit to the cores.')
+    print(f'\n    Two-Gaussian shape: core FWHM '
+          f'{np.median([o["fwhm_wing"] for o in g]):.2f} A, '
+          f'{100 * np.median(p5):.0f}% of the power beyond +/-5 A, '
+          f'{100 * np.median(pw):.1f}% beyond +/-10 A')
+    print(f'    (a pure Gaussian of that core width: {100 * gauss10:.4f}% '
+          f'beyond +/-10 A)')
+    print('\n    WHAT THIS DOES AND DOES NOT SHOW.')
+    print('      DOES: the NGSL cores sit only '
+          f'{xg:+.2f}% away from XSL degraded to the same resolution, with no')
+    print('        model involved. Whatever fills them is instrumental, not NLTE.')
+    print('      DOES NOT: identify the profile. The core excess is degenerate')
+    print('        with effective WIDTH -- a plain Gaussian spans +16.8% to -1.2%')
+    print('        across plausible widths -- so it is evidence for no particular')
+    print('        shape. An earlier version of this script claimed a winged')
+    print('        profile "removes 86%"; that was a width result, and is')
+    print('        retracted. The adopted profile was chosen on the control-window')
+    print('        rms and the published STIS core (explore/ngsl_lsf_shape.py).')
     p = ROOT / 'data' / 'ngsl_core_excess.csv'
     with open(p, 'w', newline='') as fh:
         w = csv.DictWriter(fh, fieldnames=list(out[0]))
