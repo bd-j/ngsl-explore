@@ -48,8 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid
 from fitting.observations import BREAK_WINDOW, xsl_resolution_segments
 from common.lines import hydrogen_lines, ISM_LINES
-from common.species import (atmosphere_point, abundances, species_label,
-                            dominant_species)
+from common.species import atmosphere_point, abundances, species_label
 
 ROOT = Path(__file__).resolve().parent.parent
 XSL_RANGE = (3501.0, 9500.0)

@@ -31,26 +31,16 @@ from fitting.observations import (load_ngsl, conditioning_set, heldout,
                                   ngsl_band_edges, BREAK_WINDOW, PASCHEN_WINDOW)
 from fitting.predict import predict
 from fitting.calibration import solve, residual, chi2, usable
-from common.specplot import spectrum_panel
+from common.specplot import (spectrum_panel, style, OBS_C, MOD_C, MOD2_C,
+                             BAND_C, HELD_C, SURFACE, INK, MUTED)
 from common.lines import hydrogen_lines
 
-from common.figpath import figure_path, below_grid
+from common.figpath import figure_path
 
 ROOT = Path(__file__).resolve().parent.parent
 CORE_HALF_A = 4.0        # Balmer 'core' half-width, ~1.5 G430L pixels
                          # -- the same definition explore/ngsl_lsf.py uses
 BALMER, PASCHEN = 3646.0, 8205.9
-OBS_C, MOD_C, MOD2_C = '#2a78d6', '#eb6834', '#7a3fa8'
-SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
-BAND_C, HELD_C = '#2a78d6', '#c0392b'
-
-
-def style(ax):
-    ax.set_facecolor(SURFACE)
-    ax.grid(alpha=.25, color=GRIDC, lw=.7)
-    ax.tick_params(labelsize=8, colors=MUTED)
-    for s in ax.spines.values():
-        s.set_color(GRIDC)
 
 
 def nearest_node(grid, teff, logg, mh):

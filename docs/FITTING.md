@@ -124,11 +124,16 @@ rotator the core mask should grow — v sin i = 200 km/s adds 2.9 Å at Hγ.
 The cores are masked as a precaution against a mismatch the models might not
 reproduce, not because a specific one is established. The ~10% NLTE core excess
 this used to cite has not held up: at XSL's own resolution the models fit the
-full Hγ profile, core included, and the NGSL core residual is 86% accounted for
-by a non-Gaussian instrument profile measured against XSL
-(`docs/LSF.md`, `explore/ngsl_lsf.py`). Masking them costs little —
-they are a few per cent of the fitted pixels — and still protects Teff and log g
-from absorbing whatever is left.
+full Hγ profile, core included, and under the LSF measured against XSL the
+Balmer core minus continuum over the eight in-grid stars has a median of
+**+0.42%**, scattered −1.21% to +3.41% with both signs — consistent with zero.
+That residual is degenerate with the profile's effective WIDTH rather than
+diagnostic of its shape (the same column reads −4.08% under a 7.00 Å core), so
+it is quotable only alongside the profile in use. The earlier claim that a
+winged profile accounts for 86% of it is **retracted**
+([LSF.md](LSF.md), [CAVEATS.md](CAVEATS.md), `explore/ngsl_lsf.py`). Masking
+them costs little — they are a few per cent of the fitted pixels — and still
+protects Teff and log g from absorbing whatever is left.
 
 **Hε and higher orders are excluded.** They blend into one another so a local
 continuum is not defined: the wing of H8 does not return to within 2% of the

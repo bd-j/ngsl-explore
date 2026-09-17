@@ -24,8 +24,7 @@ from astropy.io import fits
 from scipy.ndimage import gaussian_filter1d
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.lsf import (broaden_ngsl, to_ngsl_pixels, rebin_to_pixels,
-                        NGSL_LSF_TABULATED)
+from common.lsf import broaden_ngsl, to_ngsl_pixels
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as load_xsl, resolving_power
 from grid.make_model import hnu_to_flam

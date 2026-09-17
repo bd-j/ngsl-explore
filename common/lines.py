@@ -16,6 +16,19 @@ BALMER_LIMIT = 4 * RYDBERG_A        # 3646.1
 PASCHEN_LIMIT = 9 * RYDBERG_A       # 8205.9
 
 
+def air_to_vac(w):
+    """Air -> vacuum Angstroms, Ciddor (1996) via the IAU standard inverse.
+
+    Good to <1e-4 A over this project's range. Every library here is delivered
+    in AIR (NGSL, XSL, UVES-POP) while ATLAS12/SYNTHE output is VACUUM, so this
+    runs on the way in from all three. It previously existed THREE times, once
+    per loader -- identical, but three places to fix and three to get wrong.
+    """
+    s = 1e4 / np.asarray(w, dtype=float)
+    n = 1 + 0.05792105 / (238.0185 - s * s) + 0.00167917 / (57.362 - s * s)
+    return np.asarray(w, dtype=float) * n
+
+
 def hydrogen_lines(wmin, wmax, series=(2, 3), nmax=40):
     """Hydrogen line centres in [wmin, wmax], from the Rydberg formula.
 

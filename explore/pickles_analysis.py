@@ -14,7 +14,6 @@ import csv
 import pathlib
 import sys
 import re
-import numpy as np
 from astropy.io import fits
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))

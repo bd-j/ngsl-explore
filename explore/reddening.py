@@ -20,33 +20,21 @@ Writes data/reddening.csv
 """
 import csv
 import re
-import urllib.parse
-import urllib.request
+import sys
 from pathlib import Path
 
 import numpy as np
 from astropy.io import fits
 from astroquery.simbad import Simbad
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# The IRSA query and the intrinsic-colour table used to be duplicated here.
+# common/dust.py owns both. Its BV0 also covers B7 and A7, which this copy did
+# not -- no star in data/reddening.csv or data/sample.csv is either, so nothing
+# here changes; a B7 now gets a colour instead of falling through to None.
+from common.dust import irsa_ebv, BV0
+
 ROOT = Path(__file__).resolve().parent.parent
-IRSA = 'https://irsa.ipac.caltech.edu/cgi-bin/DUST/nph-dust?locstr={ra}+{dec}+equ+j2000'
-
-# Intrinsic (B-V)_0 for main-sequence/giant B8-A3, Pecaut & Mamajek (2013)
-# and Fitzgerald (1970); adequate for a first-order reddening estimate.
-BV0 = {'B8': -0.11, 'B9': -0.07, 'B9.5': -0.05, 'A0': 0.00, 'A1': 0.03,
-       'A2': 0.06, 'A3': 0.09, 'A5': 0.15}
-
-
-def irsa_ebv(ra, dec):
-    """-> (SFD98, SF11) mean E(B-V) in the reference aperture."""
-    url = IRSA.format(ra=ra, dec=dec)
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=90) as r:
-        x = r.read().decode('utf-8', 'replace')
-    def grab(tag):
-        m = re.search(r'<' + tag + r'>\s*([\d.]+)\s*\(mag\)\s*</' + tag + r'>', x)
-        return float(m.group(1)) if m else np.nan
-    return grab('refPixelValueSFD'), grab('refPixelValueSandF')
 
 
 def bv0_from_type(sp):

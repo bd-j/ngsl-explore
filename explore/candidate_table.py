@@ -8,13 +8,13 @@ Writes data/balmer_candidates.csv
 """
 import csv
 import pathlib
-import re
 import sys
 import numpy as np
 from astropy.io import fits
 from astroquery.simbad import Simbad
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from common.dust import ebv_photometric
 from common.balmer_metric import balmer_discontinuity
 
 CANDS = ['HD194453', 'HD040573', 'HD147550', 'HD128801', 'HD143459']
@@ -26,19 +26,6 @@ CANDS = ['HD194453', 'HD040573', 'HD147550', 'HD128801', 'HD143459']
 # star whose observed break exceeded the model. See CAVEATS.md.
 EBV_MAX = 0.10
 
-# Intrinsic (B-V)_0 by spectral type, Pecaut & Mamajek (2013) / Fitzgerald (1970)
-BV0 = {'B8': -0.11, 'B9': -0.07, 'B9.5': -0.05, 'A0': 0.00, 'A1': 0.03,
-       'A2': 0.06, 'A3': 0.09, 'A5': 0.15}
-
-
-def ebv_photometric(sptype, b_minus_v):
-    """E(B-V) = (B-V)_obs - (B-V)_0 from the spectral type."""
-    if b_minus_v == '' or not sptype:
-        return ''
-    m = re.match(r'([OBAFGKM]\d?(?:\.\d)?)', sptype.strip())
-    if not m or m.group(1) not in BV0:
-        return ''
-    return round(float(b_minus_v) - BV0[m.group(1)], 3)
 
 NOTES = {
     'HD194453': 'RECOMMENDED. Best-centred star in range (offset 0.00 px); '

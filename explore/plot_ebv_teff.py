@@ -81,7 +81,7 @@ VMIN, VMAX = 0.3, 300.0              # shared colour scale across panels
 # Coarse near 0 because XSL's FWHM (~31 km/s in the UVB) cannot resolve a
 # rotation slower than ~15 km/s. Imported rather than copied so this and the
 # node scan cannot drift apart.
-from fitting.scan import VSINI_GRID, VSINI_MAX
+from fitting.scan import VSINI_GRID
 SCAN_CSV = ROOT / 'data' / 'ebv_teff_scan.csv'
 
 

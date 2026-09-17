@@ -112,8 +112,7 @@ from scipy.optimize import minimize
 from scipy.signal import fftconvolve
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.lsf import (rebin_to_pixels, stis_table, stis_kernel,
-                        NGSL_STIS_ANCHORS)
+from common.lsf import rebin_to_pixels, stis_kernel, NGSL_STIS_ANCHORS
 from common.lines import hydrogen_lines
 from common.xsl_load import load as load_xsl, sigma_v, C_KMS
 from fitting.observations import load_ngsl

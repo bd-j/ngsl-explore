@@ -35,24 +35,13 @@ from fitting.model import Grid
 from fitting.observations import load_xsl
 from fitting.predict import predict
 from fitting.calibration import solve
-from common.specplot import (spectrum_panel, style, BAND_C, HELD_C,
-                             MUTED, SURFACE)
+from common.specplot import spectrum_panel, HELD_C, MUTED, SURFACE, INK
 from common.species import (atmosphere_point, abundances, species_label,
-                            dominant_species, strong_lines)
+                            strong_lines)
 
-from common.figpath import figure_path, below_grid
+from common.figpath import figure_path
 
 ROOT = Path(__file__).resolve().parent.parent
-OBS_C, MOD_C, BAND_C = '#2a78d6', '#eb6834', '#7a3fa8'
-SURFACE, INK, MUTED, GRIDC, HELD_C = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8', '#c0392b'
-
-
-def style(ax):
-    ax.set_facecolor(SURFACE)
-    ax.grid(alpha=.25, color=GRIDC, lw=.7)
-    ax.tick_params(labelsize=8, colors=MUTED)
-    for s in ax.spines.values():
-        s.set_color(GRIDC)
 
 
 def sample_row(star):
@@ -208,7 +197,7 @@ def run(star, a):
         if not drawn:
             continue
         ax.set_title(ax.get_title(), fontsize=9,
-                     color=(HELD_C if flag else '#22262b'))
+                     color=(HELD_C if flag else INK))
         # name the individual lines, as the predict_check XSL panels do.
         # Headroom first, then place the text in AXES coordinates so a rotated
         # label cannot be clipped by the data limits.

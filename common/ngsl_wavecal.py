@@ -41,6 +41,7 @@ from astropy.io import fits
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from grid.make_model import hnu_to_flam
+from common.lines import air_to_vac
 
 ROOT = Path(__file__).resolve().parent.parent
 LAM_REF = 4000.0            # pivot for the linear term, near the Balmer break
@@ -55,12 +56,6 @@ SEGMENTS = [
     ('G750L', 5647.0, 10198.0, 0, [(5800., 6500.), (6500., 7200.), (7200., 7900.),
                                    (7900., 8600.), (8600., 9100.)]),
 ]
-
-
-def air_to_vac(w):
-    s = 1e4 / np.asarray(w, dtype=float)
-    n = 1 + 0.05792105 / (238.0185 - s * s) + 0.00167917 / (57.362 - s * s)
-    return np.asarray(w, dtype=float) * n
 
 
 def _shift(wo, fo, wm, fm, lo, hi):

@@ -17,10 +17,14 @@ The two libraries need different convolution kernels.
 Overlap regions are smoothed to the worse of the two arms (13 km/s across
 UVB/VIS), so the resolution is not uniform across a splice.
 """
+import sys
 from pathlib import Path
 
 import numpy as np
 from astropy.io import fits
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.lines import air_to_vac
 
 ROOT = Path(__file__).resolve().parent.parent
 XSL = ROOT / 'data' / 'xsl' / 'XSL_DR3_release'
@@ -43,12 +47,6 @@ def sigma_v(wave_A):
 def resolving_power(wave_A):
     """R = c / FWHM(v); FWHM = 2.3548 sigma. Careful: XSL quotes sigma."""
     return C_KMS / (2.3548 * sigma_v(wave_A))
-
-
-def air_to_vac(w):
-    s = 1e4 / np.asarray(w, float)
-    n = 1 + 0.05792105 / (238.0185 - s * s) + 0.00167917 / (57.362 - s * s)
-    return np.asarray(w, float) * n
 
 
 def load(xslid, dereddened=False, to_vacuum=True):

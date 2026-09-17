@@ -13,9 +13,7 @@ Writes data/library_overlap.csv
 """
 import csv
 import re
-from collections import Counter
 
-import astropy.units as u
 import numpy as np
 from astroquery.vizier import Vizier
 

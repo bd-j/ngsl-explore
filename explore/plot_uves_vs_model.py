@@ -29,9 +29,8 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d, uniform_filter1d
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.lsf import broaden, broaden_ngsl
 from grid.make_model import hnu_to_flam, SYNTHE_R
-from common.uves_pop_load import load as load_uves, params as uves_params
+from common.uves_pop_load import load as load_uves
 from common.extinction_ccm import deredden
 from explore.plot_ngsl_vs_model import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
                                OBS_C, MOD_C, SURFACE, INK, MUTED, GRID)

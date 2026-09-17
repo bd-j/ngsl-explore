@@ -18,10 +18,14 @@ point for model broadening; refit if the profiles demand it.
 Writes data/uves_pop_selected.csv
 """
 import csv
+import sys
 from pathlib import Path
 
 import numpy as np
 from astropy.io import fits
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.lines import air_to_vac
 
 ROOT = Path(__file__).resolve().parent.parent
 UVES = ROOT / 'data' / 'uves_pop'
@@ -33,13 +37,6 @@ GRID_STEP = 0.1           # A, delivered sampling
 # dereddened rather than rejected -- but the sample is held to one standard.
 # HD162817 (E(B-V) = 0.102) was dropped under this cut.
 EBV_MAX = 0.10
-
-
-def air_to_vac(w):
-    """Ciddor (1996) via the IAU standard inverse; good to <1e-4 A here."""
-    s = 1e4 / np.asarray(w, dtype=float)
-    n = (1 + 0.05792105 / (238.0185 - s * s) + 0.00167917 / (57.362 - s * s))
-    return np.asarray(w, dtype=float) * n
 
 
 def load(star, to_vacuum=True):
@@ -101,5 +98,10 @@ if __name__ == '__main__':
         print(''.join(
             f'{(f"{r[h]:.2f}" if isinstance(r[h], float) else str(r[h])):>12}'
             for h in hdr))
+    # NGSL is deliberately NOT quoted as an R here: its profile is a Moffat
+    # (3.54 A G430L core plus a scattered-light halo), so no single resolving
+    # power describes it, and the R ~ 950 this line used to print is retracted.
+    # See docs/LSF.md.
     print(f'\neffective R at 3646 A = {effective_R(3646.0):.0f} '
-          f'(NGSL is ~950; native UVES is 80000 before resampling)')
+          f'(native UVES is 80000 before resampling; NGSL is a 3.54 A '
+          f'Moffat core plus halo, not an R -- docs/LSF.md)')
