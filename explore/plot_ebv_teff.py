@@ -69,6 +69,7 @@ from fitting.predict import predict
 from fitting.calibration import solve, usable, chi2
 
 from common.figpath import figure_path, below_grid
+from common.sample import sample_row, opt_float
 
 ROOT = Path(__file__).resolve().parent.parent
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
@@ -95,21 +96,6 @@ def style(ax):
 def sample_rows(tiers=('primary', 'secondary')):
     return [r for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv'))
             if r['tier'] in tiers]
-
-
-def sample_row(star):
-    for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv')):
-        if r['star'] == star:
-            return r
-    raise KeyError(star)
-
-
-def fnum(x):
-    try:
-        v = float(x)
-        return v if np.isfinite(v) else None
-    except (TypeError, ValueError):
-        return None
 
 
 def one_chi2(obs, grid, theta):
@@ -146,7 +132,7 @@ def nodes_for(row, grid):
     clamped value is returned alongside the catalog one so the figure can say it
     is fitting at -0.5 a star catalogued at -1.9 rather than implying a fit.
     """
-    lg_cat, mh_cat = fnum(row['logg_ngsl']), fnum(row['mh_ngsl'])
+    lg_cat, mh_cat = opt_float(row['logg_ngsl']), opt_float(row['mh_ngsl'])
     lg = float(grid.logg[np.argmin(np.abs(grid.logg - lg_cat))])
     mh = float(grid.mh[np.argmin(np.abs(grid.mh - mh_cat))])
     # Clamped = the catalog value is OUTSIDE the grid, which is a real caveat.
@@ -335,7 +321,7 @@ def draw_star(star, row, teffs, ebvs, vsinis, d_b, d_x, total, logg, mh,
         ax.legend(fontsize=7.5, loc='upper left', framealpha=.85)
 
         for key, lab in (('teff_ngsl', 'NGSL Teff'), ('teff_xsl', 'XSL Teff')):
-            v = fnum(row.get(key))
+            v = opt_float(row.get(key))
             if v and teffs.min() <= v <= teffs.max():
                 ax.axvline(v, color=CAT_C[key], ls='--', lw=1.2, alpha=.9)
                 ax.text(v, ax.get_ylim()[1], f' {lab}', rotation=90, va='top',
@@ -344,7 +330,7 @@ def draw_star(star, row, teffs, ebvs, vsinis, d_b, d_x, total, logg, mh,
             continue
         for key, lab in (('ebv_phot', 'photometric'), ('ebv_miles', 'MILES'),
                          ('ebv_sf11', 'SF11 (upper bound)')):
-            v = fnum(row.get(key))
+            v = opt_float(row.get(key))
             if v is None:
                 continue
             if key in ('ebv_sf11', 'ebv_sfd98') and row.get('ebv_map_useful') == 'no':
@@ -420,10 +406,10 @@ def draw_summary(rows):
     ax.plot(lim, lim, color=MUTED, lw=1.0, ls='--', alpha=.7, label='1:1')
     clean = []
     for r in rows:
-        pv = fnum(r['ebv_phot'])
+        pv = opt_float(r['ebv_phot'])
         if pv is None:
             continue
-        e, lo, hi = fnum(r['ebv']), fnum(r['ebv_lo']), fnum(r['ebv_hi'])
+        e, lo, hi = opt_float(r['ebv']), opt_float(r['ebv_lo']), opt_float(r['ebv_hi'])
         lim_hi, lim_lo = hit(r, 'ebv_ceiling'), hit(r, 'ebv_floor')
         if below_grid(r['star']):
             # below the grid floor: plotted, but never in the mean offset
@@ -467,13 +453,13 @@ def draw_summary(rows):
     for key, lab in (('teff_ngsl', 'NGSL catalog'), ('teff_xsl', 'XSL catalog')):
         xs, ys = [], []
         for r in rows:
-            c, t = fnum(r[key]), fnum(r['teff'])
+            c, t = opt_float(r[key]), opt_float(r['teff'])
             if c is None:
                 continue
             xs.append(c)
             ys.append(t)
-            ax.errorbar(c, t, yerr=[[max(t - fnum(r['teff_lo']), 0)],
-                                    [max(fnum(r['teff_hi']) - t, 0)]],
+            ax.errorbar(c, t, yerr=[[max(t - opt_float(r['teff_lo']), 0)],
+                                    [max(opt_float(r['teff_hi']) - t, 0)]],
                         marker=mark[r['tier']], ms=5.5, lw=0, elinewidth=1.0,
                         color=CAT_C[key], capsize=2, alpha=.9,
                         mfc='none' if hit(r, 'teff_edge') else CAT_C[key])
@@ -484,7 +470,7 @@ def draw_summary(rows):
                           f'scatter {np.std(d):.0f} K')
     for r in rows:
         ax.annotate(r['star'].replace('HD', ''),
-                    (fnum(r['teff_xsl']), fnum(r['teff'])), xytext=(4, 3),
+                    (opt_float(r['teff_xsl']), opt_float(r['teff'])), xytext=(4, 3),
                     textcoords='offset points', fontsize=6.5, color=MUTED)
     for e in (8500, 11500):
         ax.axhline(e, color=MUTED, lw=.8, ls=':', alpha=.7)
@@ -507,13 +493,13 @@ def draw_summary(rows):
     mt = ROOT / 'data' / 'vsini_mask_test.csv'
     if mt.exists():
         stab = {r['star']: r for r in csv.DictReader(open(mt))}
-    order = sorted(rows, key=lambda r: fnum(r['vsini']))
+    order = sorted(rows, key=lambda r: opt_float(r['vsini']))
     for k, r in enumerate(order):
-        v, lo, hi = fnum(r['vsini']), fnum(r['vsini_lo']), fnum(r['vsini_hi'])
+        v, lo, hi = opt_float(r['vsini']), opt_float(r['vsini_lo']), opt_float(r['vsini_hi'])
         st = stab.get(r['star'])
         bad = st is not None and st['vsini_stable'] == 'no'
         if bad:      # the full range the mask width moves it over
-            vv = [fnum(st[c]) for c in st if c.startswith('vsini_mask')]
+            vv = [opt_float(st[c]) for c in st if c.startswith('vsini_mask')]
             ax.plot([min(vv), max(vv)], [k, k], color=CAT_C['ebv_sf11'], lw=3,
                     alpha=.35, solid_capstyle='round', zorder=1)
         else:
@@ -572,8 +558,8 @@ def report(rows):
     print('\n' + hdr)
     print('-' * len(hdr))
     for r in rows:
-        pv = fnum(r['ebv_phot'])
-        d = fnum(r['ebv']) - pv if pv is not None else np.nan
+        pv = opt_float(r['ebv_phot'])
+        d = opt_float(r['ebv']) - pv if pv is not None else np.nan
         flags = ' '.join(x for x in (r['at_boundary'].replace('+', ' '),
                                      ('[M/H]@edge' if r['clamped'] else '')) if x)
         print(f'{r["star"]:<10}{r["tier"][:4]:<6}'
@@ -595,8 +581,8 @@ def report(rows):
         for tier in ('primary', 'secondary'):
             sub = [r for r in rows if r['tier'] == tier and keep(r)
                    and not (r['at_boundary'] or '')
-                   and fnum(r['ebv_phot']) is not None]
-            d = [fnum(r['ebv']) - fnum(r['ebv_phot']) for r in sub]
+                   and opt_float(r['ebv_phot']) is not None]
+            d = [opt_float(r['ebv']) - opt_float(r['ebv_phot']) for r in sub]
             if not d:
                 continue
             print(f'  {grp}, {tier}, off-boundary: fitted - photometric E(B-V) '
@@ -616,10 +602,10 @@ def report(rows):
     # Galaxy cannot be reddened by more than that, so exceeding it is not a
     # tension to weigh against other evidence -- it is unphysical, and marks a
     # solution that has gone wrong somewhere else.
-    over = [(r['star'], fnum(r['ebv']), fnum(r['ebv_sf11']), bool(r['clamped']))
+    over = [(r['star'], opt_float(r['ebv']), opt_float(r['ebv_sf11']), bool(r['clamped']))
             for r in rows
-            if r.get('ebv_map_useful') != 'no' and fnum(r['ebv_sf11'])
-            and fnum(r['ebv']) > fnum(r['ebv_sf11'])]
+            if r.get('ebv_map_useful') != 'no' and opt_float(r['ebv_sf11'])
+            and opt_float(r['ebv']) > opt_float(r['ebv_sf11'])]
     if over:
         print('  ABOVE THE SF11 TOTAL GALACTIC COLUMN (unphysical):')
         for st, e, sf, cla in over:

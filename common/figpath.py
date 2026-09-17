@@ -29,8 +29,9 @@ grid" and they would score as WELL fit -- exactly backwards for the two stars
 most in need of segregating. So the exception is a short list with a reason per
 star, which is reviewable in a way a mis-tuned threshold is not.
 """
-import csv
 from pathlib import Path
+
+from common.sample import sample_row, all_stars, opt_float
 
 ROOT = Path(__file__).resolve().parent.parent
 MH_FLOOR = -0.5                  # the model grid's lowest [M/H] node
@@ -52,21 +53,11 @@ IN_GRID_ANYWAY = {
                 'not a metallicity it cannot represent. XSL -0.19 is the '
                 'outlier here, not NGSL -0.60',
 }
-_CACHE = {}
 
 
 def catalog_mh(star, column='mh_ngsl'):
     """-> the star's catalog [M/H], or None if it is not in the sample."""
-    if not _CACHE:
-        for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv')):
-            _CACHE[r['star']] = r
-    row = _CACHE.get(star)
-    if row is None:
-        return None
-    try:
-        return float(row[column])
-    except (KeyError, TypeError, ValueError):
-        return None
+    return opt_float(sample_row(star, required=False).get(column))
 
 
 def below_grid(star, column='mh_ngsl'):
@@ -109,7 +100,5 @@ def library_figure_path(name):
 
 def metal_poor_stars(column='mh_ngsl'):
     """-> sorted list of the sample stars below the grid floor."""
-    if not _CACHE:
-        catalog_mh('')
-    return sorted(s for s, r in _CACHE.items()
-                  if r['tier'] != 'rejected' and below_grid(s, column))
+    return [s for s in all_stars()
+            if sample_row(s)['tier'] != 'rejected' and below_grid(s, column)]

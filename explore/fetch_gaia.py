@@ -53,6 +53,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.sample import as_float
 
 ROOT = Path(__file__).resolve().parent.parent
 XP_DIR = ROOT / 'data' / 'gaia_xp'
@@ -74,18 +75,10 @@ VIZ_COLS = ['Source', 'RA_ICRS', 'DE_ICRS', 'Gmag', 'BPmag', 'RPmag',
             'pmRA', 'pmDE', 'NSS', 'XPcont', 'XPsamp', 'E(BP/RP)']
 
 
-def fnum(x):
-    try:
-        v = float(x)
-        return v if np.isfinite(v) else np.nan
-    except (TypeError, ValueError):
-        return np.nan
-
-
 def col(row, name):
     """Value of a column that may be absent from the VizieR response."""
     try:
-        return fnum(row[name])
+        return as_float(row[name])
     except (KeyError, TypeError, ValueError):
         return np.nan
 
@@ -128,7 +121,7 @@ def photometry(sample):
 
     rows = []
     for s in sample:
-        ra, dec, vmag = fnum(s['ra']), fnum(s['dec']), fnum(s['vmag'])
+        ra, dec, vmag = as_float(s['ra']), as_float(s['dec']), as_float(s['vmag'])
         try:
             res = viz.query_region(SkyCoord(ra, dec, unit='deg'),
                                    radius=CONE_ARCSEC * u.arcsec,
@@ -142,11 +135,11 @@ def photometry(sample):
             continue
         t = res[0]
         seps = sep_arcsec_arr(ra, dec,
-                             np.array([fnum(v) for v in t['RA_ICRS']]),
-                             np.array([fnum(v) for v in t['DE_ICRS']]))
+                             np.array([as_float(v) for v in t['RA_ICRS']]),
+                             np.array([as_float(v) for v in t['DE_ICRS']]))
 
         # brightness, not position, picks the counterpart: for an A star G ~ V
-        g = np.array([fnum(v) for v in t['Gmag']])
+        g = np.array([as_float(v) for v in t['Gmag']])
         ok = np.isfinite(g) & (np.abs(g - vmag) < G_MINUS_V_MAX)
         if not ok.any():
             print(f'{s["star"]:<11}  no cone hit within {G_MINUS_V_MAX} mag of '

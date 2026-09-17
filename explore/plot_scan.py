@@ -27,7 +27,6 @@ at its minimum.
     python3 explore/plot_scan.py --all
 """
 import argparse
-import csv
 import sys
 from pathlib import Path
 
@@ -41,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.scan import posterior as scan_posterior
 
 from common.figpath import figure_path, below_grid
+from common.sample import sample_row, opt_float
 
 ROOT = Path(__file__).resolve().parent.parent
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
@@ -62,21 +62,6 @@ def style(ax):
     ax.tick_params(labelsize=8, colors=MUTED)
     for s in ax.spines.values():
         s.set_color(GRIDC)
-
-
-def sample_row(star):
-    for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv')):
-        if r['star'] == star:
-            return r
-    return {}
-
-
-def fnum(x):
-    try:
-        v = float(x)
-        return v if np.isfinite(v) else None
-    except (TypeError, ValueError):
-        return None
 
 
 def load(star, scale='profile', weight='inverse_dof'):
@@ -112,7 +97,7 @@ def heat(ax, X, Y, d):
 
 
 def figure(star, S, out):
-    row = sample_row(star)
+    row = sample_row(star, required=False)
     teff, logg, mh, ebv = S['teff'], S['logg'], S['mh'], S['ebv']
     dchi2 = S['dchi2']
     fig, axes = plt.subplots(1, 4, figsize=(19.6, 4.9), constrained_layout=True)
@@ -127,7 +112,7 @@ def figure(star, S, out):
     ax.plot(teff[i], mh[j], marker='*', ms=15, color='w', markeredgecolor='k',
             markeredgewidth=.6, zorder=5,
             label=f'{teff[i]:.0f} K, [M/H]={mh[j]:+.2f}')
-    zc = fnum(row.get('mh_ngsl'))
+    zc = opt_float(row.get('mh_ngsl'))
     if zc is not None:
         if mh.min() <= zc <= mh.max():
             ax.axhline(zc, color=C_CAT, ls=':', lw=1.2)
@@ -147,7 +132,7 @@ def figure(star, S, out):
     ax.plot(teff[i], logg[j], marker='*', ms=15, color='w', markeredgecolor='k',
             markeredgewidth=.6, zorder=5,
             label=f'{teff[i]:.0f} K, log g={logg[j]:.2f}')
-    gc = fnum(row.get('logg_ngsl'))
+    gc = opt_float(row.get('logg_ngsl'))
     if gc is not None and logg.min() <= gc <= logg.max():
         ax.axhline(gc, color=C_CAT, ls=':', lw=1.2)
         ax.text(teff[0], gc, ' catalog', fontsize=7, color=C_CAT, va='bottom')
@@ -163,7 +148,7 @@ def figure(star, S, out):
             markeredgewidth=.6, zorder=5,
             label=f'{teff[i]:.0f} K, E(B−V)={ebv[j]:.3f}')
     for key, lab in (('ebv_phot', 'photometric'), ('ebv_sf11', 'SF11 column')):
-        v = fnum(row.get(key))
+        v = opt_float(row.get(key))
         if v is None or (key == 'ebv_sf11' and row.get('ebv_map_useful') == 'no'):
             continue
         if ebv.min() <= v <= ebv.max():
@@ -388,11 +373,11 @@ def main():
         d = S['d']
         v = int(np.nanargmin(d['chi2_xsl'][i, j, k]))
         pz = profile(d2, (2,))
-        rec = dict(star=s, tier=sample_row(s).get('tier', 'primary'),
+        rec = dict(star=s, tier=sample_row(s, required=False).get('tier', 'primary'),
                    teff=float(S['teff'][i]), logg=float(S['logg'][j]),
                    mh=float(S['mh'][k]), ebv=float(S['ebv'][e]),
                    vsini=float(S['vsini'][v]),
-                   mh_cat=fnum(sample_row(s).get('mh_ngsl')),
+                   mh_cat=opt_float(sample_row(s, required=False).get('mh_ngsl')),
                    pressed=bool(k == 0 and (pz[1] - pz[0]) > 2.30),
                    below_grid=bool(below_grid(s)),
                    chi2n_bands=float(d['chi2_bands'][i, j, k, e]) / int(d['n_bands']),

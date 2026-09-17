@@ -36,6 +36,7 @@ from common.specplot import (spectrum_panel, style, OBS_C, MOD_C, MOD2_C,
 from common.lines import hydrogen_lines
 
 from common.figpath import figure_path
+from common.sample import sample_row
 
 ROOT = Path(__file__).resolve().parent.parent
 CORE_HALF_A = 4.0        # Balmer 'core' half-width, ~1.5 G430L pixels
@@ -47,13 +48,6 @@ def nearest_node(grid, teff, logg, mh):
     return (float(grid.teff[np.argmin(np.abs(grid.teff - teff))]),
             float(grid.logg[np.argmin(np.abs(grid.logg - logg))]),
             float(grid.mh[np.argmin(np.abs(grid.mh - mh))]))
-
-
-def sample_row(star):
-    for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv')):
-        if r['star'] == star:
-            return r
-    raise KeyError(star)
 
 
 def scan_row(star):

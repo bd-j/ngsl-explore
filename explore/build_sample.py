@@ -49,6 +49,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.sample import as_float
 from common.dust import (irsa_ebv, simbad_info, ebv_photometric, is_binary,
                          is_peculiar, is_peculiar_otype, is_horizontal_branch)
 
@@ -63,14 +64,6 @@ GRID = dict(teff=(8500.0, 11500.0), logg=(3.0, 5.0), mh=(-0.5, 0.3))
 
 # Am/Ap signature that a spectral type may miss: sharp lines plus strong metals.
 PEC_VSINI_MAX, PEC_FEH_MIN = 30.0, 0.40
-
-
-def fnum(x):
-    try:
-        v = float(x)
-        return v if np.isfinite(v) else np.nan
-    except (TypeError, ValueError):
-        return np.nan
 
 
 def galactic_b(ra, dec):
@@ -101,8 +94,8 @@ def sep_arcsec(ra1, dec1, ra2, dec2):
 def crossmatch():
     """-> [(xsl_row, ngsl_row, sep_arcsec)] one entry per XSL star."""
     ngsl = list(csv.DictReader(open(ROOT / 'data' / 'ngsl_catalog.csv')))
-    nra = np.array([fnum(r['ra']) for r in ngsl])
-    ndec = np.array([fnum(r['dec']) for r in ngsl])
+    nra = np.array([as_float(r['ra']) for r in ngsl])
+    ndec = np.array([as_float(r['dec']) for r in ngsl])
 
     first = {}
     for r in csv.DictReader(open(ROOT / 'data' / 'xsl_all.csv')):
@@ -110,7 +103,7 @@ def crossmatch():
 
     out = []
     for x in first.values():
-        ra, dec = fnum(x['ra']), fnum(x['dec'])
+        ra, dec = as_float(x['ra']), as_float(x['dec'])
         if not np.isfinite(ra):
             continue
         s = sep_arcsec(ra, dec, nra, ndec)
@@ -142,7 +135,7 @@ def gaia_flags():
         return {}
     out = {}
     for r in csv.DictReader(open(p)):
-        ruwe = fnum(r.get('ruwe', ''))
+        ruwe = as_float(r.get('ruwe', ''))
         nss = str(r.get('non_single_star', '0')).strip()
         out[r['star']] = dict(
             ruwe=ruwe, non_single_star=nss,
@@ -159,7 +152,7 @@ def miles_ebv():
     out = {}
     for r in csv.DictReader(open(p)):
         key = r.get('target') or r.get('star') or ''
-        v = fnum(r.get('miles_ebv', ''))
+        v = as_float(r.get('miles_ebv', ''))
         if key and np.isfinite(v):
             out[key] = v
     return out
@@ -171,8 +164,8 @@ def main():
     print(f'  positional matches within {MATCH_ARCSEC:.0f}": {len(matches)}')
 
     cand = [(x, n, s) for x, n, s in matches
-            if (TEFF_WINDOW[0] <= fnum(x['teff']) <= TEFF_WINDOW[1])
-            or (TEFF_WINDOW[0] <= fnum(n['teff']) <= TEFF_WINDOW[1])]
+            if (TEFF_WINDOW[0] <= as_float(x['teff']) <= TEFF_WINDOW[1])
+            or (TEFF_WINDOW[0] <= as_float(n['teff']) <= TEFF_WINDOW[1])]
     print(f'  either Teff in {TEFF_WINDOW[0]:.0f}-{TEFF_WINDOW[1]:.0f} K: '
           f'{len(cand)} stars\n')
 
@@ -184,24 +177,24 @@ def main():
                                    'only; run explore/fetch_gaia.py then rerun'))
     print()
     rows = []
-    for x, n, sep in sorted(cand, key=lambda t: -fnum(t[0]['teff'])):
+    for x, n, sep in sorted(cand, key=lambda t: -as_float(t[0]['teff'])):
         name = n['target']
         info = simbad_info(x['simbad'] or x['star'])
         sptype = info.get('sp_type', '') or n.get('sptype', '')
         otype = info.get('otype', '')
 
         try:
-            sfd, sf11 = irsa_ebv(fnum(x['ra']), fnum(x['dec']))
+            sfd, sf11 = irsa_ebv(as_float(x['ra']), as_float(x['dec']))
         except Exception as exc:
             print(f'  ! IRSA failed for {name}: {type(exc).__name__}')
             sfd = sf11 = np.nan
 
-        bv = fnum(n['bmag']) - fnum(n['vmag'])
+        bv = as_float(n['bmag']) - as_float(n['vmag'])
         ebv_phot = ebv_photometric(sptype, round(bv, 3) if np.isfinite(bv) else '')
 
-        t_xsl, t_ngsl = fnum(x['teff']), fnum(n['teff'])
-        g_xsl, g_ngsl = fnum(x['logg']), fnum(n['logg'])
-        z_xsl, z_ngsl = fnum(x['feh']), fnum(n['logz'])
+        t_xsl, t_ngsl = as_float(x['teff']), as_float(n['teff'])
+        g_xsl, g_ngsl = as_float(x['logg']), as_float(n['logg'])
+        z_xsl, z_ngsl = as_float(x['feh']), as_float(n['logz'])
 
         gf = gaia.get(name, {})
         binary_simbad = is_binary(otype, sptype)
@@ -245,7 +238,7 @@ def main():
         rows.append(dict(
             star=name, xsl_name=x['star'], xslid=x['xslid'],
             ngsl_file=n['file'], xsl_file=x['filename'],
-            ra=round(fnum(x['ra']), 5), dec=round(fnum(x['dec']), 5),
+            ra=round(as_float(x['ra']), 5), dec=round(as_float(x['dec']), 5),
             match_arcsec=round(sep, 2),
             teff_xsl=('' if not np.isfinite(t_xsl) else round(t_xsl)),
             teff_ngsl=('' if not np.isfinite(t_ngsl) else round(t_ngsl)),
@@ -260,7 +253,7 @@ def main():
             ebv_sf11=('' if not np.isfinite(sf11) else round(sf11, 4)),
             ebv_phot=ebv_phot,
             ebv_miles=mil.get(name, ''),
-            gal_b=round(galactic_b(fnum(x['ra']), fnum(x['dec'])), 2),
+            gal_b=round(galactic_b(as_float(x['ra']), as_float(x['dec'])), 2),
             ebv_map_useful=('no' if (np.isfinite(sf11) and sf11 > EBV_MAP_USELESS)
                             else 'yes'),
             binary='yes' if binary else 'no',

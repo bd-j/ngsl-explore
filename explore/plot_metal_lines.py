@@ -40,15 +40,9 @@ from common.species import (atmosphere_point, abundances, species_label,
                             strong_lines)
 
 from common.figpath import figure_path
+from common.sample import sample_row
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def sample_row(star):
-    for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv')):
-        if r['star'] == star:
-            return r
-    raise KeyError(star)
 
 
 def top_features(n):
