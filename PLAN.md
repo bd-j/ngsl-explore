@@ -194,15 +194,14 @@ over 117 line-star combinations, so none of the residual is a kernel error.
 
 ### LSF conventions, set deliberately
 
-* **The Moffat is truncated at +/-40 DETECTOR PIXELS** (`NGSL_TRUNC_PX`), 110 A
-  on G430L and 195 A on G750L, not at a fixed number of FWHM. Pixels because
+* **The Moffat is truncated at +/-15 DETECTOR PIXELS** (`NGSL_TRUNC_PX`), 41 A
+  on G430L and 73 A on G750L, not at a fixed number of FWHM. Pixels because
   that is the unit the instrument works in, and because it keeps the reach
-  comparable to the tabulated STIS profiles, which stop at +/-20 px. The old
-  40 x FWHM convention gave G750L a 335 A reach against G430L's 142 A -- the
-  same profile behaving differently per grating for no instrumental reason. At
-  +/-40 px the profile is 8.2e-6 of peak (G430L) and the discarded power is
-  0.018%, renormalised away. The change moves the smoothed flux by <=2.6e-4, so
-  nothing downstream was regenerated.
+  comparable to the tabulated STIS profiles, which stop at +/-20 px; 15 px
+  because the empirical profiles are compact and a kernel reaching 300 A claims
+  something about scattered light at a distance nothing here measures. Measured
+  against an effectively untruncated kernel the error is 9.8e-5 max / 2.6e-5
+  rms, two orders below the 1% band calibration floor.
 * **One parser for the STIS tables**: `common.lsf.stis_table` /
   `stis_kernel`, imported by `explore/ngsl_lsf.py` and
   `explore/lsf_resolution.py`. Consolidating them found an off-by-one in

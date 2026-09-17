@@ -23,7 +23,7 @@ instrument.
 | core FWHM, G750L | **8.38 ± 0.45 Å** (4.879 Å/px) |
 | behaviour with λ | constant in **Ångströms** within a grating, jumping at the splices |
 | sampling | fitted **with pixel integration**; must be applied that way |
-| truncation | **±40 detector pixels** — 110 Å (G430L), 195 Å (G750L) |
+| truncation | **±15 detector pixels** — 41 Å (G430L), 73 Å (G750L) |
 | power beyond ±10 Å | 2.4% (G430L) — a Gaussian of the same core puts 0.01% there |
 
 Uncertainties are star-to-star NMAD over 9 stars. G230LB is not measured — no
@@ -218,31 +218,49 @@ not support it.
 ## Where the Moffat is cut off
 
 A Moffat has no natural edge, so the truncation radius is a choice, and
-`NGSL_TRUNC_PX = 40` states it in **detector pixels** — 110 Å on G430L, 195 Å on
+`NGSL_TRUNC_PX = 15` states it in **detector pixels** — 41 Å on G430L, 73 Å on
 G750L.
 
 Pixels rather than FWHM, for two reasons. It is the unit the instrument works
 in; and it keeps the kernel's reach comparable to the tabulated STIS profiles,
-which stop at ±20 px. Cutting at a fixed number of FWHM instead — the previous
+which stop at ±20 px. Cutting at a fixed number of FWHM instead — an earlier
 convention, 40 × FWHM — gave the G750L kernel a 335 Å reach against G430L's
 142 Å, the same profile behaving differently in the two gratings for no
 instrumental reason.
 
-At ±40 px the profile is down to **8.2 × 10⁻⁶** of peak on G430L and
-2.0 × 10⁻⁵ on G750L, and the discarded power is **0.018%** and **0.031%** —
-renormalised away by `moffat_kernel`, so no flux is lost, only reach. Switching
-from 40 × FWHM to 40 px changes the smoothed model flux by at most 1.4 × 10⁻⁵
-(G430L) and 2.6 × 10⁻⁴ (G750L), so nothing downstream needed regenerating.
+15 px keeps the profile's effect **local**, which is the point: the empirical
+STIS LSFs are compact, and a kernel reaching 300 Å makes a claim about scattered
+light at a distance nothing here measures. The cost was measured rather than
+assumed — convolving a line-rich spectrum on one uniform grid with no segment
+edges involved, against a ±300 Å (109 px) kernel, over an interior window:
 
-For scale, cutting at the tabulated ±20 px instead would discard 0.078% and
-0.137%.
+| truncation | | max rel. error | rms rel. error |
+|---|---|---|---|
+| ±10 px | 27 Å | 2.4 × 10⁻⁴ | 5.8 × 10⁻⁵ |
+| **±15 px** | **41 Å** | **9.8 × 10⁻⁵** | **2.6 × 10⁻⁵** |
+| ±20 px | 55 Å | 5.8 × 10⁻⁵ | 1.4 × 10⁻⁵ |
+| ±40 px | 110 Å | 1.2 × 10⁻⁵ | 3.2 × 10⁻⁶ |
+
+At ±15 px the profile is 1.6 × 10⁻⁴ of peak on G430L and 3.8 × 10⁻⁴ on G750L,
+and the power discarded is **0.14%** and **0.25%** — renormalised away by
+`moffat_kernel`, so no flux is lost, only reach. An error of 10⁻⁴ is two orders
+below the 1% calibration floor the NGSL bands carry, so this is a free choice
+made on physical grounds rather than a trade.
+
+**Beware the obvious test of this.** Comparing two truncations through
+`broaden_ngsl` rather than through a bare convolution mixes in the per-segment
+edge replication, whose margin also scales with the truncation radius. Done that
+way the comparison comes out non-monotonic — ±40 px looking *worse* than ±20 px
+on G750L — which is the edges moving, not the kernel. The table above is from a
+single uniform grid with no segment boundaries in it.
 
 **The fit used a different radius, and that is fine.** `explore/ngsl_lsf.py`
-fits on a ±80 Å grid for every profile, which is narrower than 40 px on both
-gratings. Truncation was measured not to move the fitted width: at 40 / 80 /
-150 / 250 Å the Moffat fit returns rms 0.666 / 0.665 / 0.665 / 0.665 % and FWHM
-4.55 Å throughout. So the fitted parameters do not depend on the radius, and the
-applied radius is chosen for the reasons above rather than to match the fit.
+fits on a ±80 Å grid for every profile, which is wider than 15 px on G430L and
+slightly wider on G750L. Truncation was measured not to move the fitted width:
+at 40 / 80 / 150 / 250 Å the Moffat fit returns rms 0.666 / 0.665 / 0.665 /
+0.665 % and FWHM 4.55 Å throughout. So the fitted parameters do not depend on
+the radius, and the applied radius is chosen for the reasons above rather than
+to match the fit.
 
 ## What the cores can and cannot settle
 

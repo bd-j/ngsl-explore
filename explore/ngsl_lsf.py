@@ -932,18 +932,24 @@ def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best,
     print(f'    -> {out.relative_to(ROOT)}')
 
 
-def plot_kernels(rows, grating='G430L', half_px=60.0):
+def plot_kernels(rows, grating='G430L', half_A=60.0):
     """The profiles themselves, at the median fitted parameters.
 
-    The log panel runs to +/-`half_px` DETECTOR PIXELS, which is wider than the
-    +/-KERNEL_HALF grid the fits are done on, so the kernels are rebuilt here on
-    a grid that covers it. The FWHM and wing numbers in the legend are still
-    computed on the fitting grid, so they match data/ngsl_lsf.csv rather than
-    drifting with whatever the plot happens to show.
+    The log panel runs to +/-`half_A` ANGSTROMS, with a secondary axis in
+    detector pixels: the tabulated profiles stop at +/-20 px and the applied
+    truncation is stated in pixels, while the widths are in Angstroms, and
+    reading one off an axis in the other unit is an easy way to think a kernel
+    has changed when only its label has.
 
-    Pixels on the log panel because that is the unit the adopted truncation is
-    stated in (common.lsf.NGSL_TRUNC_PX), and the truncation is drawn on it --
-    a profile's behaviour outside that radius is not applied to anything.
+    The panel is widened past `half_A` if it would otherwise cut off the
+    truncation marker, which happens on G750L: 15 px is 41 A there on G430L but
+    73 A on G750L. A figure that annotates a line you cannot see is worse than
+    a slightly wider axis.
+
+    The kernels are rebuilt here on a grid covering the panel, which is wider
+    than the +/-KERNEL_HALF grid the fits are done on. The FWHM and wing numbers
+    in the legend are still computed on the FITTING grid, so they match
+    data/ngsl_lsf.csv rather than drifting with whatever the plot shows.
     """
     from common.specplot import style, SURFACE, INK, MUTED, HELD_C
     from common.lsf import NGSL_TRUNC_PX
@@ -952,7 +958,8 @@ def plot_kernels(rows, grating='G430L', half_px=60.0):
     lo, hi = dict((g[0], (g[1], g[2])) for g in GRATINGS)[grating]
     lam = 0.5 * (lo + hi)
     dl = np.arange(-KERNEL_HALF, KERNEL_HALF + STEP / 2, STEP)
-    wide = half_px * disp
+    trunc_A = NGSL_TRUNC_PX * disp
+    wide = max(half_A, 1.12 * trunc_A)
     dlw = np.arange(-wide, wide + STEP / 2, STEP)
 
     fig, ax = plt.subplots(1, 2, figsize=(11.5, 5.0))
@@ -974,7 +981,7 @@ def plot_kernels(rows, grating='G430L', half_px=60.0):
         lab = (f'{fam:<13} FWHM {f:5.2f} A   '
                f'power >10 A {100 * wing_power(k, dl, 10.0):5.2f}%')
         ax[0].plot(dl, k / k.max(), color=c, lw=1.4, label=lab, **dd)
-        ax[1].plot(dlw / disp, kw / kw.max(), color=c, lw=1.4, **dd)
+        ax[1].plot(dlw, kw / kw.max(), color=c, lw=1.4, **dd)
     ax[0].set_xlim(-16, 16)
     ax[0].set_ylim(0, 1.06)
     ax[0].set_ylabel('normalised response', fontsize=9, color=MUTED)
@@ -984,21 +991,17 @@ def plot_kernels(rows, grating='G430L', half_px=60.0):
 
     ax[1].set_yscale('log')
     ax[1].set_ylim(9e-5, 1.4)
-    ax[1].set_xlim(-half_px, half_px)
+    ax[1].set_xlim(-wide, wide)
     for sign in (-1, 1):
-        ax[1].axvline(sign * NGSL_TRUNC_PX, color=HELD_C, lw=.8, ls=':')
-    ax[1].text(0.0, 1.15, f'applied kernel cut at '
-               f'+/-{NGSL_TRUNC_PX:.0f} px', fontsize=7.5, color=HELD_C,
+        ax[1].axvline(sign * trunc_A, color=HELD_C, lw=.8, ls=':')
+    ax[1].text(0.0, 1.15, f'applied kernel cut at +/-{NGSL_TRUNC_PX:.0f} px '
+               f'= +/-{trunc_A:.0f} A', fontsize=7.5, color=HELD_C,
                ha='center', va='center')
-    ax[1].set_xlabel(f'offset from line centre (detector pixels, '
-                     f'1 px = {disp:.3f} A)', fontsize=9, color=MUTED)
-    # Both scales on the same panel. The tabulated profiles stop at +/-20 px,
-    # which is +/-55 A on G430L and +/-98 A on G750L, and reading that cutoff
-    # off an axis in the other unit is an easy way to think a kernel changed
-    # when only the label did.
-    top = ax[1].secondary_xaxis('top', functions=(lambda v: v * disp,
-                                                  lambda v: v / disp))
-    top.set_xlabel('offset (A)', fontsize=8, color=MUTED)
+    ax[1].set_xlabel('offset from line centre (A)', fontsize=9, color=MUTED)
+    top = ax[1].secondary_xaxis('top', functions=(lambda v: v / disp,
+                                                  lambda v: v * disp))
+    top.set_xlabel(f'detector pixels (1 px = {disp:.3f} A)', fontsize=8,
+                   color=MUTED)
     top.tick_params(labelsize=7.5, colors=MUTED)
     ax[1].set_title('the same, log scale: this is where they differ',
                     fontsize=10, color=INK, pad=26)

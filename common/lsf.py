@@ -115,12 +115,26 @@ NGSL_LSF_CORE = [(1675., 3058., 1.37, 1.373),
 # 142 A -- the same profile behaving differently in the two gratings for no
 # instrumental reason.
 #
-# 40 px discards almost nothing. At the adopted parameters the profile is
-# 8.2e-6 of peak at +/-40 px on G430L (110 A) and 2.0e-5 on G750L (195 A), and
-# the power beyond is 0.018% and 0.031% respectively -- renormalised away by
-# moffat_kernel, so no flux is lost, only reach. For scale, cutting at the
-# tabulated +/-20 px instead would discard 0.078% and 0.137%.
-NGSL_TRUNC_PX = 40.0
+# 15 px is 41 A on G430L and 73 A on G750L. It keeps the profile's effect LOCAL,
+# which is the point: the empirical STIS LSFs are compact, and a kernel that
+# reaches 300 A is making a claim about scattered light at a distance that
+# nothing here measures. The cost is small and was measured rather than assumed.
+# Convolving a line-rich spectrum on one uniform grid, no segment edges
+# involved, and comparing against a +/-300 A (109 px) kernel over an interior
+# window:
+#
+#   truncation        max rel error   rms rel error
+#   +/-10 px  27 A       2.4e-04         5.8e-05
+#   +/-15 px  41 A       9.8e-05         2.6e-05      <- adopted
+#   +/-20 px  55 A       5.8e-05         1.4e-05
+#   +/-40 px 110 A       1.2e-05         3.2e-06
+#
+# At +/-15 px the profile is 1.6e-4 of peak on G430L and 3.8e-4 on G750L, and
+# the power discarded is 0.14% and 0.25% -- renormalised away by moffat_kernel,
+# so no flux is lost, only reach. An error of 1e-4 is two orders below the 1%
+# calibration floor the NGSL bands carry, so this is a free choice made on
+# physical grounds rather than a trade.
+NGSL_TRUNC_PX = 15.0
 
 
 # --- the tabulated STIS profile ----# --- the tabulated STIS profile -------------------------------------------
