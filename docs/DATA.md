@@ -67,18 +67,63 @@ rejected.
 HD147550 (1.80), both of which have clean SIMBAD object types. That is the failure
 mode CAVEATS records for HD162630, caught this time.
 
+### The sample, star by star
+
+Generated from `data/sample.csv`; catalog parameters as delivered, not fitted.
+
+| star | tier | Teff NGSL / XSL | log g | [M/H] NGSL / XSL | SpType | flags | grid |
+|---|---|---|---|---|---|---|---|
+| HD167946 | primary | 10634 / 10079 | 4.30 | -0.10 / -0.47 | A0 | — | in |
+| **HD194453** | primary | 10241 / 10489 | 3.90 | +0.00 / -0.02 | A0III | — | in |
+| HD128801 | primary | 10123 / 8774 | 3.70 | -1.90 / -1.92 | B9 | HB | below |
+| HD143459 | primary | 9878 / 10689 | 3.60 | -0.60 / -0.19 | A0V | HB | in † |
+| HD117880 | primary | 9426 / 8843 | 3.70 | -0.60 / -1.65 | B9IV/V | — | below |
+| HD106304 | primary | 9376 / 8759 | 3.60 | -1.80 / -1.67 | B9V | — | below |
+| HD174240 | primary | 9274 / 9262 | 3.80 | -0.20 / -0.40 | A1IV | map | in |
+| HD074721 | primary | 8774 / 9571 | 3.30 | -0.60 / -0.57 | A0V | HB | below |
+| HD166991 | primary | 8497 / 9008 | 4.00 | -0.30 / -0.20 | A1V | — | in |
+| HD147550 | secondary | 10074 / 10044 | 3.90 | +0.00 / -0.26 | B9V | **B** (RUWE 1.80) | in |
+| HD164967 | secondary | 8534 / 9351 | 4.10 | -0.60 / -0.29 | A0 | **B** (RUWE 8.32) | in † |
+| HD164257 | secondary | 7977 / 10885 | 3.50 | -0.10 / +0.73 | A0 | **B** (El\*), Z+ | in |
+| ~~HD072968~~ | rejected | 9253 / 9569 | 3.90 | +0.50 / +0.44 | A1VpSrCr | **pec**, Z+ | in |
+
+**flags** — **B** binary, with the evidence that caught it (Gaia RUWE > 1.4, or
+the SIMBAD object type); **HB** field horizontal branch, flagged but kept;
+**pec** chemically peculiar, the one rejection; **Z+** [Fe/H] ≥ +0.4;
+**map** the SFD/SF11 dust column is unusable at this star's galactic latitude.
+
+**grid** — whether any node of the model grid can represent the star, which
+decides where its figures go (`common/figpath.py`: `figures/fits_mh_in_grid/` or
+`figures/fits_mh_below_grid/`). † marks the two stars the catalog cut sends
+below the floor but whose metal lines are fit at the −0.5 node; the exception is
+a reviewed list with a reason per star, not a threshold.
+
+Note that `grid` and the per-axis out-of-grid flag in the table above answer
+different questions: `grid` is about the [M/H] **floor** only, while HD164257 is
+flagged out-of-grid because XSL puts it at +0.73, above the +0.3 **ceiling**.
+
 ### The binding constraint is the grid's [M/H] floor
 
-**8 of the 13 stars fall outside the model grid**, almost all in [M/H]: the grid
-stops at −0.5 while the sample reaches −1.92. A node scan cannot extrapolate — it
-piles up on the boundary and returns a wall, not a measurement — so this is a
-hard limit on which stars produce quotable parameters, not a bias to be corrected.
+**9 of the 13 stars fall outside the model grid on some axis, 8 of them in
+[M/H]** — and the floor is what binds: the grid stops at −0.5 while the sample
+reaches −1.92. A node scan cannot extrapolate — it piles up on the boundary and
+returns a wall, not a measurement — so this is a hard limit on which stars
+produce quotable parameters, not a bias to be corrected.
 
-| axis | grid | sample needs | stars affected |
+A star counts as outside if **either** catalog puts it outside, on the same
+either-catalog principle as the Teff window.
+
+| axis | grid | sample reaches | stars affected |
 |---|---|---|---|
-| [M/H] | −0.5 … +0.3 | down to −1.92 | HD143459, HD074721, HD164967, HD117880, HD128801, HD106304, HD164257, HD072968 |
+| [M/H] below floor | −0.5 | down to −1.92 | HD143459, HD074721, HD164967, HD117880, HD128801, HD106304 |
+| [M/H] above ceiling | +0.3 | up to +0.73 | HD164257, HD072968 |
 | log g | 3.0 … 5.0 | down to 2.84 | HD128801 |
 | Teff | 8500 … 11500 | down to 7977 (NGSL value) | HD166991, HD164257 |
+
+The two above the ceiling are a different problem from the six below the floor:
+HD072968 is the rejected chemically peculiar star, and HD164257's +0.73 is the
+XSL value for a star NGSL puts at −0.10 — the 2900 K catalog disagreement again,
+not a real super-metal-rich A star.
 
 ### XSL — the only library that overlaps NGSL star by star
 
