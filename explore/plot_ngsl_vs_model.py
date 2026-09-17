@@ -28,7 +28,7 @@ from scipy.ndimage import gaussian_filter1d
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.balmer_metric import balmer_discontinuity
 from common.lines import hydrogen_lines
-from common.lsf import broaden, broaden_ngsl, NGSL_LSF
+from common.lsf import broaden, broaden_ngsl
 from grid.make_model import hnu_to_flam
 from common.ngsl_wavecal import apply_wavecal, load_table
 

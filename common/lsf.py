@@ -1,10 +1,9 @@
 """Line spread functions and broadening kernels, shared by the explore
 scripts and the fitter.
 
-The NGSL LSF is set by a fixed dispersion per grating, so it is constant in
-ANGSTROMS within a grating and jumps at the splices. SYNTHE's output grid is
-logarithmic, so a fixed sigma in pixels would instead be a constant-R kernel --
-the wrong thing here.
+The NGSL profile is measured, not assumed, and there is ONE function that
+applies it: `broaden_ngsl`. See `to_ngsl_pixels` for why the kernel and the
+pixel belong together, and docs/LSF.md for the measurement.
 """
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
@@ -12,85 +11,78 @@ from scipy.signal import fftconvolve
 
 C_KMS = 2.99792458e5
 
-# --- NGSL line spread function -------------------------------------------
+# --- NGSL -----------------------------------------------------------------
 #
-# TABULATED: FWHM in Angstroms per grating, from the STIS LSF tables
-# (FWHM_px x dispersion; data/stis_lsf_resolution.csv). Constant in Angstroms
-# within a grating, jumping at the splices. G230LB has no published LSF, so its
-# entry is the 2-px sampling lower bound.
+# (lo, hi, dispersion A/px) per grating, measured from the delivered v2
+# wavelength grid. One definition; everything else keys off it.
+NGSL_SEGMENTS = [('G230LB', 1675., 3058., 1.373),
+                 ('G430L', 3058., 5647., 2.747),
+                 ('G750L', 5647., 10198., 4.879)]
+
+# The TABULATED STIS LSF, FWHM in Angstroms per grating (FWHM_px x dispersion,
+# data/stis_lsf_resolution.csv). Kept for comparison only -- it is NOT what the
+# delivered spectra have. Fitted as a fixed profile against XSL it leaves an
+# rms of 1.89% and a +14% spike in every Balmer core, against 0.93% and +5.9%
+# for the profile adopted below. G230LB's entry is a 2-pixel lower bound: the
+# only tabulated LSFs at those wavelengths are for the MAMA G230L, a different
+# detector.
 NGSL_LSF_TABULATED = [(1675., 3058., 2.75), (3058., 5647., 3.85),
                       (5647., 10198., 8.09)]
 
-# MEASURED: the delivered NGSL v2 spectra are substantially broader than that,
-# and broader in a different FUNCTIONAL FORM. Measured against XSL -- which
-# observes the same stars at ~10x the resolution, so no model is involved --
-# the effective profile is constant in VELOCITY at R = 600 +/- 40 over
-# 3900-8700 A, with no jump at the G430L/G750L splice:
+# THE MEASURED PROFILE: a Moffat, core constant in ANGSTROMS per grating.
 #
-#     lambda   FWHM     implied R          tabulated
-#      3900    6.60 A      591               3.85 A
-#      4400    6.99        629               3.85
-#      4900    7.79        629               3.85
-#      6600   12.68        521               8.09
-#      8700   14.48        601               8.09
+# Measured by `explore/ngsl_lsf.py` against XSL -- two observations of the same
+# nine stars, no stellar model anywhere in it -- fitting seven profile families
+# with free widths and a free wavelength shift, scored on the rms percent
+# residual over the whole grating. Median over the nine primary stars, G430L:
 #
-# Constant-R describes this with 7% scatter; constant-Angstrom needs 41%.
-# The tabulated values are the single-exposure optical LSF; the delivered
-# spectra are co-adds of two dithered exposures resampled onto a common grid,
-# which broadens the profile beyond it. Use MEASURED for anything comparing to
-# the delivered spectra. See explore/ngsl_lsf_from_xsl.py and docs/DATA.md.
-NGSL_R_MEASURED = 600.0
-NGSL_R_SIGMA = 40.0      # star-to-star scatter of the measurement
+#   profile        npar   rms %   core mean %   FWHM A   power >10 A
+#   stis (fixed)      0   1.886       +4.74       4.04       0.00
+#   gauss             1   1.085       +0.67       6.21       0.01
+#   gauss (x) tophat  2   1.085       +0.67       6.21       0.01
+#   stis (x) tophat   1   1.057       +0.78       6.44       0.01
+#   stis (x) gauss    1   1.047       +0.65       6.03       0.03
+#   MOFFAT            2   0.930       -0.02       3.54       2.44
+#   gauss + gauss     3   0.908       +0.08       5.33       3.19
+#
+# Why the Moffat and not the marginally better two-Gaussian: its second
+# parameter is a MEASUREMENT. Over the nine stars beta runs 1.40 to 2.06, while
+# the two-Gaussian's broad component scatters from 25 A to 13574 A -- that
+# profile has three parameters and only two of them mean anything.
+#
+# Why constant in ANGSTROMS. Fitting each sub-window separately and regressing
+# the width on wavelength as FWHM ~ lambda^alpha (alpha = 0 constant in A,
+# alpha = 1 constant in R), over four Balmer-anchored G430L windows:
+#
+#   Moffat core     alpha = +0.14      tabulated STIS   alpha = +0.19
+#   single Gaussian alpha = +0.67
+#
+# The Moffat core is flat and tracks the tables' own mild wavelength
+# dependence. A single Gaussian looks nearly constant in R -- which is exactly
+# how this project once arrived at "R = 600, constant in velocity". That was an
+# artefact of the functional form: a one-parameter profile forced to represent
+# a core plus a halo drifts with wavelength as the halo's relative weight
+# changes. NGSL_R_MEASURED = 600 has been REMOVED rather than kept for
+# reference, because it is neither a width nor a resolution.
+NGSL_MOFFAT_BETA = 1.52           # beta->1 Lorentzian, beta->inf Gaussian
+NGSL_BETA_SIGMA = 0.16            # star-to-star NMAD, 18 star-grating fits
 
-# MEASURED SHAPE. The single Gaussian above is the wrong FUNCTIONAL FORM, not
-# just the wrong width. Fitting a family of profiles against XSL -- no model
-# involved -- on a control window with no Balmer line in it, and scoring each on
-# the Balmer cores it was NOT fitted to (explore/ngsl_lsf_shape.py):
+# Core FWHM in Angstroms per grating, fitted UNDER PIXEL INTEGRATION. A width
+# is meaningless without that convention: the same data fitted with centre
+# sampling returns 4.06 A for G430L, the 3.54 A below with the 2.747 A pixel's
+# equivalent Gaussian added in quadrature.
 #
-#   profile          n par   control rms   leftover Balmer core excess
-#   Gaussian             1        0.0068        +2.33%
-#   Gaussian * tophat    2        0.0067        +2.32%
-#   Gaussian + Gaussian  3        0.0059        +0.75%
-#   Gaussian + Lorentz   3        0.0058        +0.27%
-#   MOFFAT               2        0.0058        +0.04%
+#   G430L  3.54 +/- 0.16 A   (9 stars)
+#   G750L  8.38 +/- 0.45 A   (9 stars)
 #
-# The tophat is the physically obvious candidate -- NGSL v2 spectra are co-adds
-# of two DITHERED exposures resampled onto a common grid, and both the dither
-# and the pixel are boxes. It fits a sensible 1.84 A box (~1.3 pixels) and
-# changes nothing, because a box convolved with a Gaussian still has
-# Gaussian-fast wings. The pedestal is not resampling; it is a heavy-tailed
-# halo, of the kind grating scatter produces. Power beyond +/-10 A: Gaussian
-# 0.01%, Gaussian*tophat 0.01%, Moffat 2.9%.
-#
-# AND THE CORE IS THE TABULATED ONE. Fitted per grating, the Moffat core comes
-# out 4.02 +/- 0.59 A for G430L and 8.34 +/- 0.91 A for G750L, against the STIS
-# tabulated 3.85 and 8.09 -- agreement to 3-5%. That resolves the disagreement
-# explore/ngsl_lsf_from_xsl.py records as unexplained: a single Gaussian needed
-# 1.7-1.9x the tabulated width because it was absorbing a tail it had no way to
-# represent. So the profile is the PUBLISHED STIS core plus a halo, and the
-# width is constant in ANGSTROMS per grating, as the tables say -- NOT constant
-# in R. Fitting R = 1074 from one window and applying it as constant-R made the
-# kernel sharper at 3800 A than anything that had been tested, and made the
-# Balmer core excess worse rather than better.
-# WHAT THE BALMER CORES CAN AND CANNOT SETTLE. An earlier version of this note
-# claimed a Moffat removed 86% of the Balmer core excess. That was wrong: the
-# core excess is degenerate with the EFFECTIVE WIDTH, not the shape. Holding
-# everything else fixed and varying only the width, a plain Gaussian runs from
-# +16.8% at 3.85 A to -1.2% at 7.0 A. Any profile can be tuned to zero it. So
-# the cores are not evidence for this profile and are not used as such; the
-# evidence is the control-window rms at free width, and the agreement of the
-# fitted core with the independently published STIS value.
-NGSL_MOFFAT_BETA = 1.6            # beta->1 Lorentzian, beta->inf Gaussian
-# Core FWHM fitted against XSL per grating, NOT tuned on the Balmer region:
-# 4.02 +/- 0.59 A (G430L) and 8.34 +/- 0.91 A (G750L). G230LB is not fitted --
-# no sample star has XSL coverage below 3500 A -- so it keeps its tabulated
-# 2-pixel lower bound, and nothing in this project uses it (the grid starts at
-# 3200 A and the bluest band at 3220 A).
-NGSL_MOFFAT_LSF = [(1675., 3058., 2.75), (3058., 5647., 4.02),
-                   (5647., 10198., 8.34)]
-
-# Back-compatible name; now the measured profile.
-NGSL_LSF = NGSL_LSF_TABULATED
+# G430L is measured over 3700-5647 A -- XSL starts at 3501 A, so the bluest
+# band this project uses (3220-3385 A) is an extrapolation. At alpha = +0.14
+# that extrapolation is worth -2.4% in the core width, which is inside the
+# star-to-star scatter. G230LB is not measured at all and keeps a 2-pixel
+# placeholder; nothing in this project uses it (the model grid starts at
+# 3200 A).
+NGSL_LSF_CORE = [(1675., 3058., 1.37), (3058., 5647., 3.54),
+                 (5647., 10198., 8.38)]
 
 
 def broaden(w, f, fwhm_A, step=0.01):
@@ -118,7 +110,7 @@ def moffat_kernel(n_pix, fwhm_pix, beta):
 def broaden_moffat(w, f, fwhm_A, beta=NGSL_MOFFAT_BETA, step=0.05, ntrunc=40.0):
     """Moffat of constant FWHM in ANGSTROMS (resample to a linear grid first).
 
-    `ntrunc` is the half-width in FWHM. A beta ~ 1.6 Moffat has heavy tails, so
+    `ntrunc` is the half-width in FWHM. A beta ~ 1.5 Moffat has heavy tails, so
     truncating early discards the very power that distinguishes it from a
     Gaussian; the kernel is renormalised after truncation so no flux is lost.
 
@@ -148,8 +140,22 @@ def broaden_moffat(w, f, fwhm_A, beta=NGSL_MOFFAT_BETA, step=0.05, ntrunc=40.0):
     return np.interp(w, wl, sm)
 
 
-def broaden_ngsl_moffat(w, f, beta=NGSL_MOFFAT_BETA, segments=None, ntrunc=40.0):
-    """The measured NGSL profile: STIS core per grating plus a Moffat tail.
+def broaden_ngsl(w, f, beta=NGSL_MOFFAT_BETA, segments=None, ntrunc=40.0):
+    """THE NGSL line spread function. Apply this and nothing else.
+
+    A Moffat of core FWHM constant in Angstroms within each grating, jumping at
+    the splices -- the measured profile, see NGSL_LSF_CORE above and
+    docs/LSF.md. This is the only NGSL kernel in the project: there is no
+    Gaussian alternative and no `tabulated=True` switch, because having two
+    live broadening paths is what previously let the fitter and the comparison
+    figures disagree about the instrument. To compare against the tabulated
+    profile, pass NGSL_LSF_TABULATED as `segments` explicitly and say so.
+
+    IT MUST BE FOLLOWED BY PIXEL INTEGRATION. The widths were fitted that way;
+    applying this kernel and then sampling at pixel centres under-smooths the
+    model by exactly the pixel, which is a real error with no symptom except a
+    residual. `to_ngsl_pixels` does both together and is what callers should
+    normally use.
 
     Each segment is convolved over its own range plus a kernel half-width of
     margin, rather than over the whole spectrum and then masked -- the latter
@@ -157,36 +163,30 @@ def broaden_ngsl_moffat(w, f, beta=NGSL_MOFFAT_BETA, segments=None, ntrunc=40.0)
     the node scan does 61 times per node.
     """
     w = np.asarray(w, float)
+    f = np.asarray(f, float)
     out = np.array(f, dtype=float)
-    for lo, hi, fwhm in (segments or NGSL_MOFFAT_LSF):
+    for lo, hi, fwhm in (segments or NGSL_LSF_CORE):
         seg = (w >= lo) & (w < hi)
         if not seg.any():
             continue
         pad = ntrunc * fwhm
         sub = (w >= lo - pad) & (w < hi + pad)
-        sm = broaden_moffat(w[sub], np.asarray(f, float)[sub], fwhm, beta,
-                            ntrunc=ntrunc)
+        sm = broaden_moffat(w[sub], f[sub], fwhm, beta, ntrunc=ntrunc)
         out[seg] = sm[seg[sub]]
     return out
 
 
-def broaden_ngsl(w, f, tabulated=False):
-    """The NGSL instrument profile.
+def to_ngsl_pixels(w, f, w_out, beta=NGSL_MOFFAT_BETA, segments=None,
+                   ntrunc=40.0):
+    """Model spectrum -> NGSL pixels: the measured LSF and the pixel, together.
 
-    Default is the MEASURED profile: constant R = 600, from matching XSL to
-    NGSL for three stars in common (no model involved). Pass tabulated=True for
-    the STIS-table profile (constant in Angstroms per grating), which describes
-    the single-exposure optics but is ~1.7-1.8x too narrow for the delivered
-    co-added spectra.
+    The two are a matched pair. `broaden_ngsl`'s widths were fitted against XSL
+    with the comparison spectrum INTEGRATED onto NGSL pixels, so a caller that
+    applies the kernel and then interpolates has silently changed the profile.
+    Keeping both inside one function is the point: it is the one call that
+    cannot be got half right.
     """
-    if not tabulated:
-        return broaden_R(w, f, NGSL_R_MEASURED)
-    out = np.array(f, dtype=float)
-    for lo, hi, fwhm in NGSL_LSF_TABULATED:
-        seg = (w >= lo) & (w < hi)
-        if seg.any():
-            out[seg] = broaden(w, f, fwhm)[seg]
-    return out
+    return rebin_to_pixels(w, broaden_ngsl(w, f, beta, segments, ntrunc), w_out)
 
 
 def rot_kernel(dl, lam0, vsini, eps=0.6):

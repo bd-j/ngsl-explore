@@ -285,79 +285,18 @@ counterpart chosen by brightness (for an A star G ≈ V to ~0.1 mag) because the
 library coordinates are epoch 2000 against DR3's 2016.0. Observed offsets came
 out 0.1–2.7″.
 
-## NGSL resolution: the STIS core, plus a halo the tables do not describe
+## NGSL resolution
 
-The STIS LSF tables give the *single-exposure optical* profile: constant in
-Angstroms within a grating (3.85 A for G430L, 8.09 A for G750L), implying
-R = 804-1343. **The delivered NGSL v2 spectra are 1.7-1.8x broader than that,
-and broader in a different functional form.**
+**Moved.** The line spread function has its own document:
+**[LSF.md](LSF.md)**. In one line: a Moffat, core 3.54 A (G430L) / 8.38 A
+(G750L), beta = 1.52, constant in Angstroms per grating, applied with pixel
+integration via `common.lsf.to_ngsl_pixels`.
 
-Measured against XSL, which observes three of these stars at ~10x the
-resolution — so no model, no NLTE, nothing but instrument
-(`explore/ngsl_lsf_from_xsl.py`):
-
-| lambda | measured FWHM | implied R | tabulated |
-|---|---|---|---|
-| 3900 A | 6.60 A | 591 | 3.85 A |
-| 4400 A | 6.99 A | 629 | 3.85 A |
-| 4900 A | 7.79 A | 629 | 3.85 A |
-| 6600 A | 12.68 A | 521 | 8.09 A |
-| 8700 A | 14.48 A | 601 | 8.09 A |
-
-As a single GAUSSIAN that gives **R = 600 +/- 40**, constant in velocity, with
-no jump at the splice; constant-R describes it with 7% scatter against 41% for
-constant-Angstrom. Three stars agree, the jointly fitted wavelength shifts are
-below 0.2 A, and both spectra are continuum-normalized per window, so neither a
-wavecal error nor the grey flux offset is contributing.
-
-**But a single Gaussian is the wrong functional form, and R = 600 is an artefact
-of forcing one.** Fitting a family of profiles against XSL with free widths
-(`explore/ngsl_lsf_shape.py`), a **Moffat** describes the same data with 15%
-lower rms and two parameters — and its CORE comes out at **4.02 +/- 0.59 A
-(G430L)** and **8.34 +/- 0.91 A (G750L)**, matching the tabulated 3.85 and 8.09
-to 3-5%.
-
-So the 1.7-1.8x discrepancy above is not a broader instrument. It is a Gaussian
-with no way to represent a **heavy tail**, inflating its width to compensate:
-the true profile is the published STIS core plus a halo carrying ~3% of the
-power beyond +/-10 A, where a Gaussian of the same core width puts 0.0006%.
-Width is therefore constant in **Angstroms per grating**, as the tables say.
-
-The dithered-co-add explanation offered here previously is ruled out. A Gaussian
-convolved with a tophat — the correct description of a dither offset and a pixel
-— fits a sensible 1.84 A box (~1.3 pixels) and produces no halo at all, because
-a box convolved with a Gaussian still has Gaussian-fast wings. A grating
-scattering halo is the remaining candidate.
-
-`common.lsf.broaden_ngsl_moffat` implements the measured profile and is what the
-fitter uses. `NGSL_R_MEASURED = 600` is kept only as the historical
-single-Gaussian compromise -- it is neither the core width nor a resolution.
-
-Using the correct profile matters a great deal. Switching the model convolution
-from 3.85 A to R = 600 cut the Balmer-region residual RMS by ~2.5x across the
-sample and shrank every break residual:
-
-| star | RMS before -> after | D residual before -> after |
-|---|---|---|
-| HD194453 | 6.7% -> 3.1% | +0.027 -> +0.010 |
-| HD040573 | 5.0% -> 1.9% | +0.084 -> +0.058 |
-| HD128801 | 6.2% -> 2.4% | +0.025 -> +0.020 |
-| HD143459 | 7.3% -> 2.6% | -0.060 -> -0.007 |
-
-`common.lsf.broaden_ngsl` keeps the old single-Gaussian behaviour for reference
-(`tabulated=True` gives the STIS-table Gaussian); `broaden_ngsl_moffat` is the
-measured profile and the one `fitting/predict.py` applies.
-
-**A related fix, worth the same attention.** The model was being SAMPLED at NGSL
-pixel centres rather than INTEGRATED across the pixel, which is what a detector
-does. At 1.4 A pixels that alone moves the high-order Balmer core residual by
-1.7% -- larger than most of what this project measures. `fitting.predict.project`
-now integrates (see `common.lsf.rebin_to_pixels`).
-
-Two earlier statements are superseded. **R = 939 at the Balmer break is wrong**
-— it is ~600. And the claim that the data are *undersampled* (LSF narrower than
-2 pixels) is wrong: at 6.6 A FWHM over 2.744 A pixels the spectra are sampled
-at ~2.4 px per resolution element, which is adequate rather than aliased.
+Three numbers this file used to quote are wrong and are retracted there:
+R = 939 from the STIS tables, R = 665 from pixel sampling, and R = 600 from a
+single-Gaussian fit. The last was a real measurement of the wrong thing -- a
+one-parameter profile standing in for a core plus a halo -- and is what made the
+profile look constant in velocity when its core is constant in Angstroms.
 
 ## NGSL and XSL differ by a grey flux offset
 

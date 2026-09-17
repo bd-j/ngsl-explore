@@ -24,8 +24,8 @@ from astropy.io import fits
 from scipy.ndimage import gaussian_filter1d
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.lsf import (broaden_ngsl, degrade_to, rebin_to_pixels,
-                        NGSL_LSF_TABULATED, NGSL_R_MEASURED)
+from common.lsf import (broaden_ngsl, to_ngsl_pixels, rebin_to_pixels,
+                        NGSL_LSF_TABULATED)
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as load_xsl, resolving_power
 from grid.make_model import hnu_to_flam
@@ -49,21 +49,15 @@ def xsl_to_ngsl(wx, fx, wn):
     XSL's own resolution is removed in quadrature, and the rebinning integrates
     across each NGSL pixel rather than sampling at its centre.
     """
-    # Use the MEASURED NGSL profile (constant R = 600), not the STIS-table
-    # one: matching XSL to NGSL for stars in common shows the delivered spectra
-    # are 1.7-1.8x broader than the tables and constant in velocity, not in
-    # Angstroms. See explore/ngsl_lsf_from_xsl.py.
-    out = np.full_like(wn, np.nan, dtype=float)
-    for lo, hi, _ in NGSL_LSF_TABULATED:
-        seg_n = (wn >= lo) & (wn < hi)
-        if not seg_n.any():
-            continue
-        mid = 0.5 * (max(lo, wx[0]) + min(hi, wx[-1]))
-        fwhm_xsl = mid / resolving_power(mid)        # XSL FWHM in A here
-        fwhm_ngsl = mid / NGSL_R_MEASURED
-        deg = degrade_to(wx, fx, fwhm_xsl, fwhm_ngsl)
-        out[seg_n] = rebin_to_pixels(wx, deg, wn[seg_n])
-    return out
+    # The MEASURED NGSL profile, through the one function that applies it, and
+    # integrated onto the pixels -- the pair the widths were fitted under. This
+    # used to degrade XSL with a constant-R = 600 Gaussian while the fitter used
+    # the Moffat, so this figure and the fit disagreed about the instrument.
+    #
+    # XSL's own resolution is not deconvolved. At the Balmer break it is 0.37 A
+    # FWHM against NGSL's ~4 A core, so the quadrature correction is 0.4%, well
+    # inside the +/-0.16 A star-to-star scatter of the core itself.
+    return to_ngsl_pixels(wx, fx, wn)
 FULL = (3300.0, 9400.0)
 WAVECAL = load_table()
 

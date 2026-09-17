@@ -61,33 +61,18 @@ as an upper bound only. See `explore/reddening.py`.
 
 ## Resolution and instrument profiles
 
-### NGSL's delivered resolution is R ~ 600, not what the tables imply
-Three numbers have been quoted for this at different times; the last is right.
+### The NGSL line spread function lives in LSF.md
 
-| source | claim |
-|---|---|
-| 2-px sampling limit | R ~ 665 at the break |
-| STIS LSF tables (3.85 A) | R ~ 939 at the break |
-| **measured against XSL** | **R = 600 +/- 40, constant in velocity** |
+**Moved**, with the measurement rebuilt from scratch: **[LSF.md](LSF.md)**.
 
-The tables describe the single-exposure optical LSF. The delivered v2 spectra
-are co-adds of two dithered exposures resampled onto a common grid and are
-1.7-1.8x broader, and constant in VELOCITY rather than in Angstroms (7% scatter
-vs 41%). Measured with XSL as the reference, so no model is involved --
-see docs/DATA.md and explore/ngsl_lsf_from_xsl.py.
-
-**A dismissed result was right.** Fitting an effective LSF against the ATLAS12
-models had preferred 7.0-7.5 A, and that was rejected as "laundering physics
-into an instrumental parameter" because the Balmer cores carry genuine excess
-flux the LTE models cannot produce. The reasoning was sound but the conclusion
-was too strong: the model-free XSL measurement gives ~6.7 A in the same window.
-Both things are true at once -- the cores are filled AND the profile is broader
-than tabulated. When two explanations are both available, prefer the test that
-removes one of them entirely rather than arguing about which dominates.
-
-**The data are not undersampled.** An earlier claim that the LSF is narrower
-than 2 pixels followed from the tabulated width; at the measured 6.6 A over
-2.744 A pixels there are ~2.4 px per resolution element.
+The trap worth carrying here is the one that produced three contradictory
+numbers in this file over the project's life. **Fitting a ONE-parameter profile
+to an instrument that has a core and a halo does not measure the core.** The
+Gaussian inflates to split the difference, and -- because the halo's relative
+weight changes across a grating -- it also DRIFTS with wavelength, which reads
+as "constant in velocity, R = 600". Give the profile a tail and the core stops
+moving: FWHM ~ lambda^+0.14 for a Moffat core against +0.67 for a Gaussian, on
+the same data.
 
 ### The smoothing kernel must be wavelength dependent
 The NGSL LSF is set by a fixed dispersion per grating, so it is constant in
@@ -237,129 +222,28 @@ a combination that should be read as a sign error, not a partial success.
 **This entry previously said the filled Balmer cores were "most likely NLTE in
 hydrogen". That does not survive.** What forced the revision: at XSL's R ~ 9800
 the same models fit the **full H-gamma profile, core included**, for the
-metal-rich stars. A physical NLTE core deficit cannot be present at R = 600 and
-absent at R = 9800.
+metal-rich stars. A physical NLTE core deficit cannot be present at NGSL's
+resolution and absent at R = 9800.
 
 **A second correction, to the first version of this entry.** It claimed a winged
-profile "removes 86% of the core excess". That was wrong, and wrong in an
-instructive way: **the core excess is degenerate with the effective WIDTH, not
-diagnostic of the SHAPE.** Holding everything else fixed and varying only the
-width, a plain Gaussian runs from +16.8% at 3.85 A to −1.2% at 7.0 A. Any
-profile can be tuned to zero it, so it is not evidence for any particular one
-— and the old warning in this file, that fitting a width against the models
-launders physics into an instrumental parameter, was right.
+profile "removes 86% of the core excess". That was wrong: **the core excess is
+degenerate with the effective WIDTH, not diagnostic of the SHAPE.** Changing
+only the Moffat core at HD194453's ML node runs it from +2.65% at 3.54 A to
+-4.20% at 7.00 A. Any profile can be tuned to zero it.
 
-What the excess *is* made of, separated by changing one thing at a time
-(`explore/ngsl_core_excess.py`, `explore/ngsl_lsf_shape.py`):
-
-| change | effect on the Balmer core residual |
-|---|---|
-| pixel INTEGRATION instead of point sampling | **−1.7%** |
-| Moffat instead of Gaussian, at its own fitted width | +1.3% |
-| both, with the fitted per-grating widths | 3.53% → **1.10%**, both signs |
-
-The projection was sampling the model at NGSL pixel centres rather than
-integrating across the pixel, which a detector does. At 1.4-2.7 A pixels that
-alone is larger than most of what this project measures, and it is now fixed in
-`fitting.predict.project`.
-
-**The old code was internally inconsistent about this, which is the part worth
-remembering.** Both LSF measurements — `ngsl_lsf_from_xsl.py` and
-`ngsl_lsf_shape.py` — degrade XSL with `rebin_to_pixels`, so every width they
-report is an LSF *excluding* the pixel, on the assumption that the pixel will be
-applied separately. `predict` then applied that kernel and point-sampled, so the
-model was under-smoothed by exactly the pixel. Refitting both ways shows the
-size of it:
-
-| | fitted with pixel integration | fitted with point sampling |
-|---|---|---|
-| Gaussian | 6.20 A | 6.47 A |
-| Moffat core | 4.10 A | 4.63 A |
-
-A fit that is denied pixel integration inflates its kernel to compensate (+0.53 A
-for the Moffat, against +0.58 A expected in quadrature for the 2.74 A pixel).
-So a width is only meaningful alongside the sampling convention it was fitted
-under, and mixing the two is an error that produces no symptom except a
-residual.
-
-**The evidence for the Moffat is separate, and it is good.** Fitted against XSL
-with a free width on a control window containing no Balmer line, and scored on
-nothing but that window:
-
-| profile | n par | control rms |
-|---|---|---|
-| Gaussian | 1 | 0.0068 |
-| Gaussian ⊗ tophat | 2 | 0.0067 |
-| Gaussian + Gaussian | 3 | 0.0059 |
-| Gaussian + Lorentzian | 3 | 0.0058 |
-| **Moffat** | **2** | **0.0058** |
-
-The tophat is the physically obvious candidate — NGSL v2 spectra are co-adds of
-two **dithered** exposures resampled onto a common grid, and both the dither and
-the pixel are boxes. It fits a sensible 1.84 A box (~1.3 pixels) and changes
-nothing, because a box convolved with a Gaussian still has Gaussian-fast wings.
-The pedestal is not resampling; it is a heavy-tailed halo of the kind grating
-scatter produces. Power beyond ±10 A: Gaussian 0.01%, Gaussian⊗tophat 0.01%,
-Moffat 2.9%.
-
-**And the Moffat core is the published STIS core.** This is the actual evidence
-for the profile, so it is worth being precise about why it counts. The STIS LSF
-tables are an INSTRUMENT calibration product — FWHM in pixels x dispersion, from
-arc lamps and point sources. No A star, no stellar model, nothing from this
-project. The profile fits are given XSL and NGSL only; the tabulated number is
-never supplied to them. So:
-
-| | fitted against XSL alone | published STIS |
-|---|---|---|
-| Gaussian width, G430L | 6.2–7.3 A | 3.85 A |
-| **Moffat core, G430L** | **4.02 ± 0.59 A** | **3.85 A** |
-| **Moffat core, G750L** | **8.34 ± 0.91 A** | **8.09 A** |
-
-A free parameter landing on an independently measured instrumental constant is
-evidence the functional form is right; a wrong form has no reason to recover it,
-and the Gaussian's does not — it misses by 1.7–1.9x.
-
-**Balmer lines in the fit windows are fine here**, and this is worth stating
-because the instinct to exclude them is wrong in this particular place. The fit
-compares two OBSERVATIONS of the same star -- XSL is the reference, not a model
--- so a Balmer line in the window is simply a strong feature that helps
-constrain the profile, and there is nothing to be circular about. (The
-fit-here / score-there discipline belongs to `explore/ngsl_lsf_shape.py`, whose
-scoring step compares NGSL against the MODEL; that is where using the same
-window twice would be tuning to the thing under test.)
-
-The per-window numbers are given anyway, since they show the core width is
-consistent across the grating regardless of what is in the window:
-
-| window | Balmer lines | Gaussian | Moffat core | vs 3.85 |
-|---|---|---|---|---|
-| 3700–4000 | 10 (H7–H12) | 6.10 A | 4.18 A | 1.09x |
-| 4200–4600 | 1 (Hγ) | 6.20 A | 4.10 A | 1.06x |
-| 4700–5100 | 1 (Hβ) | 6.95 A | 3.81 A | 0.99x |
-
-All three agree with the tabulated value to within 9%, and the spread between
-them (3.81-4.18 A) is smaller than the star-to-star scatter of any one of them
-(±0.59 A). The adopted **4.02 A** uses all three. Dropping the high-order Balmer
-window would give 3.88 A, which is not a meaningfully different answer -- the
-point is that it does not need dropping. That resolves the disagreement
-`explore/ngsl_lsf_from_xsl.py` records as unexplained: a single Gaussian needed
-1.7–1.9x the tabulated width because it was absorbing a tail it had no way to
-represent. The width is therefore constant in **Angstroms per grating**, as the
-STIS tables say, not constant in R. (Fitting R from one window and applying it
-as constant-R made the kernel sharper at 3800 A than anything that had been
-tested, and made the residual worse — caught before it shipped.)
-
-`common.lsf.broaden_ngsl_moffat` now applies this, and `NGSL_R_MEASURED = 600`
-is retained only as the historical single-Gaussian compromise: it is neither the
-core width nor a resolution, but the number a Gaussian lands on when it splits
-the difference between a 4 A core and a halo.
-
-**What is still open.** beta = 1.6 is fitted, not derived, and the tail's outer
-extent is poorly constrained (see the wing-power table above — the power beyond
-±20 A is not measured). `USE_KP_HYDROGEN` in `synthe_module.f90:1045`
-(Kurucz-Peterson vs the default Stehle-Hutcheon Stark profiles) remains an
-untested A/B, and a residual NLTE contribution at the ~1% level is not excluded
-— only the claim that NLTE is the leading explanation.
+**And a third correction, which cuts the other way.** This entry concluded "the
+NGSL Balmer core excess is the instrument profile, not NLTE". The model-free
+half of that stands and is now much better established: under the profile
+measured against XSL, NGSL's Balmer cores are reproduced from smoothed XSL to a
+median of **+0.01%** over 117 line-star combinations
+(`data/ngsl_lsf_lines.csv`), so whatever is left is not a kernel error. But the
+width used to reach the original conclusion was one that nulled the excess.
+Measured rather than tuned, the profile leaves **+2.65%** of Balmer core excess
+against the MODELS at HD194453's ML node. That is a model deficiency, and
+whether it is NLTE in hydrogen, the Stark profile choice (`USE_KP_HYDROGEN` in
+`synthe_module.f90:1045`, still an untested A/B) or something else is open. It
+needs the other eight stars before it is a claim. See
+[LSF.md](LSF.md#what-the-cores-can-and-cannot-settle).
 
 ### Predicted O I Rydberg lines put spurious absorption in the models
 

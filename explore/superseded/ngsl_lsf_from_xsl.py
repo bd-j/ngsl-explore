@@ -1,4 +1,6 @@
-"""Measure the NGSL line spread function directly, using XSL as the reference.
+"""SUPERSEDED -- kept for provenance, not for use. See explore/superseded/README.md
+
+Measure the NGSL line spread function directly, using XSL as the reference.
 
 No model is involved. XSL resolves the same star ~10x better than NGSL, so
 convolving XSL with a free-width kernel and rebinning onto NGSL pixels asks a
@@ -14,7 +16,7 @@ from the question entirely.
 
 RESOLVED, and neither answer was right. This script fits a GAUSSIAN, and a
 Gaussian is the wrong functional form: NGSL's profile is a sharp core plus a
-heavy halo. Allowing a Moffat instead (explore/ngsl_lsf_shape.py) returns a core
+heavy halo. Allowing a Moffat instead (explore/superseded/ngsl_lsf_shape.py) returns a core
 of 4.02 +/- 0.59 A for G430L -- the tabulated 3.85 to within 5% -- plus a tail
 carrying ~3% of the power beyond +/-10 A. The 1.7-1.9x inflation this script
 measures is what a Gaussian does when it has to represent that tail with its
@@ -27,7 +29,7 @@ grey flux-calibration offset between the libraries (-11% to +4%, star
 dependent) cannot influence the width. A wavelength shift is fitted jointly
 with the width, so a residual wavecal error cannot masquerade as broadening.
 
-Writes data/ngsl_lsf_measured.csv
+Writes data/superseded/ngsl_lsf_measured.csv
 """
 import csv
 import sys
@@ -37,12 +39,12 @@ import numpy as np
 from astropy.io import fits
 from scipy.optimize import minimize
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from common.lsf import degrade_to, rebin_to_pixels
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as load_xsl, resolving_power
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 # (label, lo, hi, tabulated FWHM in A). Windows are chosen line-rich: a
 # featureless continuum constrains no width at all.
@@ -106,7 +108,7 @@ print(f'{"window":<18}{"tabulated":>10}' +
       ''.join(f'{s:>18}' for s, _, _ in PAIRS))
 data = {}
 for star, xid, nf in PAIRS:
-    d = fits.getdata('data/spectra/' + nf)
+    d = fits.getdata(ROOT / 'data' / 'spectra' / nf)
     wn = apply_wavecal(d['WAVELENGTH'].astype(float), star, load_table())
     wx, fx, ex, h = load_xsl(xid)
     data[star] = (wn, d['FLUX'].astype(float), wx, fx)
@@ -127,7 +129,7 @@ for lbl, lo, hi, tab in WINDOWS:
                  else f'{"--":>18}')
     print(line)
 
-with open(ROOT / 'data' / 'ngsl_lsf_measured.csv', 'w', newline='') as fh:
+with open(ROOT / 'data' / 'superseded' / 'ngsl_lsf_measured.csv', 'w', newline='') as fh:
     w = csv.DictWriter(fh, fieldnames=list(rows[0]))
     w.writeheader(); w.writerows(rows)
 
@@ -137,4 +139,4 @@ print(f'\nG430L: measured {np.median(g430):.2f} A  vs tabulated 3.85  '
       f'-> {np.median(g430)/3.85:.2f}x   (R = {3646/np.median(g430):.0f} at the break)')
 print(f'G750L: measured {np.median(g750):.2f} A  vs tabulated 8.09  '
       f'-> {np.median(g750)/8.09:.2f}x')
-print('\n-> data/ngsl_lsf_measured.csv')
+print('\n-> data/superseded/ngsl_lsf_measured.csv')

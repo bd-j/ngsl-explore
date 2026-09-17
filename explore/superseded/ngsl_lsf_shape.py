@@ -1,10 +1,12 @@
-"""Which line-spread PROFILE does NGSL actually have?
+"""SUPERSEDED -- kept for provenance, not for use. See explore/superseded/README.md
+
+Which line-spread PROFILE does NGSL actually have?
 
 `common.lsf` applies a single Gaussian at R = 600. That is known to be wrong in
 shape, not just width: the observed high-order Balmer cores are filled relative
 to a Gaussian-convolved model by ~2.3%, and degrading XSL to NGSL's resolution
 reproduces most of it with no model involved (docs/CAVEATS.md,
-explore/ngsl_core_excess.py). A single Gaussian of the same core width puts
+explore/superseded/ngsl_core_excess.py). A single Gaussian of the same core width puts
 0.0006% of its power beyond +/-10 A; the data want ~3%.
 
 This fits a family of profiles, so the choice is made on evidence rather than on
@@ -29,7 +31,7 @@ on a held-out TEST window (3700-4000 A) by how much Balmer core excess each one
 leaves behind. Fitting and scoring on different windows is the whole point: any
 profile with enough freedom can flatten the residual it was fitted to.
 
-    python3 explore/ngsl_lsf_shape.py
+    python3 explore/superseded/ngsl_lsf_shape.py
 """
 import csv
 import sys
@@ -39,7 +41,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.signal import fftconvolve
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from fitting.model import Grid
 from fitting.observations import load_ngsl
 from fitting.predict import spectrum_at
@@ -50,7 +52,7 @@ from common.lines import hydrogen_lines
 from common.xsl_load import load as load_xsl
 from common.figpath import below_grid
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 CONTROL = (4200., 4600.)
 TEST = (3700., 4000.)
 STEP = 0.05                       # A, the grid kernels are built on
@@ -208,7 +210,7 @@ def main():
           f'({np.median([x[1] for x in fits[best]]):+.2f}%), '
           f'median parameters '
           + ' '.join(f'{v:.3f}' for v in np.median([x[2] for x in fits[best]], axis=0)))
-    p = ROOT / 'data' / 'ngsl_lsf_shape.csv'
+    p = ROOT / 'data' / 'superseded' / 'ngsl_lsf_shape.csv'
     with open(p, 'w', newline='') as fh:
         w = csv.DictWriter(fh, fieldnames=sorted({k for r in out for k in r}))
         w.writeheader()

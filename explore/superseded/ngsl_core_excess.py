@@ -1,4 +1,6 @@
-"""Is the NGSL Balmer-core excess NLTE, or is it NGSL's line spread function?
+"""SUPERSEDED -- kept for provenance, not for use. See explore/superseded/README.md
+
+Is the NGSL Balmer-core excess NLTE, or is it NGSL's line spread function?
 
 The held-out Balmer window shows the observed high-order Balmer lines sitting
 +3 to +10% ABOVE the models -- shallower cores than the models predict. That was
@@ -31,13 +33,13 @@ holding all else fixed, a plain Gaussian spans +16.8% at 3.85 A to -1.2% at
 
 The profile actually adopted (common.lsf.broaden_ngsl_moffat) was chosen on
 different grounds -- control-window rms at free width, and the fitted core
-matching the independently published STIS value -- see explore/ngsl_lsf_shape.py
+matching the independently published STIS value -- see explore/superseded/ngsl_lsf_shape.py
 and docs/CAVEATS.md. What this script still establishes, and what it was worth
 writing for, is the MODEL-FREE half: NGSL's cores are only ~0.8% shallower than
 XSL degraded to the same resolution, so whatever fills them is instrumental and
 not NLTE.
 
-    python3 explore/ngsl_core_excess.py
+    python3 explore/superseded/ngsl_core_excess.py
 """
 import csv
 import sys
@@ -48,7 +50,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import minimize
 from scipy.special import erfc
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from fitting.model import Grid
 from fitting.observations import load_ngsl, BREAK_WINDOW
 from fitting.predict import predict, spectrum_at
@@ -60,7 +62,7 @@ from common.lsf import rebin_to_pixels
 from common.lines import hydrogen_lines
 from common.figpath import below_grid
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 CONTROL = (4200., 4600.)          # line-rich, and outside the held-out window
 CORE_HALF = 3.0                   # A; "core" = within this of a Balmer line
 # Only the RESOLVED high-order lines. Below ~3700 A the series crowds together
@@ -269,8 +271,8 @@ def main():
     print('        shape. An earlier version of this script claimed a winged')
     print('        profile "removes 86%"; that was a width result, and is')
     print('        retracted. The adopted profile was chosen on the control-window')
-    print('        rms and the published STIS core (explore/ngsl_lsf_shape.py).')
-    p = ROOT / 'data' / 'ngsl_core_excess.csv'
+    print('        rms and the published STIS core (explore/superseded/ngsl_lsf_shape.py).')
+    p = ROOT / 'data' / 'superseded' / 'ngsl_core_excess.csv'
     with open(p, 'w', newline='') as fh:
         w = csv.DictWriter(fh, fieldnames=list(out[0]))
         w.writeheader()

@@ -27,7 +27,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.extinction_ccm import redden
-from common.lsf import broaden_rot, broaden_R, broaden_ngsl_moffat
+from common.lsf import broaden_rot, broaden_R, broaden_ngsl
 
 C_KMS = 2.99792458e5
 
@@ -90,11 +90,11 @@ def instrument(w, f, resolution):
         return f
     if kind == 'R':
         return broaden_R(w, f, float(resolution[1]))
-    if kind == 'ngsl_moffat':
-        # NGSL's measured profile: the tabulated STIS core per grating plus a
-        # heavy Moffat tail. Constant in ANGSTROMS, not in R. See common/lsf.py
-        # for the family comparison and the per-grating fit that chose it.
-        return broaden_ngsl_moffat(w, f, float(resolution[1]))
+    if kind == 'ngsl':
+        # THE measured NGSL profile -- one function, one definition of it.
+        # `project` then integrates onto the pixels, which is the convention
+        # the widths were fitted under; see common.lsf.to_ngsl_pixels.
+        return broaden_ngsl(w, f, float(resolution[1]))
     if kind == 'R_segments':
         # Each arm has its own constant-R kernel. Segments are convolved
         # separately and stitched; the model grid is log-sampled so a

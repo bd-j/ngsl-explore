@@ -15,15 +15,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.extinction_ccm import redden
-from common.lsf import (broaden_rot, broaden_R, broaden_ngsl,
-                        broaden, NGSL_R_MEASURED)
 
 ROOT = Path(__file__).resolve().parent.parent
-C_KMS = 2.99792458e5
 
 
 class Grid:
@@ -72,48 +66,8 @@ class Grid:
         return 10.0 ** out
 
 
-def instrument(w, f, kind, value):
-    """Instrumental broadening. Delegates to common.lsf so the fitter and the
-    comparison figures cannot drift apart.
-
-    kind='R'      constant resolving power (value = R)
-    kind='fwhm'   constant FWHM in Angstroms (value = FWHM)
-    kind='ngsl'   the MEASURED NGSL profile: constant R = 600 (see docs/DATA.md).
-                  Not the STIS-table profile, which is 1.7-1.8x too narrow for
-                  the delivered spectra.
-    kind='ngsl_tab'  the STIS-table profile, for comparison only.
-
-    Both 'R' and 'ngsl' were previously computed here by hand and were wrong:
-    the constant-R sigma ignored the grid spacing (R=600 came out as R=83), and
-    'ngsl' still applied the superseded 3.85 A tabulated width.
-    """
-    if kind == 'ngsl':
-        return broaden_ngsl(w, f)
-    if kind == 'ngsl_tab':
-        return broaden_ngsl(w, f, tabulated=True)
-    if not value or value <= 0:
-        return f
-    if kind == 'R':
-        return broaden_R(w, f, value)
-    if kind == 'fwhm':
-        return broaden(w, f, value)
-    raise ValueError(f'unknown instrument kind: {kind}')
-
-
-def forward(grid, wave_obs, teff, logg, mh, ebv=0.0, vsini=0.0, rv=0.0,
-            inst_kind='R', inst_value=0.0, r_v=3.1):
-    """Model flux on the observed wavelength grid, up to a scalar normalization.
-
-    Order: interpolate -> rotate (star frame) -> Doppler shift -> redden
-    (observer frame) -> instrument -> resample. Rotation before the instrument
-    profile because they are physically sequential, and the two do not commute
-    once the rotation profile is not Gaussian.
-    """
-    w = grid.wave
-    f = grid.interp(teff, logg, mh)
-    f = broaden_rot(w, f, vsini)
-    ws = w * (1.0 + rv / C_KMS)
-    if ebv:
-        f = redden(ws, f, ebv, r_v)
-    f = instrument(ws, f, inst_kind, inst_value)
-    return np.interp(wave_obs, ws, f)
+# REMOVED: `instrument()` and `forward()` used to live here, a second copy of
+# the forward model that nothing called. They documented the NGSL profile as
+# "constant R = 600", which stopped being true and was never updated, so the
+# file sat there contradicting common/lsf.py. fitting/predict.py is the forward
+# model; common.lsf.broaden_ngsl is the instrument profile. One of each.

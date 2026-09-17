@@ -22,9 +22,9 @@ converts chi^2 + N to lnL downstream.
 WHAT IS NOT SCANNED, AND WHY -- each measured, not assumed:
 
   v sin i in the NGSL legs.  The held-out residual medians are identical to
-      3 decimal places over v sin i = 0 -> 300 km/s: NGSL's R = 600 profile is
-      6-13 A FWHM and a 300 km/s rotation at 3800 A is 2.5 A, so the instrument
-      swamps it. The bands move by <0.006 mmag. So the E(B-V) loop runs at
+      3 decimal places over v sin i = 0 -> 300 km/s: NGSL's profile is 6-13 A
+      FWHM once the Moffat halo is counted, and a 300 km/s rotation at 3800 A
+      is 2.5 A, so the instrument swamps it. The bands move by <0.006 mmag. So the E(B-V) loop runs at
       v sin i = 0 and the two legs factorise exactly.
   E(B-V) in the XSL leg.  Delta chi^2 = +2.0 across the entire 0-0.12 range,
       against +17000 for v sin i -- and what little there is is a constraint on

@@ -117,10 +117,11 @@ def load_ngsl(star, exclude=None, snr_ceiling=NGSL_SNR_CEILING):
 
     return Observation(
         name='ngsl', star=star, wavelength=w, flux=f, uncertainty=e, mask=ok,
-        # MEASURED against XSL -- shape as well as width. The single Gaussian
-        # at R=600 was splitting the difference between a sharp core and a
-        # heavy tail it could not represent; see common/lsf.py.
-        resolution=('ngsl_moffat', NGSL_MOFFAT_BETA),
+        # MEASURED against XSL over nine stars, shape as well as width; see
+        # common/lsf.py and docs/LSF.md. The kernel is paired with pixel
+        # INTEGRATION in predict.project -- that is the convention the widths
+        # were fitted under.
+        resolution=('ngsl', NGSL_MOFFAT_BETA),
         calibration=('scalar',),        # shape trusted, absolute level is (R/d)^2
         rv_fixed=None,
         meta=dict(offset_px=row['offset_px'], dataqual=row['dataqual'],
@@ -495,9 +496,9 @@ BREAK_WINDOW = (3550.0, 4000.0)
 # worth 0.040 mag in E(B-V), 8x the error budget (explore/xp_vs_ngsl.py).
 # Using NGSL for both roles avoids having to decide which instrument is right.
 #
-# Band edges need no line-free placement here, unlike the XP bands: the data is
-# already at R=600 and the model is broadened to R=600, so both sides carry the
-# same LSF and there is no leakage mismatch to dodge. The only requirements are
+# Band edges need no line-free placement here, unlike the XP bands: the model
+# is broadened by the same measured NGSL profile the data carries, so both sides
+# carry the same LSF and there is no leakage mismatch to dodge. The only requirements are
 # to avoid the held-out break and the hydrogen lines.
 NGSL_H_MASK_A = 20.0        # half-width dropped around every H line
 NGSL_BAND_WIDTH = 400.0     # long stretches are split into bands this wide
@@ -609,7 +610,7 @@ def load_ngsl_bands(star, bands=None, cal_floor=0.01, **kw):
     return Observation(
         name='ngsl_bands', star=star, flux=flux, uncertainty=unc,
         mask=np.isfinite(flux), filters=[tophat(*b) for b in keep],
-        resolution=('ngsl_moffat', NGSL_MOFFAT_BETA),
+        resolution=('ngsl', NGSL_MOFFAT_BETA),
         calibration=('scalar',),
         rv_fixed=None,
         meta=dict(names=[b[0] for b in keep], bands=keep,

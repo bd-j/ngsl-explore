@@ -77,8 +77,9 @@ grid. Hydrogen masked ±20 Å, both held-out windows removed, remaining stretche
 split into ~400 Å bands (165 Å blueward of the break).
 
 **Band edges need no line-free placement**, unlike the Gaia XP bands that
-preceded them: NGSL is already at R = 600 and the model is broadened to R = 600,
-so both sides carry the same LSF and there is no leakage mismatch to dodge.
+preceded them: the model is broadened by the same measured NGSL profile the data
+carries ([LSF.md](LSF.md)), so both sides have the same LSF and there is no
+leakage mismatch to dodge.
 
 **Bands stop just blueward of the Paschen break** (8206 Å). That keeps 89.5% of
 the 3220–9480 lever arm — 0.0348 against 0.0389 mag of differential extinction
@@ -125,7 +126,7 @@ reproduce, not because a specific one is established. The ~10% NLTE core excess
 this used to cite has not held up: at XSL's own resolution the models fit the
 full Hγ profile, core included, and the NGSL core residual is 86% accounted for
 by a non-Gaussian instrument profile measured against XSL
-(`docs/CAVEATS.md`, `explore/ngsl_core_excess.py`). Masking them costs little —
+(`docs/LSF.md`, `explore/ngsl_lsf.py`). Masking them costs little —
 they are a few per cent of the fitted pixels — and still protects Teff and log g
 from absorbing whatever is left.
 
@@ -210,9 +211,15 @@ level pinned next door.
 
 ## Instrumental broadening — constrained, not fitted
 
-For NGSL the profile is **measured**: matching XSL to NGSL for three stars in
-common gives **R = 600 ± 40**, constant in velocity, with no model involved (see
-[DATA.md](DATA.md)). Use it.
+For NGSL the profile is **measured**: a Moffat with core FWHM 3.54 Å (G430L) /
+8.38 Å (G750L) and β = 1.52, constant in Ångströms per grating, fitted against
+XSL over nine stars with no model involved (see [LSF.md](LSF.md)). Use it, via
+`common.lsf.to_ngsl_pixels`.
+
+An earlier version of this section gave **R = 600 ± 40, constant in velocity**.
+That was a single-Gaussian fit to a profile with a core and a halo; the Gaussian
+inflates to split the difference and drifts with wavelength as the halo's weight
+changes, which is what made it look constant in velocity. Retracted in LSF.md.
 
 Leaving `inst` free re-opens its degeneracy with Teff and log g for no gain.
 This is not hypothetical: while the fitter reimplemented its own kernels,
@@ -221,7 +228,9 @@ Because `inst` was free, nothing crashed. The kernels now delegate to
 `common.lsf`, and `Observation.resolution` is a property of the instrument.
 
 **NGSL cannot measure v sin i below ~150 km/s.** Fractional model change after
-grey rescaling, 3300–9400 Å at R = 600:
+grey rescaling, 3300–9400 Å at NGSL's resolution (the table below was computed
+under the superseded R = 600 Gaussian; the conclusion is unchanged, since the
+adopted profile is wider still once the halo is counted):
 
 | change | rms | | change | rms |
 |---|---|---|---|---|

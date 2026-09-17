@@ -29,6 +29,7 @@ since catalog values may carry systematics of their own. The Paschen break
 | [docs/DATA.md](docs/DATA.md) | the spectral libraries and the selected sample |
 | [docs/GRID.md](docs/GRID.md) | the 1705-node ATLAS12 model grid |
 | [docs/FITTING.md](docs/FITTING.md) | what conditions on what, held-out design, error budget |
+| [docs/LSF.md](docs/LSF.md) | the NGSL line spread function: how it was measured and what it is |
 | [docs/CAVEATS.md](docs/CAVEATS.md) | **known issues and traps — read before trusting any number** |
 | [PLAN.md](PLAN.md) | current state and what comes next |
 
@@ -42,12 +43,15 @@ with symptoms and fixes.
 ```
 common/    shared: extinction (CCM89), break metric, LSF kernels, line lists
            and species identification, sedpy photometry, panel plotting, IO
+             lsf.py           broaden_ngsl / to_ngsl_pixels -- ONE NGSL profile
 grid/      model grid construction (make_model.py, build_grid.py, pack_grid.py)
 fitting/   observations, forward model, calibration
              observations.py  one record per dataset + conditioning_set/heldout
              predict.py       predict(theta, observations) -> predictions
              calibration.py   the linear nuisance solve
 explore/   survey, selection and figure scripts
+             ngsl_lsf.py      the whole NGSL LSF measurement
+             superseded/      replaced scripts, kept for provenance
 data/      catalogs, derived CSVs, selected-star spectra
 docs/      this documentation, plus NGSL delivery docs in ngsl_delivery/
 figures/   comparison and diagnostic figures
@@ -78,6 +82,16 @@ python3 grid/pack_grid.py                # collapse it into models/grid.npz
 
 python3 explore/plot_ngsl_vs_model.py    # NGSL comparison figures
 python3 explore/plot_uves_vs_model.py    # UVES-POP comparison figures (superseded)
+```
+
+The instrument profile — measured against XSL, no model involved, see
+[LSF.md](docs/LSF.md):
+
+```bash
+python3 explore/lsf_resolution.py        # the tabulated STIS LSF -> a table
+python3 explore/ngsl_lsf.py --selftest   # the machinery, against known answers
+python3 explore/ngsl_lsf.py              # the measurement (~15 min) + figures
+python3 explore/ngsl_lsf.py --subwindows # constant-A vs constant-R, and the shift
 ```
 
 Fitting — see [docs/FITTING.md](docs/FITTING.md) for what conditions on what:
@@ -115,23 +129,30 @@ H_nu, not f_lambda.
   per 100 K against dD/dE(B−V) = +0.0027 per 0.01 mag at fixed Teff, so the
   binding requirement is σ(Teff) ≈ 100 K — about 3× better than published values
   for these stars.
-- The **Balmer line cores are systematically filled** relative to the LTE
-  models, by ~10% of the line equivalent width, in every star. A
-  flux-conservation test rules out a broadening mismatch. Most likely NLTE in
-  hydrogen, which this code does not treat for H. The same signature appears in
-  the Paschen lines.
+- The **Balmer line cores sit above the LTE models** — +2.65% core-minus-
+  continuum at HD194453 under the measured instrument profile. This is **not**
+  the line spread function: the same profile reproduces NGSL's cores from
+  smoothed XSL to a median of +0.01% over 117 line×star combinations, with no
+  model involved. So it is a model deficiency — NLTE in hydrogen and the Stark
+  profile choice are both candidates, neither tested. Measured on one star so
+  far; see [LSF.md](docs/LSF.md).
 - **NGSL is in air**, not vacuum, with a linear-in-lambda residual per grating
   that is recalibrated against the models.
 - **NGSL's `STATERR` is optimistic by ~3x**, and its delivered line spread
-  function is the published **STIS core (3.85/8.09 A per grating) plus a heavy
-  Moffat halo** carrying ~3% of the power beyond ±10 A. A single Gaussian forced
-  on the same data lands at R = 600, which is neither the core width nor a
-  resolution — it is the compromise a Gaussian makes when it cannot represent a
-  tail. (Earlier versions of this file said R = 939 from the STIS tables and
-  ~665 from pixel sampling; both are wrong — see [DATA.md](docs/DATA.md).)
+  function is a **Moffat**: core 3.54 A (G430L) / 8.38 A (G750L), beta = 1.52,
+  constant in Angstroms per grating, with ~2.4% of its power beyond ±10 A where
+  a Gaussian of the same core puts 0.01%. The **tabulated STIS profile is
+  rejected** — the v2 spectra are co-adds of dithered exposures resampled onto
+  the native grid, and the tables describe a single exposure. A single Gaussian
+  forced on the same data lands at R = 600, which is neither a width nor a
+  resolution: it drifts with wavelength (FWHM ∝ λ^0.67 against λ^0.14 for the
+  Moffat core) and that drift is what once made the profile look constant in
+  velocity. See [LSF.md](docs/LSF.md); earlier claims of R = 939 and R = 665 are
+  also retracted there.
 - **Model spectra must be INTEGRATED onto detector pixels**, not sampled at
-  pixel centres. At NGSL's 1.4 A pixels the difference moves the high-order
-  Balmer core residual by 1.7%.
+  pixel centres, and a kernel width is meaningless without saying which was
+  used: the same data give a 3.54 A Moffat core under integration and 4.06 A
+  under centre sampling — differing by exactly the 2.747 A pixel in quadrature.
 - **The models carry line-list artifacts.** Predicted (K13) O I transitions to
   n = 15–16 Rydberg levels put absorption at 4403 and 4827 Å that is absent from
   the data — the upper levels are dissolved by the plasma microfield at
