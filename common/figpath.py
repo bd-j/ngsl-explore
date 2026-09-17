@@ -4,8 +4,10 @@ Stars whose catalog [M/H] is below the grid's -0.5 floor cannot be represented
 by any node, so their figures are not comparable with the rest: the fit has to
 spend some other parameter to make up the difference, and on this sample that
 shows up as v sin i running to the 300 km/s ceiling and as no node satisfying
-both legs at once (PLAN.md). Keeping them in their own directory stops them
-being read as ordinary results.
+both legs at once (PLAN.md). Each group therefore gets its own directory --
+`figures/fits_mh_in_grid/` and `figures/fits_mh_below_grid/` -- so that neither
+is read as the other, and neither sits loose in `figures/` alongside the
+survey and instrument figures that are not per-star fits.
 
 This lives in code rather than being a one-off `mv` for the usual reason: the
 three figure scripts all take --all, and the next regeneration would put them
@@ -32,11 +34,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MH_FLOOR = -0.5                  # the model grid's lowest [M/H] node
-METAL_POOR_DIR = 'below_grid_mh'
+BELOW_GRID_DIR = 'fits_mh_below_grid'   # [M/H] outside the grid's reach
+IN_GRID_DIR = 'fits_mh_in_grid'         # representable by some node
 
 # Stars the catalog cut sends below the grid but that the models in fact fit.
-# Judged on the metal-line panels (figures/metal_lines_<star>.png), which show
-# directly whether the -0.5 node reproduces the observed line depths.
+# Judged on the metal-line panels (`metal_lines_<star>.png`, in whichever
+# directory this module sends them), which show directly whether the -0.5 node
+# reproduces the observed line depths.
 IN_GRID_ANYWAY = {
     'HD164967': 'catalogs disagree (NGSL -0.60, XSL -0.29) and the metal lines '
                 'are well fit at the floor node: 1 of 8 features outside the '
@@ -77,15 +81,13 @@ def below_grid(star, column='mh_ngsl'):
 
 def figure_dir(star):
     """-> the directory this star's figures belong in (created if needed)."""
-    d = ROOT / 'figures'
-    if below_grid(star):
-        d = d / METAL_POOR_DIR
+    d = ROOT / 'figures' / (BELOW_GRID_DIR if below_grid(star) else IN_GRID_DIR)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def figure_path(prefix, star, suffix='.png'):
-    """-> figures/[below_grid_mh/]<prefix>_<star><suffix>."""
+    """-> figures/fits_mh_{in,below}_grid/<prefix>_<star><suffix>."""
     return figure_dir(star) / f'{prefix}_{star}{suffix}'
 
 

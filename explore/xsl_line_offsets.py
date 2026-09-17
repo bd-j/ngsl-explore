@@ -107,7 +107,7 @@ def centroid(x, y, lam, half=SEARCH):
 
 
 def panel_lines(T, ne, eps, nfeat=8):
-    """One entry per PANEL of figures/metal_lines_*.png.
+    """One entry per PANEL of the metal_lines_<star>.png figures.
 
     Columns must correspond one-to-one with the panels, so the features are the
     top-N of data/metal_sensitivity.csv in the same order the figure uses, and
@@ -162,7 +162,7 @@ def main():
     T, ne = atmosphere_point(atm)
     eps = abundances(atm)
     lines = panel_lines(T, ne, eps, a.n)
-    print(f'{len(lines)} panels of figures/metal_lines_*.png '
+    print(f'{len(lines)} panels of the metal_lines figures '
           f'({sum(1 for l in lines if l["blended"])} blended)\n')
 
     stars = [r for r in csv.DictReader(open(ROOT / 'data' / 'sample.csv'))

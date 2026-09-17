@@ -52,9 +52,14 @@ shared `fitting.scan.best_node`). Species labels come from the nearest grid
 atmosphere rather than a bespoke `models/work/` run, so all 12 are labelled
 instead of the 3 that happened to have one.
 
+All per-star fit figures are routed by `common/figpath.py` into
+`figures/fits_mh_in_grid/` or `figures/fits_mh_below_grid/`, never loose in
+`figures/`:
+
 `predict_check_<star>.png` (conditioning vs held-out),
 `metal_lines_<star>.png` (per-feature, species-labelled),
-`ebv_teff_<star>.png` (χ² surface).
+`ebv_teff_<star>.png` (χ² surface),
+`scan_<star>.png` (the node scan).
 
 ## Next
 
@@ -314,13 +319,14 @@ over 117 line-star combinations, so none of the residual is a kernel error.
 ### The node scan — all 1705 nodes, 12 stars
 
 `fitting/scan.py` → `results/<star>/scan.npz` (gitignored, ~4 MB each, ~10 min
-per star). `explore/plot_scan.py` → `scan_<star>.png`, `scan_sample.png`.
+per star). `explore/plot_scan.py` → `scan_<star>.png` (in the star's fit directory) and
+`figures/scan_sample.png` (sample-level, so it stays at the top of `figures/`).
 
 **Results are segregated by whether the grid can reach the star.** Four of the
 twelve have a metallicity below the grid's −0.5 floor, so no node can represent
 them and the fit pays for the mismatch somewhere else. Their figures live in
-`figures/below_grid_mh/` and their numbers are never pooled with the rest
-(`common/figpath.py`). Until there are lower-[M/H] nodes, **the eight inside
+`figures/fits_mh_below_grid/`, the other eight in `figures/fits_mh_in_grid/`,
+and their numbers are never pooled (`common/figpath.py`). Until there are lower-[M/H] nodes, **the eight inside
 the grid are the result** and the other four are diagnostics.
 
 The cut is the `mh_ngsl` catalog value, with two reviewed exceptions recorded in
@@ -409,7 +415,8 @@ real nodes and requires **bitwise** agreement; it caught two real bugs (below).
 
 ### E(B−V) sweep and the Teff–E(B−V) χ² surface
 
-`explore/plot_ebv_teff.py` → `figures/ebv_teff_<star>.png`. Three panels, Teff on
+`explore/plot_ebv_teff.py` → `ebv_teff_<star>.png` in the star's fit
+directory. Three panels, Teff on
 the grid's own nodes × E(B−V), at fixed log g and [M/H]. It behaves as the design
 requires:
 
