@@ -980,7 +980,7 @@ def plot_kernels(rows, grating='G430L', half_px=60.0):
     ax[0].set_ylabel('normalised response', fontsize=9, color=MUTED)
     ax[0].set_xlabel('offset from line centre (A)', fontsize=9, color=MUTED)
     ax[0].set_title(f'{grating} kernels at median fitted parameters '
-                    f'({lam:.0f} A, rebin)', fontsize=10, color=INK)
+                    f'({lam:.0f} A, rebin)', fontsize=10, color=INK, pad=26)
 
     ax[1].set_yscale('log')
     ax[1].set_ylim(9e-5, 1.4)
@@ -992,8 +992,16 @@ def plot_kernels(rows, grating='G430L', half_px=60.0):
                ha='center', va='center')
     ax[1].set_xlabel(f'offset from line centre (detector pixels, '
                      f'1 px = {disp:.3f} A)', fontsize=9, color=MUTED)
+    # Both scales on the same panel. The tabulated profiles stop at +/-20 px,
+    # which is +/-55 A on G430L and +/-98 A on G750L, and reading that cutoff
+    # off an axis in the other unit is an easy way to think a kernel changed
+    # when only the label did.
+    top = ax[1].secondary_xaxis('top', functions=(lambda v: v * disp,
+                                                  lambda v: v / disp))
+    top.set_xlabel('offset (A)', fontsize=8, color=MUTED)
+    top.tick_params(labelsize=7.5, colors=MUTED)
     ax[1].set_title('the same, log scale: this is where they differ',
-                    fontsize=10, color=INK)
+                    fontsize=10, color=INK, pad=26)
 
     # The legend goes under both panels rather than inside one: eleven
     # monospace rows do not fit beside a curve that peaks at 1.0 without either
