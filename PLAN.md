@@ -125,10 +125,10 @@ side of the break sits near 0-2%. The same is true of the Paschen window. A
 single median over the window therefore mixes two different things:
 
 * the **continuum shape across the break** -- the actual question, and
-* the **line-core excess** — now measured properly and NOT settled. Under the
-  LSF measured against XSL (docs/LSF.md), HD194453 leaves +2.65% of Balmer core
-  excess against the models, while NGSL's cores are reproduced from smoothed XSL
-  to +0.01%. So it is a model deficiency, not the instrument profile. The
+* the **line-core excess** — measured over the sample under the LSF measured
+  against XSL (docs/LSF.md): median +0.35% over the eight in-grid stars, both
+  signs, consistent with zero. It is degenerate with the profile width (-4.22%
+  at a 7.00 A core), so it is only quotable alongside the profile in use. The
   "removes 86%" claim is retracted.
 
 Report them separately -- continuum median, core median, and the break metric
@@ -174,13 +174,14 @@ Three results worth carrying:
   width from 3.54 to 7.00 A, and XSL never sees the NGSL kernel. Held-out break
   medians move by <=0.2% across a 2x range of core width.
 
-**What it re-opens.** The Balmer core excess against the MODELS is +2.65% at
-HD194453's ML node under the measured width, against +0.77% under the old tuned
-one. NGSL's cores are reproduced from smoothed XSL to +0.01% median over 117
-line-star combinations, so this is not a kernel error -- it is in the models.
-"The core excess is the instrument profile, not NLTE" was reached with a width
-that nulled it and needs restating. **Next: run the core statistic over all
-nine stars** rather than quoting HD194453.
+**The Balmer core excess, measured over the sample rather than tuned.** Core
+minus continuum at each star's ML node, now reported by
+`explore/check_predict.py`: median **+0.35%** over the eight in-grid stars,
+scattered -1.25% to +3.29%, both signs. Consistent with zero, so "no large
+hydrogen NLTE signature" stands. But the same statistic reads -4.22% under a
+7.00 A core, so it is degenerate with the profile and is only quotable
+alongside it. NGSL's cores are reproduced from smoothed XSL to +0.01% median
+over 117 line-star combinations, so none of the residual is a kernel error.
 
 ### Conventions set while reading the figures
 

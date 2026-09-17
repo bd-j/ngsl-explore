@@ -32,10 +32,13 @@ from fitting.observations import (load_ngsl, conditioning_set, heldout,
 from fitting.predict import predict
 from fitting.calibration import solve, residual, chi2, usable
 from common.specplot import spectrum_panel
+from common.lines import hydrogen_lines
 
 from common.figpath import figure_path, below_grid
 
 ROOT = Path(__file__).resolve().parent.parent
+CORE_HALF_A = 4.0        # Balmer 'core' half-width, ~1.5 G430L pixels
+                         # -- the same definition explore/ngsl_lsf.py uses
 BALMER, PASCHEN = 3646.0, 8205.9
 OBS_C, MOD_C, MOD2_C = '#2a78d6', '#eb6834', '#7a3fa8'
 SURFACE, INK, MUTED, GRIDC = '#fcfcfb', '#22262b', '#6b7280', '#dfe3e8'
@@ -155,6 +158,19 @@ def run(star, a):
                          ebv, vsini, node)
 
 
+def core_excess(h, r, hm):
+    """Median residual in the Balmer cores minus the median outside them."""
+    w = np.asarray(h.wavelength, float)
+    core = np.zeros(w.shape, bool)
+    for l in hydrogen_lines(float(w.min()), float(w.max()), series=(2,),
+                            nmax=20):
+        core |= np.abs(w - l) < CORE_HALF_A
+    cc, ww = hm & core, hm & ~core
+    if not cc.any() or not ww.any():
+        return None
+    return float(100 * (np.nanmedian(r[cc]) - np.nanmedian(r[ww])))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--star', default='HD194453')
@@ -207,6 +223,21 @@ def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
             hres[k] = r
             print(f'    {k:<7} PREDICTED  median {100 * np.nanmedian(r[hm]):+6.2f}%'
                   f'   rms {100 * np.nanstd(r[hm]):5.2f}%   n={int(hm.sum())}')
+            if k == 'Balmer':
+                # CORE minus CONTINUUM, reported separately because a window
+                # median mixes two different things: the continuum shape across
+                # the break, which is the question, and the line-core residual,
+                # which is sensitive to the instrument profile and to hydrogen
+                # physics instead. Quoting one number for both is what let the
+                # core excess be argued about for months.
+                #
+                # It is also DEGENERATE WITH THE LSF WIDTH -- at HD194453 it
+                # runs +2.65% at a 3.54 A Moffat core to -4.20% at 7.00 A -- so
+                # it is only interpretable alongside the profile in use. See
+                # docs/LSF.md.
+                ce = core_excess(h, r, hm)
+                if ce is not None:
+                    print(f'    {"":<7} core - continuum  {ce:+6.2f}%')
 
         rx = None
         if xs is not None:

@@ -231,18 +231,19 @@ degenerate with the effective WIDTH, not diagnostic of the SHAPE.** Changing
 only the Moffat core at HD194453's ML node runs it from +2.65% at 3.54 A to
 -4.20% at 7.00 A. Any profile can be tuned to zero it.
 
-**And a third correction, which cuts the other way.** This entry concluded "the
-NGSL Balmer core excess is the instrument profile, not NLTE". The model-free
-half of that stands and is now much better established: under the profile
-measured against XSL, NGSL's Balmer cores are reproduced from smoothed XSL to a
-median of **+0.01%** over 117 line-star combinations
-(`data/ngsl_lsf_lines.csv`), so whatever is left is not a kernel error. But the
-width used to reach the original conclusion was one that nulled the excess.
-Measured rather than tuned, the profile leaves **+2.65%** of Balmer core excess
-against the MODELS at HD194453's ML node. That is a model deficiency, and
-whether it is NLTE in hydrogen, the Stark profile choice (`USE_KP_HYDROGEN` in
-`synthe_module.f90:1045`, still an untested A/B) or something else is open. It
-needs the other eight stars before it is a claim. See
+**And a third correction, about how far this entry's conclusion reaches.** The
+conclusion -- "the core excess is the instrument profile, not NLTE" -- was
+reached with a width that nulled the excess, so the number attached to it was
+never meaningful. Measured against XSL rather than tuned, the Balmer core minus
+continuum over the eight in-grid stars has a median of **+0.35%**, scattered
+-1.25% to +3.29% with both signs. Consistent with zero, so the conclusion
+stands; but the same column reads -4.22% under a 7.00 A core, so no PRECISE
+value for a residual excess can be quoted without naming the profile.
+
+The model-free half is now much better established, and is the part to rely on:
+under the adopted profile, NGSL's Balmer cores are reproduced from smoothed XSL
+to a median of **+0.01%** over 117 line-star combinations
+(`data/ngsl_lsf_lines.csv`). Whatever is left over is not a kernel error. See
 [LSF.md](LSF.md#what-the-cores-can-and-cannot-settle).
 
 ### Predicted O I Rydberg lines put spurious absorption in the models

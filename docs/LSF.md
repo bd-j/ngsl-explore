@@ -191,15 +191,38 @@ The adopted profile reproduces NGSL's Balmer cores from XSL to a **median of
 the one outlier and sits where the core is least well constrained — near the red
 end, and the strongest line in the window.
 
-**This changes what can be claimed about NLTE.** The project's standing position
-is "the NGSL Balmer core excess is the instrument profile, not NLTE". That was
-reached with a width that nulled the excess. Measured against XSL instead of
-tuned, the profile leaves a **+2.65%** core excess against the models at
-HD194453's ML node. The model-free half stands — the cores are reproduced from
-XSL to 0.01%, so it is not a kernel error — which means the residual excess is
-in the models. Whether that is NLTE in hydrogen, a Stark profile choice
-(`USE_KP_HYDROGEN` in `synthe_module.f90:1045` remains an untested A/B), or
-something else, is open. It needs the other eight stars before it is a claim.
+**What this means for NLTE: less than one star suggested.** The project's
+standing position is "the NGSL Balmer core excess is the instrument profile, not
+NLTE", and it was reached with a width that nulled the excess. Measuring the
+width instead of tuning it moves the excess, but across the sample it does not
+move it to anything systematic. Balmer core minus continuum against the models,
+at each star's ML node (`explore/check_predict.py`, which now reports this):
+
+| star | adopted 3.54 Å | old 4.02 Å | wide 7.00 Å |
+|---|---|---|---|
+| HD143459 | +3.29 | +1.56 | −5.99 |
+| HD164257 | +3.16 | +3.20 | −3.47 |
+| HD194453 | +2.65 | +0.77 | −4.20 |
+| HD164967 | +0.65 | −0.08 | −6.16 |
+| HD174240 | +0.06 | −0.95 | −3.66 |
+| HD166991 | +0.05 | −0.26 | −4.13 |
+| HD147550 | −1.22 | −1.26 | −6.46 |
+| HD167946 | −1.25 | −1.97 | −4.23 |
+| **median, 8 in grid** | **+0.35** | **−0.17** | **−4.22** |
+
+The median over the eight in-grid stars is **+0.35%**, scattered −1.25% to
++3.29% with both signs — consistent with zero at this scatter, and not evidence
+of a systematic core deficit in the models. HD194453 at +2.65% is the high end
+of the distribution, not typical of it.
+
+So the previous conclusion survives in substance: there is no large hydrogen
+NLTE signature here. What does **not** survive is any precise number for the
+residual excess, because the whole column moves by 4.5% between a 3.54 Å and a
+7.00 Å core. The excess is a joint statement about the models and the profile,
+and it is only quotable alongside the profile in use.
+
+(An earlier version of this section generalised HD194453's +2.65% and said the
+NLTE question was re-opened. Eight stars say it is not.)
 
 ## What the adoption does and does not disturb
 
