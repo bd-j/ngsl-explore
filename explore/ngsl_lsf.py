@@ -112,7 +112,8 @@ from scipy.optimize import minimize
 from scipy.signal import fftconvolve
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from common.lsf import rebin_to_pixels
+from common.lsf import (rebin_to_pixels, stis_table, stis_kernel,
+                        NGSL_STIS_ANCHORS)
 from common.lines import hydrogen_lines
 from common.xsl_load import load as load_xsl, sigma_v, C_KMS
 from fitting.observations import load_ngsl
@@ -158,10 +159,6 @@ POLY_DEG = 5         # Chebyshev degree of the continuum ratio P. Over G430L's
 GRATINGS = [('G430L', 3700., 5647., 2.747),
             ('G750L', 5700., 10198., 4.879)]
 
-# The tabulated STIS model LSFs, per grating, by anchor wavelength (A).
-STIS_ANCHORS = {'G430L': {3200.: 'LSF_G430L_3200.txt',
-                          5500.: 'LSF_G430L_5500.txt'},
-                'G750L': {7000.: 'LSF_G750L_7000.txt'}}
 # NGSL observed through 52x0.2, so that is the physically correct column. The
 # 52x2.0 column is carried too because it is the one with a HALO: the tables
 # give all apertures the same core (3.81 A at G430L 3200) but wildly different
@@ -269,47 +266,16 @@ FAMILY_STYLE = {
 
 # --- the tabulated STIS profile ------------------------------------------
 
-_STIS_CACHE = {}
+# stis_table() and stis_kernel() now live in common/lsf.py -- this script and
+# the fitter both need them, and two parsers of the same four columns is exactly
+# the drift that once let the fitter and the figures disagree about the
+# instrument. `stis_anchors` below is a thin adapter: common's stis_kernel takes
+# the {anchor wavelength: filename} mapping directly, so it does not need to
+# know what a grating is.
 
 
-def stis_table(fname, aperture=None):
-    """-> (rel_pixel, response) for one aperture column, area-normalised."""
-    aperture = aperture or STIS_APERTURE
-    key = (fname, aperture)
-    if key not in _STIS_CACHE:
-        lines = (ROOT / 'data' / 'stis_lsf' / fname).read_text().splitlines()
-        # header is 'Rel pixel  52x0.1  52x0.2 ...', so the aperture columns
-        # start at data column 1.
-        cols = lines[1].split()[2:]
-        j = cols.index(aperture) + 1
-        d = np.array([[float(v) for v in l.split()] for l in lines[2:]
-                      if l.strip()])
-        x, y = d[:, 0], np.clip(d[:, j], 0.0, None)
-        _STIS_CACHE[key] = (x, y / np.trapezoid(y, x))
-    return _STIS_CACHE[key]
-
-
-def stis_kernel(grating, lam, disp, dl, aperture=None):
-    """The tabulated LSF at `lam`, on the offset grid `dl` (Angstroms).
-
-    Interpolated linearly in wavelength between the tabulated anchors and held
-    constant outside them -- the tables give two anchors for G430L (320 and
-    550 nm, where the core runs 1.386 to 1.532 px) and one for G750L.
-    """
-    anchors = STIS_ANCHORS[grating]
-    ws = np.array(sorted(anchors))
-    ys = []
-    for w0 in ws:
-        x, y = stis_table(anchors[w0], aperture)
-        ys.append(np.interp(dl / disp, x, y, left=0.0, right=0.0))
-    if len(ws) == 1:
-        k = ys[0]
-    else:
-        i = int(np.clip(np.searchsorted(ws, lam) - 1, 0, len(ws) - 2))
-        t = float(np.clip((lam - ws[i]) / (ws[i + 1] - ws[i]), 0.0, 1.0))
-        k = (1 - t) * ys[i] + t * ys[i + 1]
-    s = k.sum()
-    return k / s if s > 0 else k
+def stis_anchors(grating):
+    return NGSL_STIS_ANCHORS[grating]
 
 
 # --- analytic profiles ----------------------------------------------------
@@ -351,12 +317,12 @@ def kernel(family, p, grating, lam, disp, dl=None):
         dl = np.arange(-KERNEL_HALF, KERNEL_HALF + STEP / 2, STEP)
     ap = STIS_FAMILY_APERTURE.get(family)
     if family in ('stis', 'stis05', 'stis2'):
-        return stis_kernel(grating, lam, disp, dl, ap)
+        return stis_kernel(stis_anchors(grating), lam, disp, dl, ap)
     if family in ('stis_gauss', 'stis2_gauss'):
-        k = fftconvolve(stis_kernel(grating, lam, disp, dl, ap),
+        k = fftconvolve(stis_kernel(stis_anchors(grating), lam, disp, dl, ap),
                         _gauss(dl, p[0]), mode='same')
     elif family in ('stis_tophat', 'stis2_tophat'):
-        k = fftconvolve(stis_kernel(grating, lam, disp, dl, ap),
+        k = fftconvolve(stis_kernel(stis_anchors(grating), lam, disp, dl, ap),
                         _box(dl, p[0]), mode='same')
     elif family == 'gauss':
         k = _gauss(dl, p[0])
@@ -738,7 +704,7 @@ def summarise_subwindows(rows, families):
             # alpha = 1 is constant in R. One number, and it does not depend on
             # which two windows happen to be the endpoints.
             alpha = float(np.polyfit(np.log(lam), np.log(wid), 1)[0])
-            tab = np.array([kernel_fwhm(stis_kernel(grating, m, disp, dl), dl)
+            tab = np.array([kernel_fwhm(stis_kernel(stis_anchors(grating), m, disp, dl), dl)
                             for m in lam], float)
             a_tab = float(np.polyfit(np.log(lam), np.log(tab), 1)[0])
             print(f'  {"":8} over {lam[0]:.0f}-{lam[-1]:.0f} A ({len(good)} '
@@ -966,19 +932,33 @@ def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best,
     print(f'    -> {out.relative_to(ROOT)}')
 
 
-def plot_kernels(rows, grating='G430L'):
-    """The profiles themselves, at the median fitted parameters."""
-    from common.specplot import style, SURFACE, INK, MUTED
+def plot_kernels(rows, grating='G430L', half_px=60.0):
+    """The profiles themselves, at the median fitted parameters.
+
+    The log panel runs to +/-`half_px` DETECTOR PIXELS, which is wider than the
+    +/-KERNEL_HALF grid the fits are done on, so the kernels are rebuilt here on
+    a grid that covers it. The FWHM and wing numbers in the legend are still
+    computed on the fitting grid, so they match data/ngsl_lsf.csv rather than
+    drifting with whatever the plot happens to show.
+
+    Pixels on the log panel because that is the unit the adopted truncation is
+    stated in (common.lsf.NGSL_TRUNC_PX), and the truncation is drawn on it --
+    a profile's behaviour outside that radius is not applied to anything.
+    """
+    from common.specplot import style, SURFACE, INK, MUTED, HELD_C
+    from common.lsf import NGSL_TRUNC_PX
     plt = _mpl()
     disp = dict((g[0], g[3]) for g in GRATINGS)[grating]
     lo, hi = dict((g[0], (g[1], g[2])) for g in GRATINGS)[grating]
     lam = 0.5 * (lo + hi)
     dl = np.arange(-KERNEL_HALF, KERNEL_HALF + STEP / 2, STEP)
+    wide = half_px * disp
+    dlw = np.arange(-wide, wide + STEP / 2, STEP)
 
-    fig, ax = plt.subplots(1, 2, figsize=(11.5, 4.4))
+    fig, ax = plt.subplots(1, 2, figsize=(11.5, 5.0))
     fig.patch.set_facecolor(SURFACE)
-    for a in ax:
-        style(a)
+    for a_ in ax:
+        style(a_)
     fams = [f for f in FAMILIES if any(r['family'] == f for r in rows)]
     for fam in fams:
         sel = [r for r in rows if r['family'] == fam
@@ -986,32 +966,46 @@ def plot_kernels(rows, grating='G430L'):
         if not sel:
             continue
         p = [float(np.median([r[nm] for r in sel])) for nm in FAMILIES[fam][2]]
-        k = kernel(fam, p, grating, lam, disp, dl)
+        k = kernel(fam, p, grating, lam, disp, dl)        # statistics
+        kw = kernel(fam, p, grating, lam, disp, dlw)      # drawing
         f = kernel_fwhm(k, dl)
         c, dash = FAMILY_STYLE.get(fam, (MUTED, None))
         dd = dict(dashes=dash) if dash else {}
         lab = (f'{fam:<13} FWHM {f:5.2f} A   '
                f'power >10 A {100 * wing_power(k, dl, 10.0):5.2f}%')
         ax[0].plot(dl, k / k.max(), color=c, lw=1.4, label=lab, **dd)
-        ax[1].plot(dl, np.maximum(k / k.max(), 1e-8), color=c, lw=1.4, **dd)
+        ax[1].plot(dlw / disp, kw / kw.max(), color=c, lw=1.4, **dd)
     ax[0].set_xlim(-16, 16)
-    ax[0].set_ylim(0, 1.34)               # headroom so the legend clears the peak
+    ax[0].set_ylim(0, 1.06)
     ax[0].set_ylabel('normalised response', fontsize=9, color=MUTED)
-    ax[0].legend(fontsize=7.5, frameon=False, loc='upper right',
-                 prop=dict(family='monospace', size=7.5))
+    ax[0].set_xlabel('offset from line centre (A)', fontsize=9, color=MUTED)
     ax[0].set_title(f'{grating} kernels at median fitted parameters '
                     f'({lam:.0f} A, rebin)', fontsize=10, color=INK)
+
     ax[1].set_yscale('log')
-    ax[1].set_ylim(1e-5, 1.4)
-    ax[1].set_xlim(-KERNEL_HALF, KERNEL_HALF)
+    ax[1].set_ylim(9e-5, 1.4)
+    ax[1].set_xlim(-half_px, half_px)
+    for sign in (-1, 1):
+        ax[1].axvline(sign * NGSL_TRUNC_PX, color=HELD_C, lw=.8, ls=':')
+    ax[1].text(0.0, 1.15, f'applied kernel cut at '
+               f'+/-{NGSL_TRUNC_PX:.0f} px', fontsize=7.5, color=HELD_C,
+               ha='center', va='center')
+    ax[1].set_xlabel(f'offset from line centre (detector pixels, '
+                     f'1 px = {disp:.3f} A)', fontsize=9, color=MUTED)
     ax[1].set_title('the same, log scale: this is where they differ',
                     fontsize=10, color=INK)
-    for a in ax:
-        a.set_xlabel('offset from line centre (A)', fontsize=9, color=MUTED)
+
+    # The legend goes under both panels rather than inside one: eleven
+    # monospace rows do not fit beside a curve that peaks at 1.0 without either
+    # covering it or squashing it into the bottom third of the axes.
+    h, la = ax[0].get_legend_handles_labels()
+    fig.legend(h, la, loc='lower center', ncol=3, frameon=False,
+               prop=dict(family='monospace', size=7.5),
+               bbox_to_anchor=(0.5, 0.005))
 
     FIGDIR.mkdir(parents=True, exist_ok=True)
     out = FIGDIR / f'kernels_{grating}.png'
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0.17, 1, 1])
     fig.savefig(out, dpi=170, facecolor=SURFACE)
     plt.close(fig)
     print(f'  -> {out.relative_to(ROOT)}')

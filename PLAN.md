@@ -192,6 +192,24 @@ hydrogen NLTE signature" stands. But the same statistic reads -4.22% under a
 alongside it. NGSL's cores are reproduced from smoothed XSL to +0.01% median
 over 117 line-star combinations, so none of the residual is a kernel error.
 
+### LSF conventions, set deliberately
+
+* **The Moffat is truncated at +/-40 DETECTOR PIXELS** (`NGSL_TRUNC_PX`), 110 A
+  on G430L and 195 A on G750L, not at a fixed number of FWHM. Pixels because
+  that is the unit the instrument works in, and because it keeps the reach
+  comparable to the tabulated STIS profiles, which stop at +/-20 px. The old
+  40 x FWHM convention gave G750L a 335 A reach against G430L's 142 A -- the
+  same profile behaving differently per grating for no instrumental reason. At
+  +/-40 px the profile is 8.2e-6 of peak (G430L) and the discarded power is
+  0.018%, renormalised away. The change moves the smoothed flux by <=2.6e-4, so
+  nothing downstream was regenerated.
+* **One parser for the STIS tables**: `common.lsf.stis_table` /
+  `stis_kernel`, imported by `explore/ngsl_lsf.py` and
+  `explore/lsf_resolution.py`. Consolidating them found an off-by-one in
+  `lsf_resolution.py` that had it reading 52x0.5 while labelling it 52x0.2.
+  Harmless in practice -- those apertures share a core -- but it corrected two
+  G230L rows of `data/stis_lsf_resolution.csv`.
+
 ### Conventions set while reading the figures
 
 * **v sin i is capped at 200 km/s** (`fitting.scan.VSINI_MAX`, one definition,

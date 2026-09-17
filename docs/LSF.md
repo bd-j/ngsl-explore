@@ -23,6 +23,7 @@ instrument.
 | core FWHM, G750L | **8.38 ± 0.45 Å** (4.879 Å/px) |
 | behaviour with λ | constant in **Ångströms** within a grating, jumping at the splices |
 | sampling | fitted **with pixel integration**; must be applied that way |
+| truncation | **±40 detector pixels** — 110 Å (G430L), 195 Å (G750L) |
 | power beyond ±10 Å | 2.4% (G430L) — a Gaussian of the same core puts 0.01% there |
 
 Uncertainties are star-to-star NMAD over 9 stars. G230LB is not measured — no
@@ -199,6 +200,35 @@ quadrature gives 4.01 Å against the tabulated 4.04 Å, which is what you would
 see if the table contained the pixel; G750L gives 9.01 Å against 8.09 Å and does
 not support it.
 
+## Where the Moffat is cut off
+
+A Moffat has no natural edge, so the truncation radius is a choice, and
+`NGSL_TRUNC_PX = 40` states it in **detector pixels** — 110 Å on G430L, 195 Å on
+G750L.
+
+Pixels rather than FWHM, for two reasons. It is the unit the instrument works
+in; and it keeps the kernel's reach comparable to the tabulated STIS profiles,
+which stop at ±20 px. Cutting at a fixed number of FWHM instead — the previous
+convention, 40 × FWHM — gave the G750L kernel a 335 Å reach against G430L's
+142 Å, the same profile behaving differently in the two gratings for no
+instrumental reason.
+
+At ±40 px the profile is down to **8.2 × 10⁻⁶** of peak on G430L and
+2.0 × 10⁻⁵ on G750L, and the discarded power is **0.018%** and **0.031%** —
+renormalised away by `moffat_kernel`, so no flux is lost, only reach. Switching
+from 40 × FWHM to 40 px changes the smoothed model flux by at most 1.4 × 10⁻⁵
+(G430L) and 2.6 × 10⁻⁴ (G750L), so nothing downstream needed regenerating.
+
+For scale, cutting at the tabulated ±20 px instead would discard 0.078% and
+0.137%.
+
+**The fit used a different radius, and that is fine.** `explore/ngsl_lsf.py`
+fits on a ±80 Å grid for every profile, which is narrower than 40 px on both
+gratings. Truncation was measured not to move the fitted width: at 40 / 80 /
+150 / 250 Å the Moffat fit returns rms 0.666 / 0.665 / 0.665 / 0.665 % and FWHM
+4.55 Å throughout. So the fitted parameters do not depend on the radius, and the
+applied radius is chosen for the reasons above rather than to match the fit.
+
 ## What the cores can and cannot settle
 
 **The core excess is degenerate with the effective WIDTH, not diagnostic of the
@@ -312,6 +342,22 @@ profile / sampling), `data/ngsl_lsf_lines.csv` (per-line core residuals),
 The adopted constants in `common/lsf.py` are a documented reduction of
 `data/ngsl_lsf.csv` — medians over the nine stars under `rebin` — so re-running
 regenerates them.
+
+**One reader for the STIS tables.** `common.lsf.stis_table` and
+`common.lsf.stis_kernel` are the only parsers of `data/stis_lsf/*.txt`;
+`explore/ngsl_lsf.py` and `explore/lsf_resolution.py` both import them. That
+consolidation immediately turned up a bug it was meant to prevent:
+`lsf_resolution.py` had its own parser doing
+`lines[1].split().index('52x0.2')`, and since the header row reads
+`Rel pixel  52x0.1  52x0.2 …` — two tokens for one abscissa column — that
+returns 3, which is the **52x0.5** column. Every number that script ever wrote
+was for the wrong aperture.
+
+It did almost no damage, which is why it survived: 52x0.2, 52x0.5 and 52x2.0
+share a core, so the G430L and G750L rows of `data/stis_lsf_resolution.csv` were
+right anyway. Only the two G230L rows were wrong — 2.376 → 2.372 and
+2.290 → 2.288 px — and this project does not use them (they are the MAMA G230L,
+not the CCD G230LB that NGSL used).
 
 ## The residual wavelength shift
 

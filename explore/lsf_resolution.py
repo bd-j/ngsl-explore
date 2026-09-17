@@ -12,7 +12,13 @@ only - converting it would require the MAMA dispersion, a different detector.
 Writes data/stis_lsf_resolution.csv
 """
 import csv
+import sys
+from pathlib import Path
+
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.lsf import stis_table
 
 # Dispersion measured from the NGSL v2 wavelength grid (grating_summary.txt).
 DISP = {'G430L': 2.744, 'G750L': 4.877}
@@ -26,11 +32,22 @@ BALMER = 3646.0
 
 
 def fwhm_pixels(path):
-    with open(path) as fh:
-        lines = fh.read().splitlines()
-    col = lines[1].split().index(APERTURE)
-    d = np.array([[float(v) for v in ln.split()] for ln in lines[2:] if ln.strip()])
-    x, y = d[:, 0], d[:, col] / d[:, col].max()
+    """FWHM in pixels of the tabulated LSF, by half-maximum interpolation.
+
+    The column is read by `common.lsf.stis_table`, which is the one parser of
+    these files. This function used to have its own, and it had an OFF-BY-ONE:
+    the header row is `Rel pixel  52x0.1  52x0.2 ...`, so `Rel` and `pixel` are
+    two tokens against one abscissa column, and
+    `lines[1].split().index('52x0.2')` returns 3 -- the 52x0.5 column. Every
+    number this script has ever written was for the wrong aperture.
+
+    It did almost no damage, which is why it survived: 52x0.2, 52x0.5 and 52x2.0
+    share a core, so the G430L and G750L rows were right anyway. Only the two
+    G230L rows were wrong, by 0.004 and 0.002 px, and this project does not use
+    them (they are the MAMA G230L, not the CCD G230LB that NGSL used).
+    """
+    x, y = stis_table(Path(path).name, APERTURE)
+    y = y / y.max()
     pk = int(np.argmax(y))
     left = np.interp(0.5, y[:pk + 1], x[:pk + 1])
     right = np.interp(0.5, y[pk:][::-1], x[pk:][::-1])
