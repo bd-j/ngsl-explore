@@ -71,26 +71,38 @@ mode CAVEATS records for HD162630, caught this time.
 
 Generated from `data/sample.csv`; catalog parameters as delivered, not fitted.
 
-| star | tier | Teff NGSL / XSL | log g | [M/H] NGSL / XSL | SpType | flags | grid |
-|---|---|---|---|---|---|---|---|
-| HD167946 | primary | 10634 / 10079 | 4.30 | -0.10 / -0.47 | A0 | — | in |
-| **HD194453** | primary | 10241 / 10489 | 3.90 | +0.00 / -0.02 | A0III | — | in |
-| HD128801 | primary | 10123 / 8774 | 3.70 | -1.90 / -1.92 | B9 | HB | below |
-| HD143459 | primary | 9878 / 10689 | 3.60 | -0.60 / -0.19 | A0V | HB | in † |
-| HD117880 | primary | 9426 / 8843 | 3.70 | -0.60 / -1.65 | B9IV/V | — | below |
-| HD106304 | primary | 9376 / 8759 | 3.60 | -1.80 / -1.67 | B9V | — | below |
-| HD174240 | primary | 9274 / 9262 | 3.80 | -0.20 / -0.40 | A1IV | map | in |
-| HD074721 | primary | 8774 / 9571 | 3.30 | -0.60 / -0.57 | A0V | HB | below |
-| HD166991 | primary | 8497 / 9008 | 4.00 | -0.30 / -0.20 | A1V | — | in |
-| HD147550 | secondary | 10074 / 10044 | 3.90 | +0.00 / -0.26 | B9V | **B** (RUWE 1.80) | in |
-| HD164967 | secondary | 8534 / 9351 | 4.10 | -0.60 / -0.29 | A0 | **B** (RUWE 8.32) | in † |
-| HD164257 | secondary | 7977 / 10885 | 3.50 | -0.10 / +0.73 | A0 | **B** (El\*), Z+ | in |
-| ~~HD072968~~ | rejected | 9253 / 9569 | 3.90 | +0.50 / +0.44 | A1VpSrCr | **pec**, Z+ | in |
+| star | tier | Teff NGSL / XSL | log g | [M/H] NGSL / XSL | SpType | slit px | flags | grid |
+|---|---|---|---|---|---|---|---|---|
+| HD167946 | primary | 10634 / 10079 | 4.30 | -0.10 / -0.47 | A0 | +0.63 | — | in |
+| **HD194453** | primary | 10241 / 10489 | 3.90 | +0.00 / -0.02 | A0III | +0.00 | — | in |
+| HD128801 | primary | 10123 / 8774 | 3.70 | -1.90 / -1.92 | B9 | +0.58 | HB | below |
+| HD143459 | primary | 9878 / 10689 | 3.60 | -0.60 / -0.19 | A0V | +0.09 | HB | in † |
+| HD117880 | primary | 9426 / 8843 | 3.70 | -0.60 / -1.65 | B9IV/V | **+0.91** ‡ | — | below |
+| HD106304 | primary | 9376 / 8759 | 3.60 | -1.80 / -1.67 | B9V | -0.33 | — | below |
+| HD174240 | primary | 9274 / 9262 | 3.80 | -0.20 / -0.40 | A1IV | +0.28 | map | in |
+| HD074721 | primary | 8774 / 9571 | 3.30 | -0.60 / -0.57 | A0V | -0.35 | HB | below |
+| HD166991 | primary | 8497 / 9008 | 4.00 | -0.30 / -0.20 | A1V | +0.45 | — | in |
+| HD147550 | secondary | 10074 / 10044 | 3.90 | +0.00 / -0.26 | B9V | +0.24 | **B** (RUWE 1.80) | in |
+| HD164967 | secondary | 8534 / 9351 | 4.10 | -0.60 / -0.29 | A0 | +0.37 | **B** (RUWE 8.32) | in † |
+| HD164257 | secondary | 7977 / 10885 | 3.50 | -0.10 / +0.73 | A0 | -0.36 | **B** (El\*), Z+ | in |
+| ~~HD072968~~ | rejected | 9253 / 9569 | 3.90 | +0.50 / +0.44 | A1VpSrCr | -0.17 | **pec**, Z+ | in |
 
 **flags** — **B** binary, with the evidence that caught it (Gaia RUWE > 1.4, or
 the SIMBAD object type); **HB** field horizontal branch, flagged but kept;
 **pec** chemically peculiar, the one rejection; **Z+** [Fe/H] ≥ +0.4;
 **map** the SFD/SF11 dust column is unusable at this star's galactic latitude.
+
+**slit px** — the NGSL v2 slit offset, the star's miscentring in the 52×0.2
+aperture. It is the proxy for the dominant systematic on break *shape*: the
+wavelength-dependent slit-throughput correction grows with it, and the v2
+correction is only reliable **below 0.9 px** ([CAVEATS.md](CAVEATS.md)). The
+sign is the direction of the offset; the magnitude is what matters here.
+
+‡ marks the one star NGSL itself flags `dataqual = suspect`. That flag is
+exactly the 0.9 px cut: across all 379 catalog stars the 35 `suspect` rows span
+|offset| 0.905–1.165 px and the 344 `good` rows span 0.000–0.895, with no
+exception either way. HD117880 at +0.91 px is therefore only just over the line,
+and it is already segregated for being below the grid's [M/H] floor.
 
 **grid** — whether any node of the model grid can represent the star, which
 decides where its figures go (`common/figpath.py`: `figures/fits_mh_in_grid/` or
