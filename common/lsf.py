@@ -36,14 +36,26 @@ NGSL_LSF_TABULATED = [(1675., 3058., 2.75), (3058., 5647., 3.85),
 # with free widths and a free wavelength shift, scored on the rms percent
 # residual over the whole grating. Median over the nine primary stars, G430L:
 #
-#   profile        npar   rms %   core mean %   FWHM A   power >10 A
-#   stis (fixed)      0   1.886       +4.74       4.04       0.00
-#   gauss             1   1.085       +0.67       6.21       0.01
-#   gauss (x) tophat  2   1.085       +0.67       6.21       0.01
-#   stis (x) tophat   1   1.057       +0.78       6.44       0.01
-#   stis (x) gauss    1   1.047       +0.65       6.03       0.03
-#   MOFFAT            2   0.930       -0.02       3.54       2.44
-#   gauss + gauss     3   0.908       +0.08       5.33       3.19
+#   profile           npar   rms %   core mean %   FWHM A   power >10 A
+#   stis2 52x2.0 fix     0   1.958       -4.74       4.05       8.75
+#   stis  52x0.2 fix     0   1.886       +4.74       4.04       0.00
+#   gauss                1   1.085       +0.67       6.21       0.01
+#   gauss (x) tophat     2   1.085       +0.67       6.21       0.01
+#   stis (x) tophat      1   1.057       +0.78       6.44       0.01
+#   stis (x) gauss       1   1.047       +0.65       6.03       0.03
+#   stis05 52x0.5 fix    0   1.045       -0.11       4.04       2.56
+#   MOFFAT               2   0.930       -0.02       3.54       2.44
+#   gauss + gauss        3   0.908       +0.08       5.33       3.19
+#
+# THE HALO IS REAL INSTRUMENTAL SCATTERED LIGHT, and the tabulated apertures say
+# so independently. All four STIS slit widths share a core (4.04 A at G430L's
+# midpoint) and differ only in their wings. The fitted Moffat's 2.44% beyond
+# +/-10 A matches the tabulated 52x0.5 profile's 2.56%, and that profile -- zero
+# free parameters, an arc-lamp calibration product, not even the right slit --
+# takes the Balmer core residual from +4.74% to -0.11%. NGSL observed through
+# 52x0.2, whose tabulated profile has NO halo, so the delivered spectra behave
+# like a slit 2.5x wider than the one used. 52x2.0 overshoots: its core residual
+# is -4.74%, and a free Gaussian or box added to it fits ZERO extra broadening.
 #
 # Why the Moffat and not the marginally better two-Gaussian: its second
 # parameter is a MEASUREMENT. Over the nine stars beta runs 1.40 to 2.06, while

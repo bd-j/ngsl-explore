@@ -36,6 +36,20 @@ THE PROFILES. Six, in increasing freedom:
                 whether the tabulated profile is the right CORE with something
                 extra on top, which is a different question from whether a free
                 Gaussian happens to fit.
+  stis2         the tabulated LSF for the 52x2.0 aperture, zero free
+                parameters. NGSL did not use that slit, so this is not a
+                candidate on physical grounds -- it is here because it is the
+                only tabulated profile with a HALO. All apertures share a core
+                (3.81 A at G430L 3200) and differ only in the wings, a wide slit
+                admitting scattered light a narrow one cuts off. If NGSL's
+                delivered tail is that scattered light leaking in, this is what
+                it should look like.
+  stis05        the 52x0.5 column, zero free parameters. Same core again, and
+                a halo between the other two (11.65% beyond +/-10 A against
+                0.00% and 18.30%), so the three of them bracket the question
+                "how much scattered light does NGSL's slit actually admit?"
+  stis2_gauss   52x2.0 convolved with a free Gaussian. One parameter.
+  stis2_tophat  52x2.0 convolved with a free boxcar. One parameter.
   stis_tophat   the same, convolved with a free boxcar. One parameter. This is
                 the co-add hypothesis stated exactly: the optics are as STScI
                 tabulates them, and everything NGSL has on top comes from
@@ -148,7 +162,33 @@ GRATINGS = [('G430L', 3700., 5647., 2.747),
 STIS_ANCHORS = {'G430L': {3200.: 'LSF_G430L_3200.txt',
                           5500.: 'LSF_G430L_5500.txt'},
                 'G750L': {7000.: 'LSF_G750L_7000.txt'}}
-STIS_APERTURE = '52x0.2'    # NGSL's slit
+# NGSL observed through 52x0.2, so that is the physically correct column. The
+# 52x2.0 column is carried too because it is the one with a HALO: the tables
+# give all apertures the same core (3.81 A at G430L 3200) but wildly different
+# wings, since a wide slit admits scattered light a narrow one cuts off.
+#
+#   aperture   G430L core   power beyond +/-10 A
+#   52x0.1       3.82 A            0.00%
+#   52x0.2       4.04 A            0.00%     <- NGSL's slit
+#   52x0.5       4.04 A            2.56%     <- the fitted Moffat wants 2.44%
+#   52x2.0       4.05 A            8.75%
+#
+# (Cores and wings at 4674 A, the G430L fit-range midpoint, via wing_power on
+# the kernel grid. Do NOT measure the wing as trapz over a two-sided mask of the
+# raw table: the mask is not contiguous, so trapz bridges the gap across the
+# core and roughly doubles the answer. That mistake produced 11.65% and 18.30%
+# for the two wide apertures in an earlier version of this comment.)
+#
+# So these bracket the question "how much scattered light does NGSL's slit
+# actually admit?", and the answer turns out to be about as much as a 0.5"
+# slit -- not the 0.2" its own tabulated profile implies. Add another column by
+# adding a family here and to FAMILIES; nothing else needs changing.
+STIS_APERTURE = '52x0.2'    # NGSL's slit; the default for stis_table()
+STIS_FAMILY_APERTURE = {
+    'stis': '52x0.2', 'stis_gauss': '52x0.2', 'stis_tophat': '52x0.2',
+    'stis2': '52x2.0', 'stis2_gauss': '52x2.0', 'stis2_tophat': '52x2.0',
+    'stis05': '52x0.5',
+}
 
 # Telluric absorption bands. NGSL is above the atmosphere and XSL is not, so
 # every one of these is a feature in one spectrum and not the other -- a
@@ -198,6 +238,10 @@ FAMILIES = {
     'stis':         (0, [],                    []),
     'stis_gauss':   (1, [3.0],                 ['extra_fwhm']),
     'stis_tophat':  (1, [4.0],                 ['box']),
+    'stis05':       (0, [],                    []),
+    'stis2':        (0, [],                    []),
+    'stis2_gauss':  (1, [3.0],                 ['extra_fwhm']),
+    'stis2_tophat': (1, [4.0],                 ['box']),
     'gauss':        (1, [6.2],                 ['fwhm']),
     'moffat':       (2, [4.5, 1.8],            ['fwhm', 'beta']),
     'gauss2':       (3, [4.5, 0.15, 14.0],     ['fwhm1', 'frac2', 'fwhm2']),
@@ -212,6 +256,10 @@ FAMILY_STYLE = {
     'stis':         ('#c0392b', (3, 1.6)),
     'stis_gauss':   ('#e08a1e', None),
     'stis_tophat':  ('#6b8f1e', None),
+    'stis05':       ('#d4726a', (4, 2)),
+    'stis2':        ('#8c5a2b', (1.5, 1.5)),
+    'stis2_gauss':  ('#b8860b', (5, 2, 1, 2)),
+    'stis2_tophat': ('#4f7942', (5, 2, 1, 2)),
     'gauss':        ('#2a78d6', None),
     'gauss_tophat': ('#00a0a8', None),
     'moffat':       ('#7a3fa8', None),
@@ -224,22 +272,24 @@ FAMILY_STYLE = {
 _STIS_CACHE = {}
 
 
-def stis_table(fname):
-    """-> (rel_pixel, response) for the NGSL aperture, area-normalised."""
-    if fname not in _STIS_CACHE:
+def stis_table(fname, aperture=None):
+    """-> (rel_pixel, response) for one aperture column, area-normalised."""
+    aperture = aperture or STIS_APERTURE
+    key = (fname, aperture)
+    if key not in _STIS_CACHE:
         lines = (ROOT / 'data' / 'stis_lsf' / fname).read_text().splitlines()
         # header is 'Rel pixel  52x0.1  52x0.2 ...', so the aperture columns
         # start at data column 1.
         cols = lines[1].split()[2:]
-        j = cols.index(STIS_APERTURE) + 1
+        j = cols.index(aperture) + 1
         d = np.array([[float(v) for v in l.split()] for l in lines[2:]
                       if l.strip()])
         x, y = d[:, 0], np.clip(d[:, j], 0.0, None)
-        _STIS_CACHE[fname] = (x, y / np.trapezoid(y, x))
-    return _STIS_CACHE[fname]
+        _STIS_CACHE[key] = (x, y / np.trapezoid(y, x))
+    return _STIS_CACHE[key]
 
 
-def stis_kernel(grating, lam, disp, dl):
+def stis_kernel(grating, lam, disp, dl, aperture=None):
     """The tabulated LSF at `lam`, on the offset grid `dl` (Angstroms).
 
     Interpolated linearly in wavelength between the tabulated anchors and held
@@ -250,7 +300,7 @@ def stis_kernel(grating, lam, disp, dl):
     ws = np.array(sorted(anchors))
     ys = []
     for w0 in ws:
-        x, y = stis_table(anchors[w0])
+        x, y = stis_table(anchors[w0], aperture)
         ys.append(np.interp(dl / disp, x, y, left=0.0, right=0.0))
     if len(ws) == 1:
         k = ys[0]
@@ -299,13 +349,14 @@ def kernel(family, p, grating, lam, disp, dl=None):
     """-> normalised kernel on the offset grid `dl`, spacing STEP."""
     if dl is None:
         dl = np.arange(-KERNEL_HALF, KERNEL_HALF + STEP / 2, STEP)
-    if family == 'stis':
-        return stis_kernel(grating, lam, disp, dl)
-    if family == 'stis_gauss':
-        k = fftconvolve(stis_kernel(grating, lam, disp, dl),
+    ap = STIS_FAMILY_APERTURE.get(family)
+    if family in ('stis', 'stis05', 'stis2'):
+        return stis_kernel(grating, lam, disp, dl, ap)
+    if family in ('stis_gauss', 'stis2_gauss'):
+        k = fftconvolve(stis_kernel(grating, lam, disp, dl, ap),
                         _gauss(dl, p[0]), mode='same')
-    elif family == 'stis_tophat':
-        k = fftconvolve(stis_kernel(grating, lam, disp, dl),
+    elif family in ('stis_tophat', 'stis2_tophat'):
+        k = fftconvolve(stis_kernel(grating, lam, disp, dl, ap),
                         _box(dl, p[0]), mode='same')
     elif family == 'gauss':
         k = _gauss(dl, p[0])
@@ -831,13 +882,27 @@ def _mpl():
     return plt
 
 
-def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best):
-    """NGSL, the smoothed XSL laid over it, and the residual."""
+def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best,
+              ref=('moffat', 'rebin'), alt=('stis', 'rebin'),
+              panel3_sampling='rebin'):
+    """NGSL, the smoothed XSL laid over it, and the residual.
+
+    The top two panels always show the SAME two profiles -- the adopted Moffat
+    and the tabulated STIS LSF, both under pixel integration -- rather than
+    whichever happened to fit best for this star. A panel whose contents change
+    from star to star cannot be compared between stars, which is the main thing
+    anyone wants to do with a set of these.
+
+    The bottom panel shows every profile at ONE sampling convention, named in
+    its axis label, because a width means nothing without it.
+    """
     from common.specplot import style, SURFACE, INK, MUTED, OBS_C, MOD_C, HELD_C
     plt = _mpl()
-    rms, bfam, bsamp, _, _ = best
-    ref = ('stis', bsamp)
     zoom = (3700., 4120.) if grating == 'G430L' else (6500., 6900.)
+    # Fall back only if the requested profile was not run at all.
+    if ref not in drawn:
+        ref = best[1], best[2]
+    have_alt = alt in drawn and alt != ref
 
     fig, ax = plt.subplots(3, 1, figsize=(11, 8.6),
                            gridspec_kw=dict(height_ratios=[2.2, 1.4, 1.4]))
@@ -847,11 +912,11 @@ def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best):
 
     s = ok
     ax[0].plot(wn[s], fn[s], color=INK, lw=.9, label='NGSL')
-    ax[0].plot(wn[s], drawn[(bfam, bsamp)][1][s], color=MOD_C, lw=.9,
-               label=f'XSL smoothed: {bfam} ({bsamp})')
-    if ref in drawn and ref != (bfam, bsamp):
-        ax[0].plot(wn[s], drawn[ref][1][s], color=OBS_C, lw=.7, alpha=.75,
-                   label=f'XSL smoothed: stis ({bsamp})')
+    ax[0].plot(wn[s], drawn[ref][1][s], color=MOD_C, lw=.9,
+               label=f'XSL smoothed: {ref[0]} ({ref[1]})')
+    if have_alt:
+        ax[0].plot(wn[s], drawn[alt][1][s], color=OBS_C, lw=.7, alpha=.75,
+                   label=f'XSL smoothed: {alt[0]} ({alt[1]})')
     for l in lines:
         ax[0].axvline(l, color=HELD_C, lw=.5, alpha=.35)
     ax[0].set_xlim(lo, hi)
@@ -860,22 +925,25 @@ def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best):
     ax[0].set_title(f'{star}  {grating}   NGSL vs XSL smoothed to it '
                     f'(no model involved)', fontsize=11, color=INK)
 
-    for label, key, col, lw in (('best', (bfam, bsamp), MOD_C, .9),
-                                ('stis', ref, OBS_C, .8)):
+    for key, col, lw in ((ref, MOD_C, .9), (alt, OBS_C, .8)):
         if key not in drawn:
             continue
         r = drawn[key][0]
         ax[1].plot(wn, r, color=col, lw=lw,
-                   label=f'{key[0]} ({key[1]})  rms {np.sqrt(np.nanmean(r**2)):.3f}%')
+                   label=f'{key[0]} ({key[1]})  '
+                         f'rms {np.sqrt(np.nanmean(r**2)):.3f}%')
     ax[1].axhline(0, color=MUTED, lw=.6)
     ax[1].set_xlim(lo, hi)
     ax[1].set_ylim(-12, 12)
     ax[1].set_ylabel('residual %', fontsize=9, color=MUTED)
     ax[1].legend(fontsize=8, frameon=False, ncol=2)
 
-    keys = [k for k in FAMILIES if (k, bsamp) in drawn]
+    samp = panel3_sampling
+    if not any(k[1] == samp for k in drawn):
+        samp = ref[1]
+    keys = [k for k in FAMILIES if (k, samp) in drawn]
     for key in keys:
-        r = drawn[(key, bsamp)][0]
+        r = drawn[(key, samp)][0]
         col, dash = FAMILY_STYLE.get(key, (MUTED, None))
         ax[2].plot(wn, r, lw=1.0, color=col, label=key,
                    dashes=dash if dash else (None, None))
@@ -884,10 +952,11 @@ def plot_star(star, grating, lo, hi, wn, fn, ok, core, lines, drawn, best):
         ax[2].axvspan(l - CORE_HALF, l + CORE_HALF, color=HELD_C, alpha=.10, lw=0)
     ax[2].set_xlim(*zoom)
     ax[2].set_ylim(-12, 12)
-    ax[2].set_xlabel(f'vacuum wavelength (A)   -- shaded: Balmer cores '
+    ax[2].set_xlabel(f'vacuum wavelength (A)   --   ALL PROFILES AT '
+                     f'sampling = {samp.upper()}   --   shaded: Balmer cores '
                      f'+/-{CORE_HALF:.0f} A', fontsize=9, color=MUTED)
     ax[2].set_ylabel('residual %', fontsize=9, color=MUTED)
-    ax[2].legend(fontsize=8, frameon=False, ncol=3)
+    ax[2].legend(fontsize=7.5, frameon=False, ncol=4)
 
     FIGDIR.mkdir(parents=True, exist_ok=True)
     out = FIGDIR / f'lsf_{star}_{grating}.png'

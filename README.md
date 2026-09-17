@@ -141,9 +141,12 @@ H_nu, not f_lambda.
 - **NGSL's `STATERR` is optimistic by ~3x**, and its delivered line spread
   function is a **Moffat**: core 3.54 A (G430L) / 8.38 A (G750L), beta = 1.52,
   constant in Angstroms per grating, with ~2.4% of its power beyond ±10 A where
-  a Gaussian of the same core puts 0.01%. The **tabulated STIS profile is
-  rejected** — the v2 spectra are co-adds of dithered exposures resampled onto
-  the native grid, and the tables describe a single exposure. A single Gaussian
+  a Gaussian of the same core puts 0.01%. That halo is **real instrumental
+  scattered light**: the STIS tables give all four slit widths the same core and
+  different wings, and the tabulated **52x0.5** profile — zero free parameters —
+  reproduces the fitted halo (2.56% against 2.44%) and nulls the Balmer core
+  residual. NGSL used 52x0.2, whose tabulated profile has no halo, so the
+  delivered spectra behave like a slit 2.5× wider than the one used. A single Gaussian
   forced on the same data lands at R = 600, which is neither a width nor a
   resolution: it drifts with wavelength (FWHM ∝ λ^0.67 against λ^0.14 for the
   Moffat core) and that drift is what once made the profile look constant in

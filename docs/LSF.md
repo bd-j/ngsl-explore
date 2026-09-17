@@ -61,23 +61,58 @@ G430L, median over 9 stars, pixel integration:
 
 | profile | npar | rms % | core mean % | core peak % | FWHM Å | power >10 Å |
 |---|---|---|---|---|---|---|
-| `stis` — tabulated, fixed | 0 | 1.886 | +4.74 | +14.11 | 4.04 | 0.00% |
+| `stis2` 52x2.0, fixed | 0 | 1.958 | −4.74 | −12.92 | 4.05 | 8.75% |
+| `stis` 52x0.2, fixed | 0 | 1.886 | +4.74 | +14.11 | 4.04 | 0.00% |
 | `gauss` | 1 | 1.085 | +0.67 | +6.34 | 6.21 ± 0.42 | 0.01% |
 | `gauss` ⊗ tophat | 2 | 1.085 | +0.67 | +6.34 | 6.21 | 0.01% |
 | `stis` ⊗ tophat | 1 | 1.057 | +0.78 | +6.35 | 6.44 ± 0.68 | 0.01% |
 | `stis` ⊗ gauss | 1 | 1.047 | +0.65 | +6.09 | 6.03 ± 0.49 | 0.03% |
+| **`stis05` 52x0.5, fixed** | **0** | **1.045** | **−0.11** | +5.74 | 4.04 | 2.56% |
 | **`moffat`** | **2** | **0.930** | **−0.02** | +5.92 | 3.54 ± 0.16 | 2.44% |
 | `gauss` + `gauss` | 3 | 0.908 | +0.08 | +4.94 | 5.33 ± 0.64 | 3.19% |
 
-**The tabulated STIS LSF is rejected.** It is a genuine instrument calibration
-product — FWHM in pixels × dispersion, from arc lamps and point sources — and
-the delivered NGSL v2 spectra are not described by it: twice the rms of the
-adopted profile, and a +14% spike in every Balmer core.
+### The tabulated apertures bracket the answer
 
-That is not surprising. STIS's native G430L dispersion is 2.75 Å/px and the
-delivered grid is 2.747 Å/px, so the v2 spectra are co-adds of dithered
-exposures resampled onto (essentially) the native grid. The tables describe a
-single exposure before any of that.
+The STIS tables give a model LSF for four slit widths. **All four share a core**
+— 4.04 Å at G430L's midpoint — and differ only in the wings, because a wide slit
+admits scattered light that a narrow one cuts off:
+
+| aperture | G430L core | power >10 Å | power >20 Å |
+|---|---|---|---|
+| 52x0.1 | 3.82 Å | 0.00% | 0.00% |
+| 52x0.2 — **NGSL's slit** | 4.04 Å | 0.00% | 0.00% |
+| 52x0.5 | 4.04 Å | **2.56%** | 0.00% |
+| 52x2.0 | 4.05 Å | 8.75% | 4.05% |
+| *fitted Moffat* | *3.54 Å + tail* | ***2.44%*** | *0.52%* |
+
+So they bracket the question *how much scattered light does NGSL's delivered
+profile actually carry?*, and three things fall out:
+
+1. **The core residual changes sign across the bracket** — +4.74% at 52x0.2,
+   −4.74% at 52x2.0 — so the answer lies strictly between the two, and neither
+   endpoint is it.
+2. **52x2.0 is already too broad.** `stis2` ⊗ gauss and `stis2` ⊗ tophat both
+   drive their extra broadening to zero and return the fixed profile unchanged.
+   Nothing can be added to the 2″ profile; the data want less halo than it has.
+3. **The fitted halo is the 52x0.5 halo.** The Moffat's 2.44% beyond ±10 Å and
+   the tabulated 52x0.5's 2.56% agree to better than the star-to-star scatter of
+   anything else here — and `stis05`, with **zero free parameters**, scores
+   rms 1.045% with a core residual of −0.11%, beating every one-parameter
+   profile in the table including the free Gaussian.
+
+That last point is the strongest evidence in this document that the halo is real
+instrumental scattered light rather than a fitting artefact. `stis05` is an
+instrument calibration product — arc lamps and point sources, no A star, no
+stellar model, nothing from this project, and not even the right slit — and
+adding its wings to the same tabulated core takes the Balmer core residual from
++4.74% to −0.11% without a single adjustable parameter.
+
+What it does not do is beat the Moffat (1.045% against 0.930%), and it carries a
+puzzle: NGSL observed through 52x0.2, whose tabulated profile has **no** halo at
+all. So the delivered spectra behave like a slit 2.5× wider than the one used.
+Co-adding dithered exposures and resampling redistributes flux and is the
+obvious suspect, but a box cannot make a heavy tail (see below), so that is a
+conjecture and not a result.
 
 **The Moffat is adopted over the marginally better two-Gaussian** because its
 second parameter is a *measurement*. Over the nine stars β runs 1.40 to 2.06,
@@ -91,8 +126,15 @@ a dither offset and a resampling both are — fits a box of **5.62 ± 0.94 Å =
 behind it, and it beats the free Gaussian. What it cannot do is make the tail:
 0.01% of its power lands beyond ±10 Å against the ~2.4% the data want, because a
 box convolved with anything Gaussian still has Gaussian-fast wings. So
-resampling accounts for the core width and something else — grating scatter is
-the standing candidate — accounts for the halo.
+resampling accounts for the core width and scattered light accounts for the
+halo.
+
+**A measurement trap, since it cost an hour here.** Do not compute the wing
+fraction as `trapz(y[mask], x[mask])` over a two-sided mask of the raw table.
+The mask is not contiguous, so the trapezoid rule bridges the gap across the
+core and roughly doubles the answer — it gave 11.65% and 18.30% for 52x0.5 and
+52x2.0 against the correct 2.56% and 8.75%. `wing_power` sums on the uniform
+kernel grid and is right.
 
 ![kernels](../figures/ngsl_lsf/kernels_G430L.png)
 
@@ -246,6 +288,13 @@ sub-windows (Hα and the Paschen series) constrain a width at all, so no α is
 quoted for it.
 
 The adopted G750L core of 8.38 ± 0.45 Å is consistent with the previous 8.34 Å.
+
+The aperture bracket behaves differently here, and weakly: `stis2` (52x2.0,
+fixed) scores 0.919% against the Moffat's 0.905%, and `stis05` 0.950%. G750L's
+4.879 Å pixels mean ±10 Å is only ±2 px, so the "wing" columns are measuring
+something much closer to the core than they are at G430L and are not comparable
+across the two gratings. The `wing_4px` column in `data/ngsl_lsf.csv` is the one
+to use for that.
 
 ## Reproducing
 

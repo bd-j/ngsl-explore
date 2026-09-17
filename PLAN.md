@@ -158,13 +158,22 @@ pixel integration through the single function `common.lsf.to_ngsl_pixels`.
 
 Three results worth carrying:
 
-* **The tabulated STIS LSF is rejected** -- rms 1.89% against 0.93%, and a +14%
-  spike in every Balmer core. Not surprising: STIS's native G430L dispersion is
-  2.75 A/px and the delivered grid is 2.747 A/px, so v2 is a co-add of dithered
-  exposures resampled onto essentially the native grid, which the tables do not
-  describe. The tabulated core convolved with a free box fits **2.05 +/- 0.34
-  pixels**, which is what that co-add should look like -- but a box has no tails
-  and cannot make the halo.
+* **The tabulated STIS LSF for NGSL's own slit is rejected** -- 52x0.2 gives
+  rms 1.89% against 0.93%, and a +14% spike in every Balmer core. The tabulated
+  core convolved with a free box fits **2.05 +/- 0.34 pixels**, which is what a
+  dithered co-add resampled onto the native grid should look like -- but a box
+  has no tails and cannot make the halo.
+* **The halo is real instrumental scattered light**, and the STIS tables say so
+  independently. All four tabulated slit widths share a core (4.04 A at G430L's
+  midpoint) and differ only in their wings. The fitted Moffat's 2.44% beyond
+  +/-10 A matches the tabulated **52x0.5** profile's 2.56%, and that profile --
+  ZERO free parameters, an arc-lamp calibration product, not even the right
+  slit -- scores rms 1.045% with a core residual of -0.11%, beating every
+  one-parameter profile including the free Gaussian. 52x2.0 overshoots (core
+  -4.74%, and a free Gaussian added to it fits zero extra broadening), so the
+  two bracket the answer. The puzzle this leaves: NGSL used 52x0.2, whose
+  tabulated profile has no halo at all, so the delivered spectra behave like a
+  slit 2.5x wider than the one used.
 * **R = 600 was an artefact of fitting a Gaussian.** FWHM ~ lambda^+0.67 for a
   Gaussian against +0.14 for a Moffat core (tabulated STIS: +0.19). A
   one-parameter profile standing in for a core plus a halo drifts with
