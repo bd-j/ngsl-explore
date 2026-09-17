@@ -256,6 +256,18 @@ over 117 line-star combinations, so none of the residual is a kernel error.
 
 ## Things to chase
 
+* **The library comparison figures predate the measured LSF and have not been
+  regenerated.** `ngsl_vs_model_<star>.png` (4) and `ngsl_xsl_<star>.png` (3) in
+  `figures/explore_libraries/` were made before the NGSL profile was measured at
+  all, so they show the model degraded by whatever kernel was in use then, not
+  the adopted Moffat. Rerunning `plot_ngsl_vs_model.py` on today's code moves
+  4.3% of the pixels; the committed PNGs were deliberately left in place rather
+  than half-updated. `plot_uves_vs_model.py` is in the same position and is in
+  any case superseded. None of the fitting results depend on these -- they are
+  survey figures -- but they should not be read as showing the current
+  instrument profile. Regenerate them together with a note saying which kernel
+  they carry.
+
 * ~~XSL sits redward of the model~~ — **DONE**. Measured at +4.21 km/s grand
   mean over 12 stars × 6 isolated lines, and applied as a zero point plus a
   per-star departure clipped at ±2 km/s (`fitting.observations.xsl_rv`). Residual

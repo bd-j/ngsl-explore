@@ -1,6 +1,5 @@
 """Stellar-parameter and S/N coverage of NGSL v2.
-Writes figures/parameter_coverage.png and
-figures/explore_libraries/snr_vs_wavelength.png
+Writes figures/explore_libraries/{parameter_coverage,snr_vs_wavelength}.png
 """
 import csv, collections
 import sys
@@ -66,7 +65,8 @@ ax[2].set_title(f'Teff distribution (N={ok.sum()})')
 ax[2].axvspan(9500, 10500, color='#c1440e', alpha=0.25)
 fig.suptitle('NGSL v2 parameter coverage: Teff, log g and scaled-solar [M/H] '
              '(Castelli models on Victoria-Regina isochrones; 107/324 stars alpha-enhanced)')
-fig.tight_layout(); fig.savefig('figures/parameter_coverage.png', dpi=140)
+cov_out = library_figure_path('parameter_coverage.png')
+fig.tight_layout(); fig.savefig(cov_out, dpi=140)
 
 # --- S/N vs wavelength ---
 BANDS = [('2000_2500',2250),('2500_3000',2750),('3000_3600',3300),('3600_4000',3800),
@@ -93,5 +93,5 @@ ax.set_ylabel('S/N per pixel'); ax.legend(fontsize=8)
 ax.set_title('NGSL v2 signal-to-noise (median, 16-84th percentile band)')
 snr_out = library_figure_path('snr_vs_wavelength.png')
 fig.tight_layout(); fig.savefig(snr_out, dpi=140)
-print(f'\n-> figures/parameter_coverage.png, '
-      f'figures/{snr_out.parent.name}/{snr_out.name}')
+print(f'\n-> figures/{cov_out.parent.name}/'
+      f'{{{cov_out.name}, {snr_out.name}}}')

@@ -124,5 +124,5 @@ axes[0].set_ylabel('spectral class')
 fig.suptitle('Where the three libraries overlap: 26 of 42 class x luminosity cells are in all three',
              fontsize=11)
 fig.tight_layout()
-fig.savefig('figures/library_coverage_grid.png', dpi=140)
+fig.savefig(library_figure_path('library_coverage_grid.png'), dpi=140)
 print('-> 4 figures written')

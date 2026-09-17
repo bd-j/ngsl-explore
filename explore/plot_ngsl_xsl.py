@@ -10,7 +10,7 @@ Each observation is put on the same footing before comparison:
         not just width: NGSL is constant in Angstroms per grating (fixed
         dispersion), XSL is constant in velocity (sigma(v) = 13 km/s in UVB).
 
-Writes figures/ngsl_xsl_<star>.png
+Writes figures/explore_libraries/ngsl_xsl_<star>.png
 """
 import csv
 import sys
@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from common.lsf import broaden_ngsl, to_ngsl_pixels
 from common.ngsl_wavecal import apply_wavecal, load_table
 from common.xsl_load import load as load_xsl, resolving_power
+from common.figpath import library_figure_path
 from grid.make_model import hnu_to_flam
 from explore.plot_ngsl_vs_model import (BALMER, PASCHEN, ZOOM_B, ZOOM_P,
                                         WINS_B, WINS_P, WINS_FULL, norm_mask,
@@ -180,7 +181,7 @@ def make_figure(star, xslid, cat):
         f'XSL {stats[1]:.1f}%   XSL@NGSL {stats[2]:.1f}%',
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 0.962])
-    out = ROOT / 'figures' / f'ngsl_xsl_{star}.png'
+    out = library_figure_path(f'ngsl_xsl_{star}.png')
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
     print(f'  {star}: RMS  NGSL {stats[0]:.1f}%  XSL {stats[1]:.1f}%  '

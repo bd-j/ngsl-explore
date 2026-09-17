@@ -8,7 +8,7 @@ import pathlib
 
 FIGURES = {
     '{{FIG_SNR}}': 'figures/explore_libraries/snr_vs_wavelength.png',
-    '{{FIG_COV}}': 'figures/parameter_coverage.png',
+    '{{FIG_COV}}': 'figures/explore_libraries/parameter_coverage.png',
     '{{FIG_BALMER}}': 'figures/balmer_break_candidates.png',
 }
 
