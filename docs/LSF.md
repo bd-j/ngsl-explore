@@ -26,6 +26,13 @@ instrument.
 | truncation | **±15 detector pixels** — 41 Å (G430L), 73 Å (G750L) |
 | power beyond ±10 Å | 2.4% (G430L) — a Gaussian of the same core puts 0.01% there |
 
+Wing fractions quoted throughout are measured on the ±80 Å grid the profiles
+are *fitted* on, so that they compare like with like against the tabulated STIS
+profiles. The ±15 px cut applied in `broaden_ngsl` moves them slightly — G430L's
+2.40% becomes 2.30%, G750L's 11.80% becomes 11.76% — because truncating and
+renormalising removes a little of the outer tail from both numerator and
+denominator.
+
 Uncertainties are star-to-star NMAD over 9 stars. G230LB is not measured — no
 sample star has XSL below 3501 Å — and keeps a 2-pixel placeholder; nothing in
 this project uses it.
@@ -84,7 +91,7 @@ admits scattered light that a narrow one cuts off:
 | 52x0.2 — **NGSL's slit** | 4.04 Å | 0.00% | 0.00% |
 | 52x0.5 | 4.04 Å | **2.56%** | 0.00% |
 | 52x2.0 | 4.05 Å | 8.75% | 4.05% |
-| *fitted Moffat* | *3.54 Å + tail* | ***2.44%*** | *0.52%* |
+| *fitted Moffat* | *3.54 Å + tail* | ***2.44%*** | *0.53%* |
 
 So they bracket the question *how much scattered light does NGSL's delivered
 profile actually carry?*, and three things fall out:
@@ -270,10 +277,9 @@ the Moffat core:
 
 | core FWHM | Balmer core − continuum |
 |---|---|
-| 3.54 Å (adopted) | +2.65% |
-| 3.85 Å | +1.51% |
-| 4.02 Å | +0.77% |
-| 7.00 Å | −4.20% |
+| 3.54 Å (adopted) | +2.68% |
+| 4.02 Å | +0.85% |
+| 7.00 Å | −4.09% |
 
 Any profile can be tuned to zero it. So the cores are not evidence for any
 profile and are not used as such — the fit sees the rms and nothing else.
@@ -303,30 +309,31 @@ width instead of tuning it moves the excess, but across the sample it does not
 move it to anything systematic. Balmer core minus continuum against the models,
 at each star's ML node (`explore/check_predict.py`, which now reports this):
 
-| star | adopted 3.54 Å | old 4.02 Å | wide 7.00 Å |
+| star | adopted 3.54 Å | 4.02 Å | wide 7.00 Å |
 |---|---|---|---|
-| HD143459 | +3.29 | +1.56 | −5.99 |
-| HD164257 | +3.16 | +3.20 | −3.47 |
-| HD194453 | +2.65 | +0.77 | −4.20 |
-| HD164967 | +0.65 | −0.08 | −6.16 |
-| HD174240 | +0.06 | −0.95 | −3.66 |
-| HD166991 | +0.05 | −0.26 | −4.13 |
-| HD147550 | −1.22 | −1.26 | −6.46 |
-| HD167946 | −1.25 | −1.97 | −4.23 |
-| **median, 8 in grid** | **+0.35** | **−0.17** | **−4.22** |
+| HD143459 | +3.41 | +1.77 | −5.80 |
+| HD164257 | +3.18 | +3.25 | −3.32 |
+| HD194453 | +2.68 | +0.85 | −4.09 |
+| HD164967 | +0.68 | −0.05 | −6.02 |
+| HD174240 | +0.17 | −0.90 | −3.54 |
+| HD166991 | +0.07 | −0.24 | −3.92 |
+| HD147550 | −1.17 | −1.18 | −6.33 |
+| HD167946 | −1.21 | −1.92 | −4.06 |
+| **median, 8 in grid** | **+0.42** | **−0.15** | **−4.08** |
 
-The median over the eight in-grid stars is **+0.35%**, scattered −1.25% to
-+3.29% with both signs — consistent with zero at this scatter, and not evidence
-of a systematic core deficit in the models. HD194453 at +2.65% is the high end
+The median over the eight in-grid stars is **+0.42%**, scattered −1.21% to
++3.41% with both signs — consistent with zero at this scatter, and not evidence
+of a systematic core deficit in the models. HD194453 at +2.68% is the high end
 of the distribution, not typical of it.
 
 So the previous conclusion survives in substance: there is no large hydrogen
 NLTE signature here. What does **not** survive is any precise number for the
 residual excess, because the whole column moves by 4.5% between a 3.54 Å and a
-7.00 Å core. The excess is a joint statement about the models and the profile,
+7.00 Å core, and by a further ~0.04% between a ±15 px and a ±40 px truncation of
+the same profile. The excess is a joint statement about the models and the profile,
 and it is only quotable alongside the profile in use.
 
-(An earlier version of this section generalised HD194453's +2.65% and said the
+(An earlier version of this section generalised HD194453's value and said the
 NLTE question was re-opened. Eight stars say it is not.)
 
 ## What the adoption does and does not disturb

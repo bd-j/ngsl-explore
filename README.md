@@ -131,8 +131,8 @@ H_nu, not f_lambda.
   for these stars.
 - The **Balmer line-core residual is consistent with zero**, and is degenerate
   with the instrument profile. Core-minus-continuum against the models has a
-  median of +0.35% over the eight in-grid stars (−1.25% to +3.29%, both signs)
-  under the measured LSF — but −4.22% under a 7.00 Å core, so it can only be
+  median of +0.42% over the eight in-grid stars (−1.21% to +3.41%, both signs)
+  under the measured LSF — but −4.08% under a 7.00 Å core, so it can only be
   quoted alongside the profile in use. None of it is a kernel error: the same
   profile reproduces NGSL's cores from smoothed XSL to +0.01% median over 117
   line×star combinations, with no model involved. See [LSF.md](docs/LSF.md).

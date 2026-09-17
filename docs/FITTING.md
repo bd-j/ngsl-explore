@@ -247,8 +247,13 @@ Per library:
 
 | library | `resolution` | value |
 |---|---|---|
-| NGSL | `('R', 600)` | measured, ±40 |
+| NGSL | `('ngsl', β)` | Moffat, core 3.54 Å (G430L) / 8.38 Å (G750L), β = 1.52 ± 0.16, constant in Å per grating, cut at ±15 px — [LSF.md](LSF.md) |
 | XSL | `('R_segments', …)` | ~9800 UVB, ~11600 VIS — constant in velocity |
+
+The NGSL row used to read `('R', 600)`, "measured, ±40". That was a single
+Gaussian fitted to a profile with a core and a halo; it is retracted in
+[LSF.md](LSF.md), along with the constant-in-velocity behaviour that came with
+it.
 
 ## Code
 
