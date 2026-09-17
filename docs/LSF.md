@@ -115,6 +115,21 @@ Co-adding dithered exposures and resampling redistributes flux and is the
 obvious suspect, but a box cannot make a heavy tail (see below), so that is a
 conjecture and not a result.
 
+**Adopting it was tried and reverted, and here is what it would cost.** The
+tabulated profile varies with wavelength within a grating, so applying it needs
+a chunked convolution — the kernel rebuilt every ~400 Å — where the Moffat needs
+one convolution per grating. Holding a single kernel per grating instead is not
+good enough: it changes the smoothed flux by 2.8 × 10⁻³, comparable to effects
+this project measures, and chunking at 400 Å is converged (4 × 10⁻⁴ against
+chunk = 150 Å). The cost is **21 ms per model evaluation against the Moffat's
+8 ms** on a full 3200–10200 Å log grid, which at ~100k evaluations per node scan
+is roughly 35 min/star against 13. That is affordable but not free, and it buys
+a profile with a 12% worse rms. The Moffat stays.
+
+The argument *for* it, if anyone revisits this: zero fitted parameters, and a
+provenance entirely outside this project. A profile that cannot be tuned cannot
+be tuned wrong.
+
 **The Moffat is adopted over the marginally better two-Gaussian** because its
 second parameter is a *measurement*. Over the nine stars β runs 1.40 to 2.06,
 while the two-Gaussian's broad component scatters from 25 Å to 13574 Å — that
