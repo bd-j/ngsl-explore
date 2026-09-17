@@ -195,20 +195,43 @@ A linear-in-lambda residual of this kind is what a different air-vacuum
 convention produces -- Edlen (1953/1966) vs Ciddor (1996), or different assumed
 temperature/pressure for the air index -- so it is modelled as a line.
 
-`common/ngsl_wavecal.py` fits air->vacuum plus a per-(star, grating)
-correction: linear for G430L (fit rms 0.02-0.20 A, slope -0.5 to -1.2 A per
-1000 A, consistent across stars), robust constant for G750L, which scatters
-window-to-window without a clean trend. G230LB cannot be calibrated this way at
-all -- the models start at 3200 A -- and is left uncorrected rather than given
-a fitted number.
+`explore/ngsl_wavecal_fit.py` MEASURES the correction and
+`common/ngsl_wavecal.py` APPLIES it -- the same split as `explore/ngsl_lsf.py`
+and `common/lsf.py`. Per (star, grating): linear for G430L (fit rms 0.04-0.46 A,
+slope -0.3 to -0.8 A per 1000 A for the in-grid stars), robust constant for
+G750L, which scatters window-to-window without a clean trend. G230LB cannot be
+calibrated this way at all -- the models start at 3200 A -- and is left
+uncorrected rather than given a fitted number.
 
-Residual shift, median over the sample:
+Residual shift over the 5 G430L windows, all 13 calibrated stars:
 
 | stage | mean | scatter | max abs |
 |---|---|---|---|
-| as delivered | -1.41 A | 0.96 | 2.95 |
-| air->vacuum | +0.17 A | 0.57 | 1.11 |
-| air->vacuum + fit | **+0.08 A** | **0.25** | **0.66** |
+| as delivered | -0.81 A | 0.54 | 1.89 |
+| air->vacuum | +0.38 A | 0.50 | 1.95 |
+| air->vacuum + fit | **-0.02 A** | **0.28** | **0.91** |
+
+**THE TABLE MUST BE REFITTED WHEN THE SAMPLE CHANGES, AND A MISSING STAR USED
+TO BE SILENT.** The table was fitted for the four stars of the superseded
+NGSL-only sample and never regenerated for the NGSL n XSL sample, so **nine of
+the thirteen stars had no row and received air->vacuum and nothing else** --
+~0.8 A at the Balmer break, a quarter of a G430L pixel. Nothing failed.
+`apply_wavecal` skipped the missing stars without a word, every figure still
+drew, and the only symptom was an oscillating residual in the Balmer window
+that looked like a modelling problem. It survived for weeks.
+
+Two things changed as a result. `apply_wavecal` now raises a `MissingWavecal`
+warning naming the star, the grating and the refit command, so the state is
+visible rather than inferred. And the fit is driven from `data/sample.csv` plus
+the comparison-figure list rather than from a hand-written candidate file, so
+adding a star to the sample does not quietly leave it uncorrected.
+
+What it did and did not affect, measured rather than assumed: node selection is
+untouched (the NGSL leg is 13 broad tophat bands, whose chi2/N moves by <2%, and
+the XSL leg never sees NGSL's wavelength solution), the adopted LSF core moved
+by 0.007 A because a free shift absorbs misalignment, and the held-out break
+medians moved by <0.5%. The Balmer CORE excess moved from +0.42% to +1.36%,
+because a +/-4 A core mask on a 0.8 A offset samples the wings asymmetrically.
 
 **Watch the sign.** The cross-correlation returns how far the MODEL must move
 to meet the data, so the data are corrected by SUBTRACTING it. Getting this
@@ -228,22 +251,26 @@ resolution and absent at R = 9800.
 **A second correction, to the first version of this entry.** It claimed a winged
 profile "removes 86% of the core excess". That was wrong: **the core excess is
 degenerate with the effective WIDTH, not diagnostic of the SHAPE.** Changing
-only the Moffat core at HD194453's ML node runs it from +2.68% at 3.54 A to
--4.09% at 7.00 A. Any profile can be tuned to zero it.
+only the Moffat core at HD194453's ML node runs it from +2.83% at 3.54 A to
+-3.83% at 7.00 A. Any profile can be tuned to zero it.
 
 **And a third correction, about how far this entry's conclusion reaches.** The
 conclusion -- "the core excess is the instrument profile, not NLTE" -- was
 reached with a width that nulled the excess, so the number attached to it was
 never meaningful. Measured against XSL rather than tuned, the Balmer core minus
-continuum over the eight in-grid stars has a median of **+0.42%**, scattered
--1.21% to +3.41% with both signs. Consistent with zero, so the conclusion
-stands; but the same column reads -4.08% under a 7.00 A core, so no PRECISE
-value for a residual excess can be quoted without naming the profile -- and
-that includes naming where the profile is truncated.
+continuum over the eight in-grid stars has a median of **+1.36%**, scattered
+-1.10% to +4.22% with both signs; a bootstrap 95% interval on the median runs
+-0.63% to +2.83%. Consistent with zero, so the conclusion stands; but the same
+column reads -5.78% under a 7.00 A core, so no PRECISE value for a residual
+excess can be quoted without naming the profile -- and that includes naming
+where the profile is truncated, and which wavelength solution the data carry.
+The core mask is +/-4 A, so an uncorrected ~0.8 A wavelength offset samples the
+line wings asymmetrically: this column read +0.42% before the per-star wavecal
+was refitted for the whole sample (see below).
 
 The model-free half is now much better established, and is the part to rely on:
 under the adopted profile, NGSL's Balmer cores are reproduced from smoothed XSL
-to a median of **+0.01%** over 117 line-star combinations
+to a median of **-0.05%** over 117 line-star combinations
 (`data/ngsl_lsf_lines.csv`). Whatever is left over is not a kernel error. See
 [LSF.md](LSF.md#what-the-cores-can-and-cannot-settle).
 

@@ -30,25 +30,23 @@ Two corrections, applied in order:
    window straddles the Paschen limit, where the fit tracks model line
    positions rather than calibration), so it gets a robust constant instead.
 
-Writes data/ngsl_wavecal.csv
+APPLYING vs MEASURING. This module applies `data/ngsl_wavecal.csv`;
+`explore/ngsl_wavecal_fit.py` measures and writes it. Same split as
+`common/lsf.py` applying what `explore/ngsl_lsf.py` measures.
 """
 import csv
 import sys
+import warnings
 from pathlib import Path
 
-import numpy as np
-from astropy.io import fits
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from grid.make_model import hnu_to_flam
 from common.lines import air_to_vac
 
 ROOT = Path(__file__).resolve().parent.parent
 LAM_REF = 4000.0            # pivot for the linear term, near the Balmer break
-SHIFTS = np.arange(-6.0, 6.01, 0.02)
-MIN_CORR = 0.5
 
-# name, lo, hi, polynomial degree, fitting sub-windows
+# name, lo, hi, polynomial degree, fitting sub-windows.
+# Shared with explore/ngsl_wavecal_fit.py, which fits into this shape.
 SEGMENTS = [
     ('G230LB', 1675.0, 3058.0, 0, [(2600., 3050.)]),
     ('G430L', 3058.0, 5647.0, 1, [(3300., 3700.), (3700., 4100.), (4100., 4600.),
@@ -58,73 +56,49 @@ SEGMENTS = [
 ]
 
 
-def _shift(wo, fo, wm, fm, lo, hi):
-    """Cross-correlation shift (A) aligning model to observation, or nan.
-
-    Returns nan when the window is not covered by both spectra (the models
-    start at 3200 A, so G230LB cannot be calibrated this way), when the peak
-    correlation is poor, or when the peak sits at the search boundary.
-    """
-    lo, hi = max(lo, float(wm[0])), min(hi, float(wm[-1]))
-    if hi - lo < 100.0:
-        return np.nan, np.nan
-    m = (wo > lo) & (wo < hi) & np.isfinite(fo) & (fo > 0)
-    if m.sum() < 80:
-        return np.nan, np.nan
-    x, y = wo[m], fo[m]
-    yn = y / np.polyval(np.polyfit(x, y, 3), x)
-    cc = np.empty_like(SHIFTS)
-    for i, s in enumerate(SHIFTS):
-        mi = np.interp(x, wm + s, fm)
-        cc[i] = np.corrcoef(yn, mi / np.polyval(np.polyfit(x, mi, 3), x))[0, 1]
-    j = int(np.argmax(cc))
-    if cc[j] < MIN_CORR or j in (0, len(SHIFTS) - 1):
-        return np.nan, float(cc[j])
-    return float(SHIFTS[j]), float(cc[j])
+class MissingWavecal(UserWarning):
+    """A star has no fitted correction, so it gets air->vacuum only."""
 
 
-def fit_star(obs_file, model_spec, lsf):
-    """-> {grating: dict(a, b, n, rms)} after the air->vacuum conversion."""
-    d = fits.getdata('data/spectra/' + obs_file)
-    wo, fo = air_to_vac(d['WAVELENGTH'].astype(float)), d['FLUX'].astype(float)
-    wm, hnu, _ = np.loadtxt(model_spec, unpack=True)
-    fm = lsf(wm, hnu_to_flam(wm, hnu))
-    out = {}
-    for name, _, _, deg, wins in SEGMENTS:
-        xs, ys = [], []
-        for lo, hi in wins:
-            s, _ = _shift(wo, fo, wm, fm, lo, hi)
-            if np.isfinite(s):
-                xs.append((lo + hi) / 2 - LAM_REF)
-                ys.append(s)
-        if not xs:
-            out[name] = None
-            continue
-        xs, ys = np.array(xs), np.array(ys)
-        if deg == 1 and len(xs) >= 3:
-            b, a = np.polyfit(xs, ys, 1)
-            rms = float(np.std(ys - (a + b * xs)))
-        else:
-            a, b = float(np.median(ys)), 0.0      # median: robust to one bad window
-            rms = float(np.std(ys - a))
-        out[name] = dict(a=float(a), b=float(b), n=len(xs), rms=rms)
-    return out
+# G230LB (1675-3058 A) cannot be calibrated this way and never will be: the
+# model grid starts at 3200 A, so there is nothing to cross-correlate against.
+# It is left uncorrected deliberately rather than given a fitted number, so a
+# missing row for it is the expected state and must not warn.
+UNCALIBRATABLE = {'G230LB'}
+
+_WARNED = set()
 
 
-def apply_wavecal(wave, star, table):
+def apply_wavecal(wave, star, table, quiet=False):
     """Air->vacuum, then remove the fitted per-grating residual.
 
-    _shift returns s such that the model at (wm + s) matches the observation,
+    The fit returns s such that the model at (wm + s) matches the observation,
     so observed features sit s redward of truth and the data are corrected by
     SUBTRACTING the fitted s(lambda).
+
+    A star with no entry gets air->vacuum and NOTHING ELSE, which is a silent
+    ~0.8 A error at the Balmer break. This used to pass unnoticed: the table was
+    fitted for four stars of the superseded sample and never regenerated, so
+    nine of the thirteen sample stars were uncorrected for weeks while every
+    figure and residual looked plausible. It now warns once per star and
+    grating. Pass quiet=True only when the caller has already established that
+    an uncorrected star is acceptable.
     """
     w = air_to_vac(wave)
     out = w.copy()
     for name, lo, hi, _, _ in SEGMENTS:
+        seg = (w >= lo) & (w < hi)
         c = table.get((star, name))
         if c is None:
+            if (seg.any() and not quiet and name not in UNCALIBRATABLE
+                    and (star, name) not in _WARNED):
+                _WARNED.add((star, name))
+                warnings.warn(
+                    f'no wavelength calibration for {star} {name}: '
+                    f'{int(seg.sum())} pixels get air->vacuum only. '
+                    f'Refit with explore/ngsl_wavecal_fit.py --star {star}',
+                    MissingWavecal, stacklevel=2)
             continue
-        seg = (w >= lo) & (w < hi)
         out[seg] = w[seg] - (c['a'] + c['b'] * (w[seg] - LAM_REF))
     return out
 
@@ -139,32 +113,3 @@ def load_table(path=None):
     return {(r['star'], r['grating']):
             dict(a=float(r['a_A']), b=float(r['b_A_per_A']))
             for r in rd if r['a_A'] != ''}
-
-
-if __name__ == '__main__':
-    from plot_ngsl_vs_model import broaden_ngsl
-    cat = [r for r in csv.DictReader(open(ROOT / 'data' / 'balmer_candidates.csv'))
-           if r.get('selected') != 'no']
-    rows = []
-    print(f'Fitted wavelength correction (after air->vacuum), pivot {LAM_REF:.0f} A')
-    print(f'{"star":<10}{"grating":<8}{"a (A)":>8}{"b (A/1000A)":>13}{"n":>4}{"rms":>7}')
-    for r in cat:
-        spec = ROOT / 'models' / 'work' / f'{r["star"]}.spec'
-        if not spec.exists():
-            continue
-        for g, c in fit_star(r['file'], spec, broaden_ngsl).items():
-            if c is None:
-                rows.append(dict(star=r['star'], grating=g, a_A='', b_A_per_A='',
-                                 n_windows=0, fit_rms_A=''))
-                continue
-            rows.append(dict(star=r['star'], grating=g, a_A=round(c['a'], 4),
-                             b_A_per_A=round(c['b'], 7), n_windows=c['n'],
-                             fit_rms_A=round(c['rms'], 3)))
-            print(f'{r["star"]:<10}{g:<8}{c["a"]:>8.2f}{c["b"]*1000:>13.3f}'
-                  f'{c["n"]:>4}{c["rms"]:>7.2f}')
-    with open(ROOT / 'data' / 'ngsl_wavecal.csv', 'w', newline='') as fh:
-        w = csv.DictWriter(fh, fieldnames=['star', 'grating', 'a_A', 'b_A_per_A',
-                                           'n_windows', 'fit_rms_A'])
-        w.writeheader()
-        w.writerows(rows)
-    print(f'\n{len(rows)} rows -> data/ngsl_wavecal.csv')

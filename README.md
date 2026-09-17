@@ -106,6 +106,15 @@ python3 explore/ngsl_lsf.py              # the measurement (~15 min) + figures
 python3 explore/ngsl_lsf.py --subwindows # constant-A vs constant-R, and the shift
 ```
 
+The wavelength solution — per star, because NGSL took no wavecals with the
+stellar exposures. Rerun this whenever the sample changes: a star with no row
+in the table gets air->vacuum only, which is ~0.8 A of error at the break.
+
+```bash
+python3 explore/ngsl_wavecal_fit.py --selftest   # inject a known shift, recover it
+python3 explore/ngsl_wavecal_fit.py              # -> data/ngsl_wavecal.csv (~2 min)
+```
+
 Fitting — see [docs/FITTING.md](docs/FITTING.md) for what conditions on what:
 
 ```bash
@@ -143,13 +152,18 @@ H_nu, not f_lambda.
   for these stars.
 - The **Balmer line-core residual is consistent with zero**, and is degenerate
   with the instrument profile. Core-minus-continuum against the models has a
-  median of +0.42% over the eight in-grid stars (−1.21% to +3.41%, both signs)
-  under the measured LSF — but −4.08% under a 7.00 Å core, so it can only be
-  quoted alongside the profile in use. None of it is a kernel error: the same
-  profile reproduces NGSL's cores from smoothed XSL to +0.01% median over 117
-  line×star combinations, with no model involved. See [LSF.md](docs/LSF.md).
+  median of +1.36% over the eight in-grid stars (−1.10% to +4.22%, both signs)
+  under the measured LSF — but −5.78% under a 7.00 Å core, so it can only be
+  quoted alongside the profile in use. A bootstrap 95% interval on that median
+  is −0.63% to +2.83%, so it remains consistent with zero. None of it is a
+  kernel error: the same profile reproduces NGSL's cores from smoothed XSL to
+  −0.05% median over 117 line×star combinations, with no model involved. See
+  [LSF.md](docs/LSF.md).
 - **NGSL is in air**, not vacuum, with a linear-in-lambda residual per grating
-  that is recalibrated against the models.
+  that is recalibrated against the models — **per star**, because NGSL derived
+  its zero points from each spectrum's own features. It is ~0.8 Å at the break,
+  a quarter of a G430L pixel, and it has to be refitted whenever the sample
+  changes ([CAVEATS.md](docs/CAVEATS.md)).
 - **NGSL's `STATERR` is optimistic by ~3x**, and its delivered line spread
   function is a **Moffat**: core 3.54 A (G430L) / 8.38 A (G750L), beta = 1.52,
   constant in Angstroms per grating, with ~2.4% of its power beyond ±10 A where

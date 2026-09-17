@@ -123,10 +123,13 @@ The cores are masked as a precaution against a mismatch the models might not
 reproduce, not because a specific one is established. At XSL's own resolution
 the models fit the full Hγ profile, core included, and under the LSF measured
 against XSL the Balmer core minus continuum over the eight in-grid stars has a
-median of **+0.42%**, scattered −1.21% to +3.41% with both signs — consistent
-with zero. That residual is degenerate with the profile's effective WIDTH rather
-than diagnostic of its shape (the same column reads −4.08% under a 7.00 Å core),
-so it is quotable only alongside the profile in use ([LSF.md](LSF.md)). Masking
+median of **+1.36%**, scattered −1.10% to +4.22% with both signs; a bootstrap
+95% interval on that median runs −0.63% to +2.83%, so it is consistent with
+zero. The residual is degenerate with the profile's effective WIDTH rather than
+diagnostic of its shape (the same column reads −5.78% under a 7.00 Å core), and
+it is also sensitive to the wavelength solution — the core mask is ±4 Å, so an
+uncorrected ~0.8 Å offset samples the wings asymmetrically. Quotable only
+alongside both ([LSF.md](LSF.md)). Masking
 the cores costs little — they are a few per cent of the fitted pixels — and
 still protects Teff and log g from absorbing whatever is left.
 

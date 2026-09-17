@@ -131,10 +131,11 @@ single median over the window therefore mixes two different things:
 
 * the **continuum shape across the break** -- the actual question, and
 * the **line-core excess** — measured over the sample under the LSF measured
-  against XSL (docs/LSF.md): median +0.42% over the eight in-grid stars, both
-  signs, consistent with zero. It is degenerate with the profile width (-4.08%
-  at a 7.00 A core), so it is only quotable alongside the profile in use. The
-  "removes 86%" claim is retracted.
+  against XSL (docs/LSF.md): median +1.36% over the eight in-grid stars, both
+  signs, bootstrap 95% CI -0.63% to +2.83%, so consistent with zero. It is
+  degenerate with the profile width (-5.78% at a 7.00 A core) and with the
+  wavelength solution, so it is only quotable alongside both. The "removes 86%"
+  claim is retracted.
 
 Report them separately -- continuum median, core median, and the break metric
 D from `common.balmer_metric`. This also means `balmer_metric`'s blue window
@@ -190,13 +191,16 @@ Three results worth carrying:
 
 **The Balmer core excess, measured over the sample rather than tuned.** Core
 minus continuum at each star's ML node, now reported by
-`explore/check_predict.py`: median **+0.42%** over the eight in-grid stars,
-scattered -1.21% to +3.41%, both signs. Consistent with zero, so "no large
-hydrogen NLTE signature" stands. But the same statistic reads -4.08% under a
-7.00 A core, so it is degenerate with the profile and is only quotable
-alongside it -- including where the profile is truncated, which is worth +0.04%
-on the median between +/-15 px and +/-40 px. NGSL's cores are reproduced from smoothed XSL to +0.01% median
-over 117 line-star combinations, so none of the residual is a kernel error.
+`explore/check_predict.py`: median **+1.36%** over the eight in-grid stars,
+scattered -1.10% to +4.22%, both signs, bootstrap 95% CI -0.63% to +2.83%.
+Consistent with zero, so "no large hydrogen NLTE signature" stands. But the same
+statistic reads -5.78% under a 7.00 A core, so it is degenerate with the profile
+and is only quotable alongside it -- including where the profile is truncated,
+which is worth +0.04% on the median between +/-15 px and +/-40 px, and which
+wavelength solution the data carry, which was worth +0.94% when the per-star
+wavecal was refitted for the whole sample. NGSL's cores are reproduced from
+smoothed XSL to -0.05% median over 117 line-star combinations, so none of the
+residual is a kernel error.
 
 ### LSF conventions, set deliberately
 

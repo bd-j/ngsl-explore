@@ -283,15 +283,15 @@ the NGSL-minus-smoothed-XSL residual in the core, under the adopted profile,
 
 | line | median | | line | median |
 |---|---|---|---|---|
-| Hβ 4862.7 | **+2.20%** | | H9 3836.5 | −0.20% |
-| Hγ 4341.7 | +0.37% | | H10 3799.0 | +0.38% |
-| Hδ 4102.9 | −0.06% | | H11 3771.7 | +0.48% |
-| H7 3971.2 | +0.03% | | H12 3751.3 | −0.48% |
-| H8 3890.2 | −0.91% | | H13–H16 | −0.08% to +0.38% |
-| | | | **all 117 line × star** | **+0.01%** |
+| Hβ 4862.7 | **+2.77%** | | H9 3836.5 | −0.19% |
+| Hγ 4341.7 | +0.58% | | H10 3799.0 | +0.38% |
+| Hδ 4102.9 | −0.20% | | H11 3771.7 | +0.59% |
+| H7 3971.2 | −0.02% | | H12 3751.3 | −0.66% |
+| H8 3890.2 | −0.96% | | H13–H16 | −0.07% to +0.37% |
+| | | | **all 117 line × star** | **−0.05%** |
 
 The adopted profile reproduces NGSL's Balmer cores from XSL to a **median of
-+0.01%**, so the instrument profile is not the thing left over. Hβ at +2.20% is
+−0.05%**, so the instrument profile is not the thing left over. Hβ at +2.77% is
 the one outlier and sits where the core is least well constrained — near the red
 end, and the strongest line in the window.
 
@@ -304,24 +304,31 @@ at each star's ML node (`explore/check_predict.py`, which now reports this):
 
 | star | adopted 3.54 Å | 4.02 Å | wide 7.00 Å |
 |---|---|---|---|
-| HD143459 | +3.41 | +1.77 | −5.80 |
-| HD164257 | +3.18 | +3.25 | −3.32 |
-| HD194453 | +2.68 | +0.85 | −4.09 |
-| HD164967 | +0.68 | −0.05 | −6.02 |
-| HD174240 | +0.17 | −0.90 | −3.54 |
-| HD166991 | +0.07 | −0.24 | −3.92 |
-| HD147550 | −1.17 | −1.18 | −6.33 |
-| HD167946 | −1.21 | −1.92 | −4.06 |
-| **median, 8 in grid** | **+0.42** | **−0.15** | **−4.08** |
+| HD164257 | +4.22 | +2.28 | −5.06 |
+| HD194453 | +2.83 | +0.93 | −3.83 |
+| HD143459 | +2.61 | +1.89 | −5.98 |
+| HD174240 | +1.66 | −0.46 | −4.24 |
+| HD164967 | +1.06 | −0.47 | −7.74 |
+| HD166991 | +0.90 | −0.20 | −5.96 |
+| HD147550 | −0.63 | −1.67 | −6.72 |
+| HD167946 | −1.10 | −2.41 | −5.60 |
+| **median, 8 in grid** | **+1.36** | **−0.33** | **−5.78** |
 
-The median over the eight in-grid stars is **+0.42%**, scattered −1.21% to
-+3.41% with both signs — consistent with zero at this scatter, and not evidence
-of a systematic core deficit in the models. HD194453 at +2.68% is the high end
-of the distribution, not typical of it.
+The median over the eight in-grid stars is **+1.36%**, scattered −1.10% to
++4.22% with both signs. A bootstrap 95% interval on the median runs −0.63% to
++2.83%, so it is still consistent with zero — six of eight stars are positive,
+which a sign test does not distinguish from chance at n = 8 — and it is not
+evidence of a systematic core deficit in the models.
+
+These numbers moved when the per-star wavelength calibration was refitted for
+the whole sample: the core mask is ±4 Å and nine of thirteen stars carried an
+uncorrected ~0.8 Å offset, so the mask was sampling the line wings
+asymmetrically. The previous column read +0.42% median. See
+[CAVEATS.md](CAVEATS.md#a-linear-in-lambda-residual-survives-the-conversion).
 
 So the previous conclusion survives in substance: there is no large hydrogen
 NLTE signature here. What does **not** survive is any precise number for the
-residual excess, because the whole column moves by 4.5% between a 3.54 Å and a
+residual excess, because the whole column moves by 7.1% between a 3.54 Å and a
 7.00 Å core, and by a further ~0.04% between a ±15 px and a ±40 px truncation of
 the same profile. The excess is a joint statement about the models and the profile,
 and it is only quotable alongside the profile in use.
@@ -395,19 +402,23 @@ not the CCD G230LB that NGSL used).
 ## The residual wavelength shift
 
 A shift is fitted alongside every width, because a residual misalignment
-broadens a cross-comparison exactly the way a wider kernel does. Per
-sub-window, G430L:
+broadens a cross-comparison exactly the way a wider kernel does. It is
+model-free — NGSL against smoothed XSL — so it is also the cleanest available
+check on the wavelength solution, and it is what showed the per-star
+calibration working:
 
-```
-shift  -0.036 A at 3850 A  ->  -0.430 A at 4875 A      slope -3.85e-04 A/A
-```
+| G430L fitted shift, 9 stars | median | scatter |
+|---|---|---|
+| before the sample-wide wavecal refit | +0.208 Å | 0.310 |
+| after | **−0.029 Å** | **0.143** |
 
-Identical for `gauss` and `moffat`, so it is a property of the wavelength scale
-and not of the fit. It is **not a velocity**: a constant velocity requires a
-*positive* slope (+2.74e-05 Å/Å for the +8.2 km/s implied), and the measured
-slope is negative. End to end it is 0.395 Å = **0.144 pixels** — residual linear
-wavecal left over from `common/ngsl_wavecal.py`'s own per-grating correction,
-too small to affect a width.
+The before column is what nine stars look like when six of them have no
+wavelength calibration at all (see
+[CAVEATS.md](CAVEATS.md#a-linear-in-lambda-residual-survives-the-conversion)).
+The after column is 0.01 of a G430L pixel, far too small to affect a width —
+which is why the adopted core moved by only 0.007 Å (3.544 → 3.551) when every
+star's wavelengths changed underneath it. A free shift absorbs misalignment;
+that is what it is there for.
 
 XSL's measured +4.21 km/s velocity zero point
 (`fitting.observations.XSL_RV_ZEROPOINT`) is not removed by `common.xsl_load`
