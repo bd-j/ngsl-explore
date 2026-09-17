@@ -16,7 +16,7 @@ by the data:
                 0.1 A boxcar. The boxcar dominates: 0.1 A vs a 0.046 A
                 resolution element at 3646 A.
 
-Writes figures/uves_vs_model_<star>.png
+Writes figures/explore_libraries/uves_vs_model_<star>.png
 """
 import csv
 import sys
@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from grid.make_model import hnu_to_flam, SYNTHE_R
 from common.uves_pop_load import load as load_uves
 from common.extinction_ccm import deredden
+from common.figpath import library_figure_path
 from explore.plot_ngsl_vs_model import (hydrogen_lines, BALMER, PASCHEN, H_MASK_A,
                                OBS_C, MOD_C, SURFACE, INK, MUTED, GRID)
 
@@ -175,7 +176,7 @@ def make_figure(star, p):
            if gapfrac > 0.02 else ''),
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 0.962])
-    out = ROOT / 'figures' / f'uves_vs_model_{star}.png'
+    out = library_figure_path(f'uves_vs_model_{star}.png')
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
     print(f'  {star}: Balmer RMS={rms:.1f}%, Balmer coverage {100*cover[0]:.0f}%, '

@@ -1,4 +1,4 @@
-"""Where a per-star figure goes.
+"""Where a figure goes.
 
 Stars whose catalog [M/H] is below the grid's -0.5 floor cannot be represented
 by any node, so their figures are not comparable with the rest: the fit has to
@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MH_FLOOR = -0.5                  # the model grid's lowest [M/H] node
 BELOW_GRID_DIR = 'fits_mh_below_grid'   # [M/H] outside the grid's reach
 IN_GRID_DIR = 'fits_mh_in_grid'         # representable by some node
+LIBRARY_DIR = 'explore_libraries'       # survey figures, not per-star fits
 
 # Stars the catalog cut sends below the grid but that the models in fact fit.
 # Judged on the metal-line panels (`metal_lines_<star>.png`, in whichever
@@ -89,6 +90,21 @@ def figure_dir(star):
 def figure_path(prefix, star, suffix='.png'):
     """-> figures/fits_mh_{in,below}_grid/<prefix>_<star><suffix>."""
     return figure_dir(star) / f'{prefix}_{star}{suffix}'
+
+
+def library_figure_path(name):
+    """-> figures/explore_libraries/<name>, for the library survey figures.
+
+    These characterise a LIBRARY -- NGSL or UVES-POP against the models, the
+    Pickles atlas, the S/N survey -- rather than fitting one star, so they are
+    not results in the sense the two fit directories are, and mixing them in
+    with per-star figures is what made `figures/` unreadable in the first
+    place. Same reason as figure_dir: the scripts regenerate, so the choice
+    belongs here and not in four separate string literals.
+    """
+    d = ROOT / 'figures' / LIBRARY_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d / name
 
 
 def metal_poor_stars(column='mh_ngsl'):

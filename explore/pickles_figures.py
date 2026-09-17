@@ -1,10 +1,19 @@
-"""Figures for the Pickles atlas report."""
+"""Figures for the Pickles atlas report.
+
+Writes figures/explore_libraries/pickles_*.png
+"""
 import csv
+import sys
+from pathlib import Path
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from astropy.io import fits
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.figpath import library_figure_path
 
 UV, TEAL, AMBER, INK3 = '#4a3fb5', '#0f6d75', '#b07d10', '#727a94'
 pk = list(csv.DictReader(open('data/pickles_catalog.csv')))
@@ -42,7 +51,7 @@ ax[1].set_ylim(0, 1.35)
 ax[1].set_title('Break amplitude vs luminosity class', fontsize=10)
 ax[1].tick_params(labelsize=9)
 fig.tight_layout()
-fig.savefig('figures/pickles_a0_sequence.png', dpi=140)
+fig.savefig(library_figure_path('pickles_a0_sequence.png'), dpi=140)
 
 # --- Fig 2: D_Balmer vs Teff across the atlas -------------------------------
 fig, ax = plt.subplots(figsize=(9, 5.2))
@@ -68,7 +77,7 @@ ax.set_title('Balmer break across the Pickles atlas, Teff > 6000 K\n(below that 
 ax.legend(fontsize=8)
 ax.grid(alpha=.15)
 fig.tight_layout()
-fig.savefig('figures/pickles_break_vs_teff.png', dpi=140)
+fig.savefig(library_figure_path('pickles_break_vs_teff.png'), dpi=140)
 
 # --- Fig 3: Pickles A0V vs the NGSL recommendation --------------------------
 fig, ax = plt.subplots(figsize=(9.5, 5))
@@ -89,7 +98,7 @@ ax.set_title('Template vs individual star: the same break at two resolutions',
              fontsize=11)
 ax.legend(fontsize=8.5, loc='upper left')
 fig.tight_layout()
-fig.savefig('figures/pickles_vs_ngsl.png', dpi=140)
+fig.savefig(library_figure_path('pickles_vs_ngsl.png'), dpi=140)
 
 # --- Fig 4: three-library coverage grid -------------------------------------
 ov = list(csv.DictReader(open('data/library_overlap.csv')))

@@ -7,7 +7,7 @@ import base64
 import pathlib
 
 FIGURES = {
-    '{{FIG_SNR}}': 'figures/snr_vs_wavelength.png',
+    '{{FIG_SNR}}': 'figures/explore_libraries/snr_vs_wavelength.png',
     '{{FIG_COV}}': 'figures/parameter_coverage.png',
     '{{FIG_BALMER}}': 'figures/balmer_break_candidates.png',
 }

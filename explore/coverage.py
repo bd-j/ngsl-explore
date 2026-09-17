@@ -1,11 +1,18 @@
 """Stellar-parameter and S/N coverage of NGSL v2.
-Writes figures/parameter_coverage.png and figures/snr_vs_wavelength.png
+Writes figures/parameter_coverage.png and
+figures/explore_libraries/snr_vs_wavelength.png
 """
 import csv, collections
+import sys
+from pathlib import Path
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common.figpath import library_figure_path
 
 cat = list(csv.DictReader(open('data/ngsl_catalog.csv')))
 snr = {r['target']: r for r in csv.DictReader(open('data/ngsl_snr.csv'))}
@@ -84,5 +91,7 @@ ax.text(3650, 3.5, 'Balmer\nbreak', fontsize=8, ha='center')
 ax.set_yscale('log'); ax.set_xlabel(r'Wavelength [$\AA$]')
 ax.set_ylabel('S/N per pixel'); ax.legend(fontsize=8)
 ax.set_title('NGSL v2 signal-to-noise (median, 16-84th percentile band)')
-fig.tight_layout(); fig.savefig('figures/snr_vs_wavelength.png', dpi=140)
-print('\n-> figures/parameter_coverage.png, figures/snr_vs_wavelength.png')
+snr_out = library_figure_path('snr_vs_wavelength.png')
+fig.tight_layout(); fig.savefig(snr_out, dpi=140)
+print(f'\n-> figures/parameter_coverage.png, '
+      f'figures/{snr_out.parent.name}/{snr_out.name}')

@@ -58,6 +58,9 @@ figures/   comparison and diagnostic figures
              fits_mh_in_grid/     per-star fit figures, grid can reach the star
              fits_mh_below_grid/  the same, for stars below the [M/H] floor
                                   -- segregated, never pooled (common/figpath.py)
+             explore_libraries/   library survey figures: NGSL / UVES-POP vs
+                                  model, the Pickles atlas, the S/N survey
+             ngsl_lsf/            the LSF measurement
 models/    ATLAS12 output and the packed grid (gitignored, ~25 GB)
 ```
 

@@ -30,6 +30,7 @@ from common.lines import hydrogen_lines
 from common.lsf import broaden_ngsl
 from grid.make_model import hnu_to_flam
 from common.ngsl_wavecal import apply_wavecal, load_table
+from common.figpath import library_figure_path
 
 WAVECAL = load_table()
 
@@ -167,7 +168,7 @@ def make_figure(star, cat):
         + (f'     [model only {lo:.0f}-{hi:.0f} $\\AA$]' if narrow else ''),
         fontsize=11, color=INK, linespacing=1.5)
     fig.tight_layout(rect=[0, 0, 1, 0.962])
-    out = ROOT / 'figures' / f'ngsl_vs_model_{star}.png'
+    out = library_figure_path(f'ngsl_vs_model_{star}.png')
     fig.savefig(out, dpi=200, facecolor=SURFACE)
     plt.close(fig)
     print(f'  {star}: D obs={d_obs:.3f} model={d_mod:.3f} ({d_mod-d_obs:+.3f}), '
