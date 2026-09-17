@@ -31,12 +31,17 @@ since catalog values may carry systematics of their own. The Paschen break
 | [docs/FITTING.md](docs/FITTING.md) | what conditions on what, held-out design, error budget |
 | [docs/LSF.md](docs/LSF.md) | the NGSL line spread function: how it was measured and what it is |
 | [docs/CAVEATS.md](docs/CAVEATS.md) | **known issues and traps — read before trusting any number** |
+| [docs/STALE.md](docs/STALE.md) | retracted numbers, superseded designs, dead ends — nothing here is current |
 | [PLAN.md](PLAN.md) | current state and what comes next |
 
 Most of the work in this project turned out to be identifying ways the
 comparison goes silently wrong: wavelength conventions, resolution mismatches,
 reddening, peculiar stars, binaries, detector gaps. CAVEATS.md catalogues them
 with symptoms and fixes.
+
+The four reference documents — DATA, GRID, FITTING, LSF — describe the project
+as it is now. Where a number or a design was retracted along the way, the record
+is in STALE.md rather than in their running text.
 
 ## Layout
 

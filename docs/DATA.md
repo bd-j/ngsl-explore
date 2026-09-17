@@ -24,14 +24,13 @@ Model atmospheres are computed with [ATLAS12 + SYNTHE](https://github.com/cconro
 `explore/build_sample.py` → `data/sample.csv`. 13 stars: 9 primary, 3 secondary
 (binaries, kept and flagged), 1 rejected.
 
-This supersedes the earlier NGSL + UVES-POP sample described further down.
-Two reasons the definition changed:
+HD194453 is the worked example throughout these documents because its NGSL
+**slit offset is 0.00 px**: the wavelength-dependent slit-throughput correction
+is the dominant systematic on break *shape*, and for this star it is
+essentially null (see [CAVEATS.md](CAVEATS.md) for the general case).
 
-* **UVES-POP is no longer fitted.** It has no overlap with NGSL, so it can only
-  ever be a separate sample rather than a cross-check on the same star, and its
-  continuum normalisation is too uncertain to contribute to a break measurement.
-* **The intersection is the point.** Each library supplies something the other
-  cannot, and the break test needs both at once:
+**The intersection is the point.** Each library supplies something the other
+cannot, and the break test needs both at once:
 
   | library | what only it provides |
   |---|---|
@@ -39,8 +38,8 @@ Two reasons the definition changed:
   | XSL | ~16× the resolving power; locally normalised line profiles are **immune to reddening**, so they carry Teff, log g and v sin i free of the dust degeneracy |
 
   A degree-4 polynomial absorbs CCM89 across a 1100 Å window to 3×10⁻⁵, which is
-  what makes the second statement exact rather than approximate. HD040573, a
-  mainstay of the earlier NGSL-only comparison, drops out: XSL never observed it.
+  what makes the second statement exact rather than approximate. Requiring both
+  libraries is what sets the sample size: NGSL alone has many more A stars.
 
 Selection, all enforced in code with the reason recorded and rejected rows kept:
 
@@ -57,12 +56,12 @@ by up to 2900 K for the same star (HD164257: 10885 vs 7977), which is the whole
 reason parameters are fitted here. Requiring agreement would let one catalog's
 systematic define the sample.
 
-`HB*` was previously treated as peculiarity and is not. A field horizontal-branch
-star at 9000–11000 K sits below the ~11500 K Grundahl jump where radiative
-levitation starts, so a scaled-solar atmosphere still describes it; what actually
-disqualifies these stars is low log g and low [M/H], which the grid-coverage flag
-records instead. This reclassification is why HD143459, HD074721 and HD128801 are
-in the sample rather than rejected.
+**`HB*` is not a peculiarity type here.** A field horizontal-branch star at
+9000–11000 K sits below the ~11500 K Grundahl jump where radiative levitation
+starts, so a scaled-solar atmosphere still describes it. What disqualifies these
+stars is low log g and low [M/H], which the grid-coverage flag records instead
+— which is why HD143459, HD074721 and HD128801 are in the sample rather than
+rejected.
 
 **Gaia RUWE caught two binaries that SIMBAD did not**: HD164967 (RUWE = 8.32) and
 HD147550 (1.80), both of which have clean SIMBAD object types. That is the failure
@@ -80,46 +79,6 @@ hard limit on which stars produce quotable parameters, not a bias to be correcte
 | [M/H] | −0.5 … +0.3 | down to −1.92 | HD143459, HD074721, HD164967, HD117880, HD128801, HD106304, HD164257, HD072968 |
 | log g | 3.0 … 5.0 | down to 2.84 | HD128801 |
 | Teff | 8500 … 11500 | down to 7977 (NGSL value) | HD166991, HD164257 |
-
-### Superseded: the earlier NGSL + UVES-POP sample
-
-The tables below describe the sample used for the *catalog-parameter comparison*
-figures, before the fit was set up. Kept because the figures in `figures/` and
-the resolution and flux-offset measurements below were made with it.
-
-#### NGSL — space-based spectrophotometry, R ~ 600 at the break
-
-| star | Teff | log g | [M/H] | E(B-V) | slit offset | notes |
-|---|---|---|---|---|---|---|
-| HD194453 | 10241 | 3.9 | +0.0 | -0.01 | **0.00 px** | primary target |
-| HD040573 | 10200 | 4.2 | -0.4 | 0.06 | 0.36 px | classification and gravity agree |
-| HD128801 | 10123 | 3.7 | -1.9 | 0.03 | 0.58 px | metal-poor comparison; in MILES |
-| HD143459 | 9878 | 3.6 | -0.6 | 0.04 | 0.09 px | horizontal-branch star |
-| ~~HD147550~~ | 10074 | 3.9 | -0.0 | **0.125** | 0.24 px | dropped: reddened |
-
-HD194453 is the primary target because its **slit offset is 0.00 px** — the
-wavelength-dependent slit-throughput correction, the dominant systematic on
-break *shape*, is essentially null for it.
-
-#### UVES-POP — high resolution, resolves the line cores
-
-| star | Teff | log g | [Fe/H] | v sin i | E(B-V) | S/N | notes |
-|---|---|---|---|---|---|---|---|
-| HD162678 | 9908 | 3.53 | +0.03 | 37 | 0.077 | 169 | slowest rotator; best for profiles |
-| HD188294 | 11016 | 4.04 | +0.05 | 182 | 0.040 | 299 | best S/N and lowest reddening |
-| HD162393 | 9955 | 4.05 | -0.55 | 142 | 0.065 | 132 | metal-poor comparison |
-| ~~HD162817~~ | 10153 | 3.66 | +0.11 | 65 | **0.102** | 176 | dropped: reddened |
-| ~~HD162630~~ | 10494 | 3.92 | -0.18 | 46 | 0.01 | 226 | dropped: spectroscopic binary |
-
-UVES-POP spectra are **dereddened** with CCM89 (R_V = 3.1) using the library's
-own fitted E(B-V), and models are rotationally broadened with each star's
-published `v sin i`. Both libraries were screened against Ap/Am peculiarity and
-binarity — see [CAVEATS.md](CAVEATS.md), since neither is caught by parameter
-cuts alone.
-
-The two samples are **disjoint** — no star appears in both — so they are
-independent tests rather than a repeat measurement. Between them they span
-9878-11016 K, log g 3.5-4.2, [M/H] -1.9 to +0.1, and rotation 37-182 km/s.
 
 ### XSL — the only library that overlaps NGSL star by star
 
@@ -228,8 +187,7 @@ HD194453 gives a median flux ratio of **1.011** over 4000–9000 Å, which
 validates the mean level and the unit conversion. It does **not** validate the
 colour, and the colour is the whole dust lever — see
 [the BP/RP discontinuity](#gaia-xp-has-a-discontinuity-at-the-bprp-join) below.
-An earlier version of this section read that 1.011 as validating both
-calibrations, which was too strong a conclusion from a median.
+A median flux ratio is not a colour check.
 
 ### Gaia XP has a discontinuity at the BP/RP join
 
@@ -292,11 +250,9 @@ out 0.1–2.7″.
 (G750L), beta = 1.52, constant in Angstroms per grating, applied with pixel
 integration via `common.lsf.to_ngsl_pixels`.
 
-Three numbers this file used to quote are wrong and are retracted there:
-R = 939 from the STIS tables, R = 665 from pixel sampling, and R = 600 from a
-single-Gaussian fit. The last was a real measurement of the wrong thing -- a
-one-parameter profile standing in for a core plus a halo -- and is what made the
-profile look constant in velocity when its core is constant in Angstroms.
+Earlier resolving powers quoted for NGSL -- R = 939, R = 665 and R = 600 -- are
+retracted; see [STALE.md](STALE.md) for where each came from and why it is
+wrong.
 
 ## NGSL and XSL differ by a grey flux offset
 

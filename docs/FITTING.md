@@ -65,9 +65,7 @@ Teff: along the locus that keeps the conditioning set unchanged, dTeff/dE(B−V)
 
 The effect being chased is 0.02–0.08 mag. So the binding requirement is
 **σ(Teff) ≈ 100 K, about 3× better than Arentsen+2019 achieve for these stars**,
-and the XSL line-profile leg is the critical path. An earlier draft of this
-document called the problem dust-limited; that was wrong, and the correction
-matters because it changes which leg deserves the work.
+and the XSL line-profile leg is the critical path, not the dust lever.
 
 ## The synthetic bands
 
@@ -122,18 +120,15 @@ back into the continuum by 37–41 Å, and the 50%-depth core runs 0.8 Å (Hα) 
 rotator the core mask should grow — v sin i = 200 km/s adds 2.9 Å at Hγ.
 
 The cores are masked as a precaution against a mismatch the models might not
-reproduce, not because a specific one is established. The ~10% NLTE core excess
-this used to cite has not held up: at XSL's own resolution the models fit the
-full Hγ profile, core included, and under the LSF measured against XSL the
-Balmer core minus continuum over the eight in-grid stars has a median of
-**+0.42%**, scattered −1.21% to +3.41% with both signs — consistent with zero.
-That residual is degenerate with the profile's effective WIDTH rather than
-diagnostic of its shape (the same column reads −4.08% under a 7.00 Å core), so
-it is quotable only alongside the profile in use. The earlier claim that a
-winged profile accounts for 86% of it is **retracted**
-([LSF.md](LSF.md), [CAVEATS.md](CAVEATS.md), `explore/ngsl_lsf.py`). Masking
-them costs little — they are a few per cent of the fitted pixels — and still
-protects Teff and log g from absorbing whatever is left.
+reproduce, not because a specific one is established. At XSL's own resolution
+the models fit the full Hγ profile, core included, and under the LSF measured
+against XSL the Balmer core minus continuum over the eight in-grid stars has a
+median of **+0.42%**, scattered −1.21% to +3.41% with both signs — consistent
+with zero. That residual is degenerate with the profile's effective WIDTH rather
+than diagnostic of its shape (the same column reads −4.08% under a 7.00 Å core),
+so it is quotable only alongside the profile in use ([LSF.md](LSF.md)). Masking
+the cores costs little — they are a few per cent of the fitted pixels — and
+still protects Teff and log g from absorbing whatever is left.
 
 **Hε and higher orders are excluded.** They blend into one another so a local
 continuum is not defined: the wing of H8 does not return to within 2% of the
@@ -221,21 +216,16 @@ For NGSL the profile is **measured**: a Moffat with core FWHM 3.54 Å (G430L) /
 XSL over nine stars with no model involved (see [LSF.md](LSF.md)). Use it, via
 `common.lsf.to_ngsl_pixels`.
 
-An earlier version of this section gave **R = 600 ± 40, constant in velocity**.
-That was a single-Gaussian fit to a profile with a core and a halo; the Gaussian
-inflates to split the difference and drifts with wavelength as the halo's weight
-changes, which is what made it look constant in velocity. Retracted in LSF.md.
-
-Leaving `inst` free re-opens its degeneracy with Teff and log g for no gain.
-This is not hypothetical: while the fitter reimplemented its own kernels,
-`kind='R'` ignored the grid spacing and turned a request for R = 600 into R = 83.
-Because `inst` was free, nothing crashed. The kernels now delegate to
-`common.lsf`, and `Observation.resolution` is a property of the instrument.
+Leaving `inst` free re-opens its degeneracy with Teff and log g for no gain, and
+it masks kernel bugs: a free `inst` will absorb a broadening error instead of
+failing on it. The kernels therefore delegate to `common.lsf`, and
+`Observation.resolution` is a property of the instrument, not a fitted
+parameter.
 
 **NGSL cannot measure v sin i below ~150 km/s.** Fractional model change after
-grey rescaling, 3300–9400 Å at NGSL's resolution (the table below was computed
-under the superseded R = 600 Gaussian; the conclusion is unchanged, since the
-adopted profile is wider still once the halo is counted):
+grey rescaling, 3300–9400 Å at NGSL's resolution (computed under a 600 Gaussian
+rather than the adopted Moffat; the conclusion is unchanged, since the adopted
+profile is wider still once the halo is counted):
 
 | change | rms | | change | rms |
 |---|---|---|---|---|
@@ -255,18 +245,12 @@ Per library:
 | NGSL | `('ngsl', β)` | Moffat, core 3.54 Å (G430L) / 8.38 Å (G750L), β = 1.52 ± 0.16, constant in Å per grating, cut at ±15 px — [LSF.md](LSF.md) |
 | XSL | `('R_segments', …)` | ~9800 UVB, ~11600 VIS — constant in velocity |
 
-The NGSL row used to read `('R', 600)`, "measured, ±40". That was a single
-Gaussian fitted to a profile with a core and a halo; it is retracted in
-[LSF.md](LSF.md), along with the constant-in-velocity behaviour that came with
-it.
-
 ## Code
 
 ```
 common/lines.py           hydrogen line positions, named Balmer members, ISM
-                          lines. ONE definition -- hydrogen_lines previously
-                          existed twice, in fitting/fit.py and again in
-                          explore/plot_ngsl_vs_model.py.
+                          lines, and the air->vacuum conversion. ONE definition
+                          of each, imported everywhere.
 common/species.py         dominant species per window, Saha-Boltzmann weighted
                           against the Kurucz line list.
 common/photometry.py      sedpy filter projection, shared by model and data.
@@ -297,7 +281,7 @@ exact lookup.
 Still to write: `likelihood.py` (marginalised, with the log-det term) and
 `scan.py` (the 1705-node driver). See [../PLAN.md](../PLAN.md).
 
-## Traps, all hit before being fixed
+## Traps
 
 * **sedpy silently integrates a truncated bandpass.** `obj_counts_hires` has its
   "source does not span filter" assertion commented out, so a source truncated
@@ -313,23 +297,11 @@ Still to write: `likelihood.py` (marginalised, with the log-det term) and
   1.011 validates the mean *level*, not the *colour*, and the colour is the
   whole lever. This is why the dust constraint comes from NGSL alone.
 * **A band at exactly 3200 Å is silently dropped** for a spectrum starting at
-  3201 Å, because `tophat` tapers ~10 Å past each edge. That cost the bluest and
-  most important band once already; `NGSL_BAND_RANGE` is now inset.
+  3201 Å, because `tophat` tapers ~10 Å past each edge. `NGSL_BAND_RANGE` is
+  inset to keep the bluest and most important band.
 
-## Superseded
+## What this design replaced
 
-The earlier design fitted the whole NGSL spectrum with emcee over free Teff,
-log g, [M/H], E(B−V), v sin i, `inst`, RV and an error scale, with the break
-*included* in the fit and a `DustPrior` doing the work of separating Teff from
-reddening. It lived in `fitting/fit.py`, which has been **deleted** — it kept a
-second copy of the forward model, which is exactly the drift that once turned a
-request for R = 600 into R = 83.
-
-Two things killed it. A Gaussian dust prior **does not bite**: with 1466 pixels
-and a free error scale the likelihood formally measures E(B−V) to ~0.001, so
-N(0.00, 0.02) came back 2σ out at 0.038. And fitting the break to then report
-its residual answers a different question from the one at the top of this file.
-
-UVES-POP is no longer fitted at all — it shares no star with NGSL, so it can
-only be a separate sample rather than a cross-check on the same object, and its
-continuum normalisation is too uncertain for a break measurement.
+The emcee whole-spectrum fitter, its dust prior and the reasons both were
+abandoned are recorded in [STALE.md](STALE.md), along with every retracted
+number this document used to quote.

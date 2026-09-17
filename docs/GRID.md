@@ -100,9 +100,8 @@ reasons:
   is R ≈ 600, XSL ≈ 9800, UVES-POP ≈ 18,000. The fitter convolves from the
   native grid to whichever instrument it is fitting.
 
-Over the full grid that would have been **~19 GB and ~2.4 hours** of pure
-waste; 385 such files (4.2 GB) were written before this was noticed and have
-been deleted. Pass `--no-csv` to `make_model.py` for any bulk use; omit it for a
-single star if you want the convenience file.
+Over the full grid it would come to **~19 GB and ~2.4 hours** of pure waste.
+Pass `--no-csv` to `make_model.py` for any bulk use; omit it for a single star
+if you want the convenience file.
 
 All of `models/` is gitignored: 25 GB, and fully regenerable from this script.

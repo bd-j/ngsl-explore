@@ -12,9 +12,8 @@ from common.lsf import broaden_ngsl       # just the kernel, if you must
 ```
 
 `broaden_ngsl` is the only NGSL kernel in the project. There is no Gaussian
-alternative and no `tabulated=True` switch, because two live broadening paths
-is what previously let the fitter and the comparison figures disagree about the
-instrument.
+alternative and no `tabulated=True` switch: two live broadening paths let the
+fitter and the comparison figures disagree about the instrument, silently.
 
 | | |
 |---|---|
@@ -179,20 +178,15 @@ Balmer-anchored G430L windows, 9 stars each:
 The Moffat core is flat and tracks the tables' own mild wavelength dependence.
 A single Gaussian looks nearly constant in R.
 
-**This resolves the project's longest-running contradiction.** The record
-previously carried "R = 600 ± 40, constant in velocity, 7% scatter against 41%
-for constant-Ångström" *and* "width is constant in Ångströms per grating, as the
-tables say", in the same files. Both were reporting real measurements. The first
-came from fitting Gaussians: a one-parameter profile forced to represent a core
-plus a halo drifts with wavelength as the halo's relative weight changes, and
-the drift mimics constant-R. Give the profile a tail and the core stops moving.
+**A single Gaussian cannot tell the two apart.** Forced to represent a core plus
+a halo, it drifts with wavelength as the halo's relative weight changes, and
+that drift mimics constant-R. Give the profile a tail and the core stops moving.
+This is why a Gaussian fit to these data returns an apparent resolving power
+that is neither a width nor a resolution ([STALE.md](STALE.md)).
 
-`NGSL_R_MEASURED = 600` has been **removed**, not kept for reference. It is
-neither a width nor a resolution.
-
-Every sub-window is anchored on a Balmer line on purpose. A 5100–5647 Å window
-was tried and 4 of 9 stars walked their fit to the guard, the survivors
-scattering by ±0.95 Å: the red end of G430L has almost no features in an A star.
+Every sub-window is anchored on a Balmer line on purpose: the red end of G430L
+has almost no features in an A star, and a line-free window lets the fit walk to
+its guard.
 
 ## The sampling convention
 
@@ -230,10 +224,9 @@ G750L.
 
 Pixels rather than FWHM, for two reasons. It is the unit the instrument works
 in; and it keeps the kernel's reach comparable to the tabulated STIS profiles,
-which stop at ±20 px. Cutting at a fixed number of FWHM instead — an earlier
-convention, 40 × FWHM — gave the G750L kernel a 335 Å reach against G430L's
-142 Å, the same profile behaving differently in the two gratings for no
-instrumental reason.
+which stop at ±20 px. Cutting at a fixed number of FWHM instead makes the same
+profile behave differently in the two gratings for no instrumental reason,
+because their pixel scales differ.
 
 15 px keeps the profile's effect **local**, which is the point: the empirical
 STIS LSFs are compact, and a kernel reaching 300 Å makes a claim about scattered
@@ -333,8 +326,8 @@ residual excess, because the whole column moves by 4.5% between a 3.54 Å and a
 the same profile. The excess is a joint statement about the models and the profile,
 and it is only quotable alongside the profile in use.
 
-(An earlier version of this section generalised HD194453's value and said the
-NLTE question was re-opened. Eight stars say it is not.)
+The eight-star median is the number to quote. A single star's value is not: the
+scatter spans both signs, so one star can be made to say almost anything.
 
 ## What the adoption does and does not disturb
 
@@ -421,22 +414,13 @@ XSL's measured +4.21 km/s velocity zero point
 and does not need to be: at 4000 Å it is 0.056 Å, 2% of a G430L pixel, and the
 free shift absorbs it whole.
 
-## History
+## Why every fitted parameter is written to CSV
 
-Three superseded scripts are kept in [`explore/superseded/`](../explore/superseded/)
-with a README recording what each got wrong. In short:
-
-* **`ngsl_lsf_from_xsl.py`** fitted Gaussians and reported R = 600. Correct as a
-  Gaussian fit; not a line spread function.
-* **`ngsl_lsf_shape.py`** compared profile families on a single 400 Å window and
-  selected the winner on leftover Balmer core excess — a criterion this project
-  had already retracted as degenerate with width.
-* **`ngsl_core_excess.py`** produced the retracted "a winged profile removes 86%
-  of the core excess" claim.
-
-And the adopted constants were not reproducible from the committed code:
-`common/lsf.py` carried a 4.02 Å G430L core, an 8.34 Å G750L core and β = 1.6,
-while the committed `ngsl_lsf_shape.csv` gives a median core of 4.096 Å and
-β = 1.556, and **no script in the repository fitted G750L at all**. That is why
 `ngsl_lsf.py` writes every fitted parameter for every star, grating, profile and
-sampling convention to a CSV that the adopted numbers are a stated reduction of.
+sampling convention to `data/ngsl_lsf_*.csv`, and the adopted constants at the
+top of this document are a stated reduction of that table.
+
+That is deliberate. The adopted constants were once **not reproducible from the
+committed code** — the superseded scripts, the numbers they produced and the
+mismatch are recorded in [STALE.md](STALE.md). Writing the full table means the
+adopted numbers can always be re-derived from what is in the repository.
