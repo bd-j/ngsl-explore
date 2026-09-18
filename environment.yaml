@@ -1,0 +1,60 @@
+# Environment for the Balmer-break project.
+#
+#   conda env create -f environment.yaml
+#   conda activate balmer
+#
+# WHY THIS FILE EXISTS. The work up to now was done in the *unactivated*
+# miniconda3 root install -- no environment was active at all, and `python3`
+# simply fell through to /Users/bjohnson/miniconda3/bin/python3. That is easy to
+# reproduce by accident and impossible to reproduce on purpose, and it matters
+# here because the committed figures and the adopted LSF and wavecal constants
+# are reproducible to the byte only against a fixed set of versions.
+#
+# Note there are two conda installations on this machine and they are crossed:
+# `conda` itself comes from miniforge3 (which owns base, c3k, jades, ...) while
+# the python3 on PATH came from miniconda3. Activating `balmer` removes that
+# ambiguity.
+#
+# VERSIONS ARE PINNED EXACTLY, not loosely. These are the versions that produced
+# the committed results. matplotlib in particular is not cosmetic: rendering the
+# same figure under a different release moves several thousand anti-aliasing
+# pixels on contour paths, which shows up as a confusing diff in figures/ that
+# has nothing to do with the science. Relax a pin deliberately, not by default.
+#
+# NOT MANAGED HERE: ATLAS12 and SYNTHE are external Fortran binaries built
+# outside conda and located through the $ATLAS12 environment variable. See
+# docs/GRID.md.
+
+name: balmer
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.13.12
+
+  # core numerics -- the grid, the kernels, the linear calibration solve
+  - numpy=2.5.0
+  - scipy=1.18.1
+
+  # spectra and catalogs: FITS io, SIMBAD/VizieR/Gaia queries
+  - astropy=8.0.0
+  - astroquery=0.4.11
+
+  # every figure in figures/
+  - matplotlib=3.11.1
+
+  # reads the NGSL delivery PDFs (explore/extract_docs.py)
+  - pypdf=6.16.2
+
+  # C3K comparison (fitting/compare-c3k_v2.3.py). Listed because that script
+  # needs it; it was NOT installed in the root environment this work ran in, so
+  # the script could not have run there.
+  - h5py
+
+  - pip
+  - pip:
+      # Filter projection for the synthetic photometry (common/photometry.py).
+      # Distribution name is astro-sedpy, import name is sedpy. pip rather than
+      # conda because that is how it is installed here.
+      - astro-sedpy==0.4.1

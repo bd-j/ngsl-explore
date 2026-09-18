@@ -33,6 +33,7 @@ since catalog values may carry systematics of their own. The Paschen break
 | [docs/CAVEATS.md](docs/CAVEATS.md) | **known issues and traps — read before trusting any number** |
 | [docs/STALE.md](docs/STALE.md) | retracted numbers, superseded designs, dead ends — nothing here is current |
 | [PLAN.md](PLAN.md) | current state and what comes next |
+| [environment.yaml](environment.yaml) | the `balmer` conda environment, pinned |
 
 Most of the work in this project turned out to be identifying ways the
 comparison goes silently wrong: wavelength conventions, resolution mismatches,
@@ -73,6 +74,8 @@ models/    ATLAS12 output and the packed grid (gitignored, ~25 GB)
 ## Pipeline
 
 ```bash
+conda env create -f environment.yaml   # once
+conda activate balmer
 export ATLAS12=/path/to/atlas12
 
 ./explore/fetch_ngsl.sh                  # NGSL, docs, STIS LSFs, Pickles atlas
