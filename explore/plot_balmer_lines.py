@@ -68,7 +68,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # comparable BETWEEN members and between stars. Per-panel autoscaling would
 # make a 1% core residual and a 10% one look identical, which is the one
 # comparison this figure exists to support.
-RLIM = (-15., 15.)
+RLIM = (-10., 10.)
 
 # Members drawn, blue-ward first so the figure reads down the series the way
 # the break does. Anything unusable for a given star drops out in `run`.
@@ -209,7 +209,7 @@ def figure(star, panels, stats, p):
         residual_panel(axr, d['view'].wavelength,
                        [(d['resid'], d['used'], d['pred'], [d['incore']])],
                        lo, hi,
-                       ylim=RLIM, marks=marks, ylabel='resid [%]',
+                       ylim=RLIM, marks=marks, ylabel='data−model [%]',
                        xlabel=(i == last_in_col[c]),
                        bands=[(d['lam'] - d['core'], d['lam'] + d['core'])])
         axr.axvline(d['lam'], color=MUTED, ls='--', lw=1)
@@ -244,7 +244,7 @@ def figure(star, panels, stats, p):
     axs.set_xticklabels([member_name(n) for n in ns])
     axs.set_xlabel('Balmer member (upper level n)', fontsize=9, color=INK)
     axs.set_ylabel('core residual, median [%]', fontsize=9, color=INK)
-    axs.set_title('The series — core (obs−model)/model against line order;  '
+    axs.set_title('The series — core (data − model)/model against line order;  '
                   'bars are the SCATTER within the core, not an error on the '
                   'median', fontsize=9, color=INK)
     axs.legend(fontsize=8, framealpha=.92)
@@ -258,7 +258,9 @@ def figure(star, panels, stats, p):
     fig.suptitle(
         f'{star} — the Balmer series in XSL\n{line2}\n'
         'every core is a prediction; from Hε up so is every wing — '
-        'shaded = masked core, faded = pixels that set the scale',
+        'shaded = masked core, faded = pixels that set the scale\n'
+        'residuals are (DATA − MODEL)/model, so positive means the '
+        'observation is brighter than the model',
         fontsize=11, color=INK, linespacing=1.5)
     out = figure_path('balmer_lines', star)
     fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches='tight')

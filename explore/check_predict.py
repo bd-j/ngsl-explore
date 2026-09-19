@@ -71,7 +71,12 @@ BALMER, PASCHEN = 3646.0, 8205.9
 # error the NGSL number still carries. They agree on the SIGN and shape of a
 # core excess, not on its size.
 H10_H11_N = (11, 10)
-H10_H11_RLIM = (-15., 15.)      # the Balmer break panel's range, deliberately
+# +/-10%, which is TIGHTER than the NGSL Balmer break panel's +/-15% in the
+# same figure. The two are not asked to show the same thing: the NGSL panel has
+# to hold the whole high-order core excess at 1.4 A pixels, while these cores
+# are resolved and sit well inside 10%. Anything that does leave the range is
+# named by specplot.offscale_note rather than silently cropped.
+H10_H11_RLIM = (-10., 10.)
 
 
 def nearest_node(grid, teff, logg, mh):
@@ -392,7 +397,7 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
                      transform=axr.transAxes, ha='right', va='bottom',
                      fontsize=6.5, color=HELD_C,
                      bbox=dict(fc='white', ec='none', alpha=.8, pad=1.5))
-        axr.set_ylabel('(obs−model)/model [%]', fontsize=8, color=INK)
+        axr.set_ylabel('(data − model)/model [%]', fontsize=8, color=INK)
         axr.set_xlabel(r'$\lambda$ [$\AA$]', fontsize=8, color=INK)
 
     if xs is not None:
@@ -457,7 +462,7 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
     for win in (BREAK_WINDOW, PASCHEN_WINDOW):
         axb.axvspan(*win, color=HELD_C, alpha=.13, lw=0)
     axb.set_xlabel(r'band effective $\lambda$ [$\AA$]', fontsize=9, color=INK)
-    axb.set_ylabel('(obs−model)/model [%]', fontsize=9, color=INK)
+    axb.set_ylabel('(data − model)/model [%]', fontsize=9, color=INK)
     axb.set_title('NGSL band residuals — the dust lever '
                   '(error bars = 1% calibration floor)', fontsize=9, color=INK)
     axb.legend(fontsize=8, framealpha=.92)
@@ -473,12 +478,16 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
                  f'over 1705 nodes'
                  + ('   ⚠ [M/H] AT THE GRID FLOOR' if node['at_mh_floor'] else ''))
         line3 = ('E(B−V) and v sin i are fitted at every node; the held-out '
-                 'Balmer and Paschen windows are never fitted')
+                 'Balmer and Paschen windows are never fitted\n'
+                 'every residual panel is (DATA − MODEL)/model, so positive '
+                 'means the observation is brighter than the model')
     else:
         line2 = (f'nominal Teff={row["teff_ngsl"]} / log g={row["logg_ngsl"]} / '
                  f'[M/H]={row["mh_ngsl"]}')
         line3 = (f'held fixed: E(B−V)={fixed.get("ebv", 0.0):.3f}, '
-                 f'v sin i={fixed.get("vsini", 0.0):.0f} km/s')
+                 f'v sin i={fixed.get("vsini", 0.0):.0f} km/s\n'
+                 'every residual panel is (DATA − MODEL)/model, so positive '
+                 'means the observation is brighter than the model')
     fig.suptitle(
         f'{star}   conditioning = NGSL bands + XSL lines;   '
         f'Balmer and Paschen held out\n{line2}\n{line3}',

@@ -120,7 +120,8 @@ def offscale_note(ax, values_pct, ylim, color=HELD_C):
 
 
 def residual_panel(ax, w, models, lo, hi, bands=(), ylim=None, marks=(),
-                   ylabel='(obs−model)/model [%]', xlabel=True, note=True):
+                   ylabel='(data − model)/model [%]', xlabel=True,
+                   note=True):
     """Fractional residuals over one window, fitted and predicted drawn apart.
 
     models  [(resid, used, pred[, median_masks])] per model curve, in
