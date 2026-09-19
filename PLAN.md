@@ -45,9 +45,9 @@ extracted; `observations.py`, `predict.py`, `calibration.py`,
 `common/{lines,species,photometry,specplot}.py`; XSL fit regions with measured
 metal windows and a measured velocity zero point; `fitting/fit.py` retired.
 
-**Figures:** `predict_check_<star>.png` and `metal_lines_<star>.png` are now
-produced for **every star at its node-scan ML parameters** (`--all` on both
-scripts; Teff, log g, [M/H], E(B−V) and v sin i all from the same fit, via the
+**Figures:** `predict_check_<star>.png`, `balmer_lines_<star>.png` and
+`metal_lines_<star>.png` are now produced for **every star at its node-scan ML
+parameters** (`--all` on all three scripts; Teff, log g, [M/H], E(B−V) and v sin i all from the same fit, via the
 shared `fitting.scan.best_node`). Species labels come from the nearest grid
 atmosphere rather than a bespoke `models/work/` run, so all 12 are labelled
 instead of the 3 that happened to have one.
@@ -57,6 +57,7 @@ All per-star fit figures are routed by `common/figpath.py` into
 `figures/`:
 
 `predict_check_<star>.png` (conditioning vs held-out),
+`balmer_lines_<star>.png` (per-member, cores predicted),
 `metal_lines_<star>.png` (per-feature, species-labelled),
 `ebv_teff_<star>.png` (χ² surface),
 `scan_<star>.png` (the node scan).

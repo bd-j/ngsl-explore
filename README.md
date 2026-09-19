@@ -128,6 +128,8 @@ python3 explore/xp_vs_ngsl.py            # XP vs NGSL band ratios (why XP is not
 
 python3 explore/check_predict.py  --star HD194453   # end-to-end smoke test
 python3 explore/plot_metal_lines.py --star HD194453 # per-feature model vs data
+python3 explore/plot_balmer_lines.py --star HD194453 # per-member model vs data,
+                                               # Hα..H12, cores all predicted
 python3 explore/plot_ebv_teff.py  --star HD194453   # chi2 surface, Teff vs E(B-V)
 ```
 

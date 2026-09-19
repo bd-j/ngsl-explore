@@ -13,6 +13,12 @@ Every NGSL pixel is therefore used at most once, and both breaks are
 predictions rather than fits. The hydrogen lines are used from neither -- XSL
 resolves them ~16x better for these same stars.
 
+The figure also carries an H11 + H10 row at XSL resolution. Those two members
+lie inside the held-out NGSL window and are fitted by nothing in either
+dataset, so they are predictions on the same footing as the breaks -- and they
+are the one view of the Balmer core excess that is not dominated by the NGSL
+instrument profile. The whole series is in explore/plot_balmer_lines.py.
+
     python3 explore/check_predict.py --star HD194453
 """
 import argparse
@@ -31,9 +37,11 @@ from fitting.observations import (load_ngsl, conditioning_set, heldout,
                                   ngsl_band_edges, BREAK_WINDOW, PASCHEN_WINDOW)
 from fitting.predict import predict
 from fitting.calibration import solve, residual, chi2, usable
-from common.specplot import (spectrum_panel, style, OBS_C, MOD_C, MOD2_C,
-                             BAND_C, HELD_C, SURFACE, INK, MUTED)
+from common.specplot import (spectrum_panel, residual_panel, offscale_note,
+                             style, OBS_C, MOD_C, MOD2_C, BAND_C, HELD_C,
+                             SURFACE, INK, MUTED)
 from common.lines import hydrogen_lines
+from common.balmer import member_panel, merge_members, core_stat, wing_stat
 
 from common.figpath import figure_path
 from common.sample import sample_row
@@ -42,6 +50,28 @@ ROOT = Path(__file__).resolve().parent.parent
 CORE_HALF_A = 4.0        # Balmer 'core' half-width, ~1.5 G430L pixels
                          # -- the same definition explore/ngsl_lsf.py uses
 BALMER, PASCHEN = 3646.0, 8205.9
+
+# The two high-order members shown at XSL resolution. Both sit INSIDE the
+# held-out NGSL window (3550-4000 A) and neither is fitted by anything -- XSL
+# conditions on H-alpha through H-delta and the metal windows only -- so every
+# pixel of that panel is a prediction from both datasets, exactly like the
+# break panels above it.
+#
+# They are here because the NGSL core excess cannot be interpreted on its own.
+# It is degenerate with the instrument profile: at HD194453 it runs +2.65% at a
+# 3.54 A Moffat core to -4.20% at 7.00 A (docs/LSF.md). XSL resolves the same
+# lines with a 0.39 A FWHM at H10, ~10x narrower than the NGSL core, so the
+# same excess measured there is ~10x less sensitive to the LSF -- which is what
+# makes it an independent check rather than a restatement.
+#
+# NOTE the two numbers are not the same quantity and must not be read as one.
+# core_excess() below is measured against the NGSL window's own continuum under
+# a single scalar from the bands; the XSL core residual is measured against an
+# order-1 scale solved on that line's own wings, which absorbs a continuum
+# error the NGSL number still carries. They agree on the SIGN and shape of a
+# core excess, not on its size.
+H10_H11_N = (11, 10)
+H10_H11_RLIM = (-15., 15.)      # the Balmer break panel's range, deliberately
 
 
 def nearest_node(grid, teff, logg, mh):
@@ -187,7 +217,7 @@ def main():
 
 def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
                   vsini, node=None):
-    results, xsl_cal = {}, {}
+    results, xsl_cal, hiord = {}, {}, {}
     for label, th in thetas:
         print(f'\n  {label}:')
         pb = predict(th, [nb], grid)[0]
@@ -234,11 +264,28 @@ def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
             print(f'    xsl     chi2/N = '
                   f'{chi2(xs, cal_x) / max(int(ux.sum()), 1):7.2f}'
                   f'   rms = {100 * np.nanstd(rx[ux]):5.2f}%   n={int(ux.sum())}')
+
+            # H11 and H10 at XSL resolution. Nothing fits them, so these are
+            # predictions on the same footing as the break windows -- and they
+            # are the LSF-independent version of the core excess the Balmer
+            # panel reports. See H10_H11_N.
+            merged = merge_members([member_panel(xs, px.value, n)
+                                    for n in H10_H11_N])
+            if merged is not None:
+                hiord[label] = merged
+                for d in merged['members']:
+                    cs, ws = core_stat(d), wing_stat(d)
+                    if cs is None:
+                        continue
+                    print(f'    H{d["n"]:<6d} PREDICTED  core   {cs[0]:+6.2f}%'
+                          f'   rms {cs[1]:5.2f}%   n={cs[2]}'
+                          f'   (over ±{d["core_hw"]:.1f} A, masked ±'
+                          f'{d["core"]:.1f} A; wings {ws:+.2f}%)')
         results[label] = dict(cal_b=cal_b, rb=rb, ub=ub, scalar=c[0],
                               model_spec=model_spec, hres=hres)
 
     figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
-           fixed=dict(ebv=ebv, vsini=vsini), node=node)
+           fixed=dict(ebv=ebv, vsini=vsini), node=node, hiord=hiord)
     labels = list(results)
     return dict(star=star, ebv=ebv, vsini=vsini,
                 balmer=float(np.nanmedian(results[labels[0]]['hres']['Balmer'])),
@@ -246,11 +293,19 @@ def _fit_and_draw(star, grid, row, bands, nb, xs, spec, held, thetas, ebv,
 
 
 def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
-           fixed=None, node=None):
+           fixed=None, node=None, hiord=None):
     labels = list(results)
-    fig = plt.figure(figsize=(12.5, 14))
-    gs = fig.add_gridspec(5, 2, height_ratios=[1.9, 1.5, 0.95, 1.4, 1.3],
-                          hspace=.48, wspace=.22)
+    # The high-order row is conditional: a star with no XSL, or whose XSL does
+    # not reach 3760 A, gets the figure it always got rather than two blank
+    # panels claiming a check that was not made.
+    hiord = hiord or {}
+    heights = [1.9, 1.5, 0.95, 1.4] + ([1.35, 0.85] if hiord else []) + [1.3]
+    fig = plt.figure(figsize=(12.5, 15 + (3.0 if hiord else 0)))
+    # hspace was .48, which already let every row's title sit on the xlabel of
+    # the row above it; a seventh row and a two-line title made that collision
+    # unreadable rather than merely untidy.
+    gs = fig.add_gridspec(len(heights), 2, height_ratios=heights,
+                          hspace=.62, wspace=.22)
     fig.patch.set_facecolor(SURFACE)
     m = spec.mask
 
@@ -348,7 +403,49 @@ def figure(star, nb, spec, xs, held, results, xsl_cal, row, bands,
                            [(f'model, {lab}', xsl_cal[lab]) for lab in labels],
                            lo, hi, title=ttl, legend=(col == 0))
 
-    axb = fig.add_subplot(gs[4, :])
+    if hiord:
+        first = hiord[labels[0]]
+        lo, hi = first['window']
+        axh = fig.add_subplot(gs[4, :])
+        spectrum_panel(
+            axh, first['view'],
+            [(f'model, {lab}', hiord[lab]['cal']) for lab in labels], lo, hi,
+            obs_label='XSL (solid = sets the local scale)')
+        axh.set_xlabel('')
+        axh.tick_params(labelbottom=False)
+        # Legend bottom RIGHT and the line names at the TOP: the bottom left of
+        # this panel is H11's core and the tops of the line centres are the one
+        # part of an absorption panel guaranteed to be empty.
+        axh.legend(fontsize=7, loc='lower right', framealpha=.92)
+        bits = []
+        for d in first['members']:
+            axh.axvline(d['lam'], color=MUTED, ls='--', lw=1)
+            axh.text(d['lam'], 0.97, f'H{d["n"]}', fontsize=8, color=INK,
+                     transform=axh.get_xaxis_transform(), ha='center',
+                     va='top',
+                     bbox=dict(fc=SURFACE, ec='none', alpha=.85, pad=1.5))
+            cs = core_stat(d)
+            if cs is not None:
+                bits.append(f'H{d["n"]} {cs[0]:+.2f}%')
+        axh.set_title(
+            'XSL, ~16× the NGSL resolution — H11 and H10 are inside the '
+            'held-out window and fitted by NOTHING\n'
+            'core residual ' + ', '.join(bits)
+            + '   (shaded = masked core, predicted; the local scale is solved '
+              'on the wings only)', fontsize=9, color=INK, linespacing=1.4)
+
+        axhr = fig.add_subplot(gs[5, :], sharex=axh)
+        residual_panel(
+            axhr, first['view'].wavelength,
+            [(hiord[lab]['resid'], hiord[lab]['used'], hiord[lab]['pred'],
+              [m['incore'] for m in hiord[lab]['members']])
+             for lab in labels], lo, hi, ylim=H10_H11_RLIM,
+            bands=[(d['lam'] - d['core'], d['lam'] + d['core'])
+                   for d in first['members']])
+        for d in first['members']:
+            axhr.axvline(d['lam'], color=MUTED, ls='--', lw=1)
+
+    axb = fig.add_subplot(gs[len(heights) - 1, :])
     style(axb)
     lam = np.array([f.wave_effective for f in nb.filters])
     for lab, c in zip(labels, (MOD_C, MOD2_C)):

@@ -44,6 +44,37 @@ def hydrogen_lines(wmin, wmax, series=(2, 3), nmax=40):
     return np.array(out)
 
 
+def balmer_member(n):
+    """Vacuum wavelength of the Balmer line n -> 2, from the Rydberg formula.
+
+    BALMER below names only the four members with a usable local continuum.
+    The high orders have no name worth writing down and their positions are
+    exactly what the formula gives, so they are DERIVED rather than tabulated:
+    against XSL the core minimum of H10 lands within 0.4 A of this value in all
+    twelve sample stars, which is a tenth of an XSL resolution element.
+    """
+    return RYDBERG_A / (0.25 - 1.0 / float(n) ** 2)
+
+
+def balmer_neighbourhood(n):
+    """(lo, hi) for Balmer member n: the midpoints of the gaps to n+1 and n-1.
+
+    From H-epsilon up the lines blend into one another -- the wing of H8 does
+    not return to within 2% of the continuum until 122 A from centre -- so
+    there is no line-free continuum to run a window out to, and the +/-50 A
+    used for H-alpha through H-delta would swallow several neighbours whole.
+    The midpoint of each gap is the one boundary the line positions themselves
+    define, and it lands on the interline maximum: measured on XSL, the
+    3785.4-3817.8 window around H10 peaks at both of its own edges.
+
+    The window is ASYMMETRIC (-13.6 / +18.8 A at H10) because the series
+    crowds blueward. Forcing it symmetric would either cross into the bluer
+    neighbour's core or throw away half of the usable red wing.
+    """
+    lam = balmer_member(n)
+    return 0.5 * (balmer_member(n + 1) + lam), 0.5 * (lam + balmer_member(n - 1))
+
+
 # Named Balmer members. Only these four are used as XSL fit windows: H-epsilon
 # and higher orders blend into each other, so a local continuum is not defined
 # for them, and they sit inside the held-out break window besides. Measured at

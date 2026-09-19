@@ -336,6 +336,32 @@ and it is only quotable alongside the profile in use.
 The eight-star median is the number to quote. A single star's value is not: the
 scatter spans both signs, so one star can be made to say almost anything.
 
+### The same cores, measured where the profile barely matters
+
+`explore/plot_balmer_lines.py` (`balmer_lines_<star>.png`) now measures the core
+residual **against the models, in XSL**, one panel per member from Hα to H12,
+with the series plotted against line order. It is the third leg of the table
+above and the only one where the degeneracy that governs this whole section is
+small: XSL's FWHM at H10 is 0.39 Å against the 3.54–7.00 Å NGSL core being
+argued over, so the same ±3.5 Å swing in the assumed profile cannot move an XSL
+core residual by anything like 7.1%.
+
+Two things keep it independent rather than a restatement. H-epsilon and up are
+fitted by **nothing** — XSL conditions on Hα–Hδ and the metal windows, NGSL
+holds 3550–4000 Å out entirely — so those cores are predictions from both
+datasets. And the local scale each one is measured against is solved on its own
+wings, not on a continuum, because between blended lines there is no continuum
+(`common/balmer.py`).
+
+It is **not** the same number as the column above and must not be read into it:
+the NGSL core excess is measured under a single scalar from the bands and still
+carries the continuum error that the per-line order-1 scale has already
+absorbed. They should agree on sign and on how the excess runs with line order,
+not on magnitude. A sample statement needs the twelve `--all` runs collected
+into a median the way the table above was, which has not been done; the
+per-star figures are what exist so far, and the caution at the head of this
+subsection applies to them unchanged.
+
 ## What the adoption does and does not disturb
 
 The stored node scans (`results/<star>/scan.npz`) were computed under the

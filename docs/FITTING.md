@@ -258,7 +258,12 @@ common/species.py         dominant species per window, Saha-Boltzmann weighted
                           against the Kurucz line list.
 common/photometry.py      sedpy filter projection, shared by model and data.
 common/specplot.py        the shared spectrum panel, so the figures keep one
-                          faded-masked / solid-fitted convention.
+                          faded-masked / solid-fitted convention. Also the
+                          residual panel, which carries the same split.
+common/balmer.py          per-member Balmer windows, the measured core mask,
+                          and the local scale solved on the wings. Shared by
+                          check_predict and plot_balmer_lines so the two cannot
+                          disagree about where a line's core is.
 fitting/observations.py   one record per dataset: data + resolution +
                           calibration + mask. conditioning_set() / heldout().
 fitting/predict.py        predict(theta, observations) -> one prediction each.
@@ -270,6 +275,12 @@ explore/metal_sensitivity.py  ranks features by [M/H] sensitivity; --union
                           writes the XSL metal windows.
 explore/plot_metal_lines.py   one panel per top [M/H]-sensitive feature, with
                           a band showing what the grid can reach.
+explore/plot_balmer_lines.py  one panel per Balmer member with its residual,
+                          H-alpha to H12, plus the core residual against line
+                          order. H-alpha..H-delta are FITTED and show the fit's
+                          own calibration; H-epsilon and up are fitted by
+                          nothing and get an order-1 scale on their wings. Every
+                          core in the figure is a prediction.
 explore/plot_ebv_teff.py  the chi^2 surface in Teff and E(B-V), per leg.
 explore/xsl_line_offsets.py   velocity offset per line per star.
 explore/xp_vs_ngsl.py     the XP/NGSL band ratio that ruled XP out.
