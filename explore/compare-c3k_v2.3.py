@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fitting.model import Grid
 from fitting.predict import spectrum_at
 from fitting.observations import load_ngsl
-from common.lsf import broaden_rot, to_ngsl_pixels
+from common.lsf import broaden_R, broaden_rot, to_ngsl_pixels
 from common.extinction_ccm import redden
 
 #NODE_ATOL["logt"] = 1e-6  # log10(teff) is the axis in the c3k cube, not teff itself
@@ -47,16 +47,27 @@ c3k_spectrum /= c3k_wave**2 # to f_lambda
 
 c3k_spectrum = redden(c3k_wave, c3k_spectrum, star["ebv"], 3.1)
 c3k_ngsl = to_ngsl_pixels(c3k_wave, c3k_spectrum, ngsl.wavelength)
+c3k_r10k = broaden_R(c3k_wave, c3k_spectrum, 10000,)
+
 balmer_spectrum = redden(balmer_wave, balmer_spectrum, star["ebv"], 3.1)
 balmer_ngsl = to_ngsl_pixels(balmer_wave, balmer_spectrum, ngsl.wavelength)
-balmer_ngsl *= ngsl.flux[1100:1200].mean() / balmer_ngsl[1100:1200].mean()
-c3k_ngsl *= ngsl.flux[1100:1200].mean() / c3k_ngsl[1100:1200].mean()
+balmer_r10k = broaden_R(balmer_wave, balmer_spectrum, 10000,)
+
 
 node_spectrum = spectrum_at(balmer, 10**params[ind][0]["logt"], params[ind][0]["logg"], params[ind][0]["feh"])
 node_spectrum = redden(balmer_wave, node_spectrum, star["ebv"], 3.1)
+node_r10k = broaden_R(balmer_wave, node_spectrum, 10000,)
 node_ngsl = to_ngsl_pixels(balmer_wave, node_spectrum, ngsl.wavelength)
-node_ngsl *= ngsl.flux[1100:1200].mean() / node_ngsl[1100:1200].mean()
 
+
+# renorm
+balmer_ngsl *= ngsl.flux[1100:1200].mean() / balmer_ngsl[1100:1200].mean()
+c3k_ngsl *= ngsl.flux[1100:1200].mean() / c3k_ngsl[1100:1200].mean()
+node_ngsl *= ngsl.flux[1100:1200].mean() / node_ngsl[1100:1200].mean()
+renorm = c3k_r10k[(c3k_wave < 3500) & (c3k_wave > 3200)].mean() / node_r10k[(balmer_wave < 3500) & (balmer_wave > 3200)].mean()
+node_r10k *= renorm
+
+node_r10k_int = np.interp(c3k_wave, balmer_wave, node_r10k)
 
 import matplotlib.pyplot as pl
 pl.style.use("via")
@@ -68,7 +79,7 @@ ax.plot(ngsl.wavelength, balmer_ngsl, label="Balmer", color="dodgerblue", alpha=
 ax.plot(ngsl.wavelength, c3k_ngsl, label=f"C3K_v2.3\nlogg={params[ind][0]['logg']},[Fe/H]={params[ind][0]['feh']}", color="r", alpha=0.8)
 ax.plot(ngsl.wavelength, node_ngsl, label="Balmer @ C3K", color="cyan", alpha=0.8)
 #ax.set_xlabel("Wavelength [Angstrom]")
-ax.set_ylabel("Flux [erg/s/cm^2/Angstrom]")
+ax.set_ylabel("Flux [erg/s/cm^2/Angstrom]", fontsize=13)
 ax.set_title(f"Star: {star['name']} (Teff={star['teff']}, logg={star['logg']}, [Fe/H]={star['feh']})")
 ax.set_xlim(3600, 4000)
 ax.set_ylim(0.3e-11, 1.19e-11)
@@ -76,8 +87,31 @@ ax.legend()
 
 ax = axes[1]
 ax.plot(ngsl.wavelength,(c3k_ngsl - node_ngsl)/node_ngsl*100, label="C3K - Balmer@C3K", color="red", alpha=0.8)
-ax.plot(ngsl.wavelength, np.zeros_like(ngsl.wavelength), label="0", color="k", alpha=0.8, ls="--")
+ax.plot(ngsl.wavelength,(balmer_ngsl - ngsl.flux)/ngsl.flux*100, label="Balmer - NGSL", color="dodgerblue", alpha=0.8)
+ax.plot(ngsl.wavelength, np.zeros_like(ngsl.wavelength), color="k", alpha=0.8, ls="--")
 ax.set_xlim(3600, 4000)
 ax.set_ylim(-10, 10)
 ax.set_xlabel("Wavelength [Angstrom]")
-ax.set_ylabel("(C3K - Balmer@C3K) / Balmer [%]")
+ax.legend()
+ax.set_ylabel("Residual [%]", fontsize=13)
+fig.savefig(f"../figures/compare_c3k_v2.3_{star['name']}.png", dpi=300, bbox_inches="tight")
+
+# --------
+fig, axes = pl.subplots(2, 1, figsize=(14, 7), sharex=True)
+ax = axes[0]
+ax.plot(c3k_wave, c3k_r10k, label="C3K", color="k", alpha=0.8,)
+ax.plot(balmer_wave, node_r10k, label="Balmer @ C3K", color="cyan", alpha=0.8)
+ax.set_xlim(3600, 4000)
+#ax.set_ylim(0.3e-11, 1.19e-11)
+ax.set_ylabel("Flux [erg/s/cm^2/Angstrom]", fontsize=13)
+ax.set_title(f'Teff={10**params[ind][0]["logt"]:.0f} K, logg={params[ind][0]["logg"]:.2f}, [Fe/H]={params[ind][0]["feh"]:.2f}')
+ax.legend()
+
+ax = axes[1]
+ax.plot(c3k_wave, (c3k_r10k - node_r10k_int)/node_r10k_int*100, label="C3K - Balmer@C3K", color="red", alpha=0.8)
+ax.set_xlim(3600, 4000)
+ax.set_ylim(-15, 15)
+ax.set_xlabel("Wavelength [Angstrom]")
+ax.legend()
+ax.set_ylabel("Residual [%]", fontsize=13)
+fig.savefig(f"../figures/compare_c3k_v2.3_R10K.png", dpi=300, bbox_inches="tight")
