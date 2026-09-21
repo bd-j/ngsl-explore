@@ -318,6 +318,69 @@ A star. Note also how far the NGSL table's `A0III` and `A2Ib/II` are from
 SIMBAD's F0V/F1V: the `sptype` column is SIMBAD-as-of-2012 and should not be
 trusted for luminosity class on these two.
 
+### Synthetic colours against catalogue photometry
+
+`explore/uves_ngsl_ub.py` synthesises Johnson U-B and Stromgren c1 from both
+libraries and compares them with published photometry, for the 13 overlap
+stars. Both U-band indices straddle the Balmer break — bessell_U runs
+3050-4150 A with lambda_eff 3571 A, Stromgren u runs 3150-3775 A — so they are
+broadband measures of the break, and a library that gets the break wrong must
+get them wrong by a related amount.
+
+Writes `data/uves_ngsl_ub.csv` (the comparison),
+`data/uves_ngsl_photometry.csv` (every column of both catalogues, 37 of them,
+kept because the uncertainties are what say whether a residual is real) and
+`figures/explore_libraries/uves_ngsl_ub.png`.
+
+| comparison | n | median | NMAD |
+|---|---|---|---|
+| **c1, NGSL − catalogue** (zero point removed) | 11 | **+0.000** | **0.007** |
+| U−B, NGSL − catalogue | 11 | −0.029 | 0.025 |
+| c1, UVES − NGSL (identical truncated band) | 12 | −0.025 | 0.058 |
+| U−B, UVES − NGSL (identical truncated band) | 12 | −0.011 | 0.024 |
+
+**Stromgren is the better index here, and by a wide margin.** NGSL reproduces
+catalogue c1 to 0.007 NMAD with no offset, against 0.025 and a −0.029 offset
+for U−B. Read that as a statement about the Johnson U bandpass rather than
+about NGSL: U's blue edge is set by atmospheric cutoff for ground-based work
+and runs to 3050 A, while Stromgren u is narrower and better defined. The U−B
+offset also does not scale with c1 over −0.13 to +0.81, so it is not the break
+being mis-measured — though with n = 9 and the range carried by two variables,
+that is "no evidence of a trend" rather than a constraint.
+
+**UVES-POP cannot measure Johnson U at all.** It starts at 3200 A against U's
+3050 A, so 1.96% of the band's transmission-weighted integral is missing;
+`common.photometry.project` returns NaN for an uncovered filter rather than a
+clipped number, so this is caught. Truncated bands are therefore applied to
+BOTH libraries for the like-for-like rows above, and the cost of truncating is
+measured on NGSL, which covers both: 0.008 mag in U−B, 0.005 in c1. Stromgren u
+loses only 0.63%, so of the two systems it is the one UVES-POP nearly reaches.
+
+**Errors matter more than the medians on this sample.** Catalogue `e_U-B` runs
+0.005 to 0.075 mag, a factor of 15. HD076932 carries the 0.075, so its −0.116
+residual — the largest of any non-variable star — is 1.5 sigma and not an
+outlier at all. Its c1 agrees to 0.000 with e_c1 = 0.007. A colour residual on
+these stars cannot be read without opening `data/uves_ngsl_photometry.csv`.
+
+**Both catalogues are matched by identifier, never by position.** II/215
+carries B1950 coordinates and this sample moves up to 27" between epochs;
+matching II/215 positionally at 15" returned c1 for 5 of 13 and widening to
+120" returned 12, by picking up neighbours. The LID prefix is NOT the same in
+the two: II/215 writes HD076932 as `0100076932`, II/168 as `+100076932`.
+Trying only the first form made every II/168 lookup fall through to a
+positional fallback silently — it still found 11 of 13, which is why it went
+unnoticed for a while.
+
+U and B come from ONE source, Mermilliod II/168, which publishes V, B−V and
+U−B together. SIMBAD is queried as a cross-check and deliberately not used: it
+gives HD022484 B = 5.150 against V = 4.300, so B−V = +0.85 for an F9IV-V star
+that should sit near +0.57, where II/168's homogeneous value is +0.572.
+
+The AB→Vega direction is pinned by a selftest that runs sedpy's own Vega
+spectrum through the filters, where U = B = 0 by definition. It caught a real
+0.023 mag error: sedpy ships two CALSPEC files and calibrates on
+`alpha_lyr_stis_005`, and a glob had picked up `_011`.
+
 ## Gaia DR3: the independent dust lever
 
 `explore/fetch_gaia.py` → `data/gaia_sample.csv` and `data/gaia_xp/<star>_xp.csv`.
