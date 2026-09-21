@@ -71,8 +71,10 @@ def main():
 
     names = {o['name'] for o in objs}
     hit = [s for s in NGSL_SAMPLE if s in names]
+    # Only asks about the Balmer-break sample. The two libraries DO overlap,
+    # in 13 stars -- see explore/uves_ngsl_overlap.py -- just none of them here.
     print(f'\nNGSL Balmer-break sample present in UVES-POP: '
-          f'{hit if hit else "none — the two libraries are disjoint here"}')
+          f'{hit if hit else "none of the five"}')
 
 
 if __name__ == '__main__':

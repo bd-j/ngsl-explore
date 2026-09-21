@@ -137,18 +137,18 @@ HD072968 is the rejected chemically peculiar star, and HD164257's +0.73 is the
 XSL value for a star NGSL puts at −0.10 — the 2900 K catalog disagreement again,
 not a real super-metal-rich A star.
 
-### XSL — the only library that overlaps NGSL star by star
+### XSL — the library that overlaps NGSL in the Balmer window
 
 XSL DR3 (Verro et al. 2022): 830 spectra of 683 stars, ground-based
 VLT/X-shooter. 74 A stars in 7000-11500 K; 11 in the Balmer window, 8 clean
 after vetting (`explore/xsl_astars.py`, parameters from Arentsen et al. 2019
 since the DR3 table carries only names and filenames).
 
-Its value here is the **overlap**. UVES-POP is disjoint from NGSL, but 23 of
-the 74 XSL A stars are also in NGSL, including three of the four Balmer-break
-targets. Same star, two instruments, one space-based and one ground-based at
-~16x the resolution — which is what made the NGSL LSF measurement below
-possible without a model.
+Its value here is the **overlap**. UVES-POP overlaps NGSL in only 13 stars and
+none of them is an A star in the Balmer window, but 23 of the 74 XSL A stars
+are also in NGSL, including three of the four Balmer-break targets. Same star,
+two instruments, one space-based and one ground-based at ~16x the resolution —
+which is what made the NGSL LSF measurement below possible without a model.
 
 | star | XSL Teff | NGSL Teff | Δ | in our sample |
 |---|---|---|---|---|
@@ -221,6 +221,78 @@ HD194453**. XSL observed the primary target twice (X0196 and X0288) and
 two independent observations of the same star with the same instrument are a
 repeatability check on the XSL continuum and on v sin i, which is worth having
 for the one star the whole analysis leans on.
+
+### UVES-POP × NGSL: 13 stars in common, none in the Balmer window
+
+`explore/uves_ngsl_overlap.py` → `data/uves_ngsl_overlap.csv`. Neither catalog
+carries the other's identifiers and UVES-POP names its brightest targets by
+proper name, so the match is positional: SIMBAD resolves the 406 UVES-POP names
+and those coordinates are matched against the NGSL v2 header positions.
+
+The 13 pairs all fall within 7.3", the next-nearest pair is at 36" and the one
+after that at 1952", so the 10" cut is in a wide gap and the answer does not
+depend on where in it the line is drawn. The 36" pair is **HD36959 (UVES-POP) /
+HD36960 (NGSL)** — two components of a visual double, not one star seen twice,
+and correctly excluded. 49 UVES-POP entries carry open-cluster running numbers
+that SIMBAD does not resolve (46 in IC 2391, 3 in NGC 6475); the nearest NGSL
+star to either field is 6.4° and 12.2° away, so none of them can be a match.
+
+The radius is 10" rather than the 5" `build_sample.py` uses for XSL because
+these are nearby bright stars and the leftover separation is **proper motion**
+between the NGSL header epoch and SIMBAD's J2000 positions. The four widest
+matches are exactly the four fastest movers — 171 Pup 1.72"/yr at 7.33",
+61 Vir 1.51"/yr at 3.20", ε Eri 0.98"/yr at 1.75", 10 Tau 0.54"/yr at 2.11" —
+which is what makes them epoch offsets rather than doubtful matches. At 5"
+171 Pup would have been dropped for moving.
+
+| star | SpT | V | Teff NGSL | Teff UVES | Δ | log g N / U | [M/H] N / [Fe/H] U | v sin i |
+|---|---|---|---|---|---|---|---|---|
+| HD022049 | K2V | 3.73 | 5130 | 5342 | 212 | 4.50 / 5.04 | 0.00 / -0.14 | 0.3 |
+| HD022484 | F9IV-V | 4.28 | 6141 | 5866 | -275 | 4.10 / 3.60 | 0.10 / -0.45 | 1.6 |
+| HD047839 | O7Ve | 4.66 | — | 45541 | — | — / 3.96 | — / 0.34 | 92.4 |
+| HD058343 | B2Vne | 5.20 | — | — | — | — / — | — / — | — |
+| HD063077 | G0V | 5.37 | 5926 | 5795 | -131 | 4.20 / 4.02 | -0.70 / -0.95 | 1.8 |
+| HD076932 | F7-8IV-V | 5.86 | 6034 | 5852 | -182 | 4.10 / 3.59 | -0.70 / -0.96 | 4.1 |
+| HD099648 | G8Iab: | 4.95 | 4811 | 4990 | 179 | 2.00 / 1.89 | -0.30 / -0.27 | 9.1 |
+| HD102212 | M1III | 4.05 | 3800 | 3982 | 182 | 1.10 / 1.14 | 0.10 / -0.42 | 11.0 |
+| HD111786 | A0III | 6.14 | 7598 | 7436 | -162 | 3.90 / 4.03 | -1.30 / -1.70 | 47.0 |
+| HD115617 | G5V | 4.74 | 5557 | 5755 | 198 | 4.30 / 4.70 | 0.00 / -0.07 | 3.9 |
+| HD138716 | K1IV | 4.61 | 4771 | 5214 | 443 | 2.90 / 3.63 | -0.10 / 0.05 | 9.2 |
+| HD142703 | A2Ib/II | 6.12 | 7337 | 7285 | -52 | 3.90 / 3.85 | -1.40 / -1.77 | 92.5 |
+| HD206778 | K2Ib | 2.40 | 4095 | 4483 | 388 | 1.30 / -0.05 | 0.10 / -0.32 | 10.5 |
+
+Teff from NGSL (Castelli 2004 on Victoria-Regina isochrones, fitted to v1) and
+from UVES-POP (VOXAstro PHOENIX fit) agree to within 443 K on the 11 stars both
+libraries fitted, but log g and [M/H] do not: up to 1.35 dex in log g (HD206778)
+and 0.55 dex in metallicity (HD022484). The two parameter scales are not
+interchangeable, which is the same lesson the XSL comparison gives above.
+
+Four rows carry a reason in the `notes` column: HD047839 (O7Ve) and HD058343
+(B2Vne) are outside the range NGSL attempted a fit for, HD058343 is unfitted in
+UVES-POP too, HD138716 is `dataqual = suspect` in NGSL, and HD206778's UVES-POP
+log g of −0.05 is pinned to a grid edge rather than measuring a K2Ib supergiant
+— take that one as a fit artefact, not a gravity.
+
+**The library's `v` column is the radial velocity in km/s, not the V
+magnitude.** The script checks this against SIMBAD on every run: across the 12
+stars here it tracks the catalogued RV to within 3.7 km/s (worst case 15 Mon, a
+spectroscopic binary) while missing V by up to 114 mag. It is `rv_uves_kms` in
+the overlap table.
+
+Why this overlap does nothing for the Balmer break: UVES-POP is a southern
+VLT library of bright stars, and the 13 shared stars are one of nearly every
+type — O7, B2, A0, A2, two F, G0, G5, G8, K1, K2 V, K2 Ib, M1. The nearest
+things to A stars are HD111786 (7598 K) and HD142703 (7337 K), both well below
+the 9000–11000 K window, and the only hotter star with a fit is 15 Mon at
+45,500 K. For the Balmer break the useful overlap is XSL's, above.
+
+Those two would be the wrong stars anyway. SIMBAD types them `F0VkA1mA1_lB`
+and `F1VskA1.5mA1.5_lB` — **λ Boo stars**, and δ Scuti pulsators besides — so
+the [M/H] ≈ −1.3 to −1.8 both catalogs report for them is a surface accretion
+pattern, not a halo metallicity, and their continua are not those of a normal
+A star. Note also how far the NGSL table's `A0III` and `A2Ib/II` are from
+SIMBAD's F0V/F1V: the `sptype` column is SIMBAD-as-of-2012 and should not be
+trusted for luminosity class on these two.
 
 ## Gaia DR3: the independent dust lever
 
