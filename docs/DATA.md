@@ -286,6 +286,30 @@ things to A stars are HD111786 (7598 K) and HD142703 (7337 K), both well below
 the 9000–11000 K window, and the only hotter star with a fit is 15 Mon at
 45,500 K. For the Balmer break the useful overlap is XSL's, above.
 
+`explore/plot_uves_ngsl.py` compares the two libraries directly for all 13 —
+UVES-POP smoothed to the NGSL LSF and integrated onto NGSL pixels through
+`common.lsf.to_ngsl_pixels`, one panel per star with a fractional residual,
+plus an H-epsilon zoom — writing `figures/explore_libraries/uves_ngsl_break.png`,
+`uves_ngsl_hepsilon.png` and `data/uves_ngsl_compare.csv`. Three results from
+it are worth having here rather than only in its docstring (the `v` column
+finding above came from the same script):
+
+* **UVES-POP's delivered spectra are in the OBSERVED frame.** Verified on the
+  two fastest stars: the Ca II H and K minima sit at rest×(1+v/c) for the
+  catalogued v, recovering +123.0/+122.6 km/s for HD076932 (catalog +119.76)
+  and +107.7/+107.5 for HD063077 (+106.93). The catalog RV must be removed.
+* **The bluest UVES setting join is 3733.6–3859.2 Å**, measured three
+  independent ways, and there is none blueward of it. Detail in the script.
+* **NGSL's wavelength zero point is fitted per star** here, against the smoothed
+  UVES spectrum, because `data/ngsl_wavecal.csv` covers none of these 13. The
+  fitted shifts run −13.5 to −70.6 km/s and absorb NGSL's own RV and its
+  wavecal residual together, which nothing in this comparison can separate.
+
+Gaia XP exists for 5 of the 13 and is available behind `--xp`, but is off by
+default: three of the five give the same −1.5% blue-to-red tilt across the
+break, which is the instrumental XP/NGSL pattern measured in
+`explore/xp_vs_ngsl.py`, not a property of the stars.
+
 Those two would be the wrong stars anyway. SIMBAD types them `F0VkA1mA1_lB`
 and `F1VskA1.5mA1.5_lB` — **λ Boo stars**, and δ Scuti pulsators besides — so
 the [M/H] ≈ −1.3 to −1.8 both catalogs report for them is a surface accretion

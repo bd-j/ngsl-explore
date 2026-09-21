@@ -1,4 +1,4 @@
-# Bulk spectra downloaded from archives — regenerate with scripts/fetch_ngsl.sh.
+# Bulk spectra downloaded from archives — regenerate with explore/fetch_ngsl.sh.
 # The spectra of the SELECTED stars are tracked (4 x 53 KB) so the analysis can
 # be reproduced without a 22 MB refetch; the other 375 are not.
 data/spectra/*
@@ -15,7 +15,8 @@ data/pickles/*.fits
 
 # UVES-POP spectra (~2.9 MB each). The four SELECTED stars are tracked
 # (11.5 MB total); anything else fetched for screening is not.
-# URLs in scripts/uves_pop_astars.py.
+# URLs in explore/uves_pop_astars.py; the 13 NGSL-overlap stars are fetched
+# on demand by explore/plot_uves_ngsl.py and are not tracked either.
 data/uves_pop/*
 !data/uves_pop/Castor.fits.gz
 !data/uves_pop/HD162393.fits.gz
