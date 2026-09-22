@@ -10,7 +10,7 @@ resolution, coverage gaps, peculiar stars — are in [CAVEATS.md](CAVEATS.md).
 |---|---|---|---|---|
 | **NGSL v2** | 379 HST/STIS spectra, space-based spectrophotometry | **R ~ 600 as delivered** (tables say 804-1343) | 1675-10198 A | primary sample; the only one reaching the UV |
 | **XSL DR3** | 830 VLT/X-shooter spectra of 683 stars (Verro+2022) | R ~ 9800 UVB, ~11600 VIS | 3500-24800 A | **23 stars shared with NGSL** — independent check on the same objects |
-| **UVES-POP** | 406 VLT/UVES spectra, re-reduced and flux-calibrated (2023) | R = 80,000 native, **~18,000 as delivered** | 3200-10250 A | high-resolution follow-up; resolves line cores |
+| **UVES-POP** | 406 VLT/UVES spectra, re-reduced and flux-calibrated (2023) | R = 80,000 native, **~18,000 as delivered** | 3200-10250 A | high-resolution follow-up; resolves line cores. 13 stars shared with NGSL, **9 with XSL**, none in the Balmer window |
 | **MILES** | 985 ground-based spectra | FWHM 2.5 A | 3525-7500 A | independent Teff, [Fe/H] and E(B-V); 145 stars shared with NGSL |
 | **Pickles** | 131 composite templates by spectral type | R ~ 500 | 1150-10620 A | reference break shape vs type and gravity; not individual stars |
 | **MaStar** | MaNGA stellar library | R ~ 1800 | 3622-10354 A | checked, **zero overlap** with NGSL (disjoint in brightness) |
@@ -181,11 +181,17 @@ same star, from two published analyses.
   CCM89 so extinction is handled identically across all three libraries, and
   treat `FLUX_DR` as a cross-check.
 
-**Coverage gaps are real and must be masked**, not interpolated across: a
-dichroic gap at 5750-5844 A, inter-order gaps every ~150 A redward of 8515 A,
-and one star (HD162678) missing 3859-4779 A outright — 43% of its Balmer
-coverage. See [CAVEATS.md](CAVEATS.md), which also has the echelle order-width
-measurement explaining why the blue has no gaps and the red does.
+**XSL's coverage is continuous across the optical.** Checked directly: 486
+points in 5750-5844 A and 610 in 8515-8690 A. Its only gaps wider than 3 A are
+a handful in the NIR telluric regions near 18,400-19,150 A, star-dependent and
+outside the range used here. The limit that does bite is XSL's **3501 A start**
+— only 145 A blueward of the break, which is what sets the blue edge of the
+comparison panels in `explore/plot_uves_xsl.py`.
+
+The dichroic gap at 5750-5844 A, the inter-order gaps redward of 8515 A and
+HD162678's 3859-4779 A hole belong to **UVES-POP**, not XSL; they are listed
+under UVES-POP in [CAVEATS.md](CAVEATS.md), which is also where the
+gap-handling rule lives.
 
 #### Getting an XSL spectrum: extract it from the tarball, do not refetch
 
@@ -317,6 +323,169 @@ pattern, not a halo metallicity, and their continua are not those of a normal
 A star. Note also how far the NGSL table's `A0III` and `A2Ib/II` are from
 SIMBAD's F0V/F1V: the `sptype` column is SIMBAD-as-of-2012 and should not be
 trusted for luminosity class on these two.
+
+### UVES-POP × XSL: 9 stars in common, and none in the Balmer window either
+
+`explore/uves_xsl_overlap.py` → `data/uves_xsl_overlap.csv`. Same positional
+method as the NGSL overlap above — SIMBAD resolves the UVES-POP names, and
+those coordinates are matched against the XSL DR3 positions in
+`data/xsl_all.csv`, which XSL repeats once per epoch and the script collapses
+to 683 unique stars.
+
+Both are VLT libraries, so there is no hemisphere penalty here — and the
+overlap is **smaller** than NGSL's 13 anyway. The two programs simply chose
+nearly disjoint targets: UVES-POP took bright nearby stars for a
+high-resolution atlas, XSL a stellar-population grid weighted to cool giants,
+the bulge and the Magellanic Clouds.
+
+The 9 pairs all fall within **0.09"** and the next-nearest pair is at 430"
+(HD109379 / HD 109443 — β Crv and a different star), so the cut sits in a
+four-decade gap and the answer does not depend on where in it the line is
+drawn. The radius is the 5" `build_sample.py` uses for XSL, not the NGSL
+overlap's 10", and the sub-0.1" residuals are the reason: **both** catalogs
+here carry J2000 catalog positions, so there is no proper motion to absorb,
+unlike the NGSL header positions at the epoch of observation.
+
+The 49 open-cluster entries are **resolved, not dropped**. SIMBAD knows them
+under their `Cl*` designations — all 3 NGC 6475 stars as `Cl* NGC 6475 JJnn`,
+and 10 of the 46 IC 2391 stars as `Cl* IC 2391 SHJM n` or `PP n` — which takes
+the resolved count from 357 to 370. None of the 13 matches anything. For the
+36 IC 2391 entries still unresolved the script does not assume: it asserts that
+XSL has **no star within 3° of the field** (nearest is 6.54°, and the resolved
+members sit 0.20–0.64° from the centre), so the assertion fails loudly if a
+future XSL release lands there. This is worth flagging because
+`uves_ngsl_overlap.py` makes the same argument for NGSL from a 6.4°/12.2°
+margin — but for XSL the NGC 6475 field is only **1.34°** away, close enough
+that the NGSL script's reasoning could not simply be carried over.
+
+The positional match is confirmed a second, independent way, on every run:
+resolving the XSL identifier as well and requiring the two SIMBAD `main_id`s
+to be the same object. **9/9 agree.**
+
+| XSL | UVES-POP | SIMBAD | ep | Teff X / U | Δ | log g X / U | Δ | [Fe/H] X / U | Δ | v sin i |
+|---|---|---|---|---|---|---|---|---|---|---|
+| HD 39801 | Betelgeuse | α Ori | 1 | 3654 / 3779 | +125 | 0.43 / −0.46 | −0.89 | −0.21 / −0.13 | +0.08 | 14.3 |
+| BS 4517 | HD102212 | ν Vir | 1 | 3733 / 3982 | +249 | 1.43 / 1.14 | −0.29 | −0.54 / −0.42 | +0.12 | 11.0 |
+| HD 99648 | HD099648 | τ Leo | 1 | 4933 / 4990 | +57 | 2.18 / 1.89 | −0.29 | −0.04 / −0.27 | −0.23 | 9.1 |
+| HD 24616 | HD024616 | HD 24616 | 1 | 5020 / 5225 | +205 | 3.35 / 3.47 | +0.12 | −0.74 / −0.71 | +0.03 | 3.7 |
+| HD 140283 | HD140283 | HD 140283 | 2 | 5718 / 5712 | −6 | 3.66 / 2.06 | **−1.60** | −2.43 / −3.04 | −0.61 | 0.5 |
+| HD 16673 | HD016673 | HD 16673 | 1 | 6189 / 6235 | +46 | 4.27 / 4.43 | +0.16 | −0.05 / −0.11 | −0.06 | 23.3 |
+| HD 84937 | HD084937 | HD 84937 | 1 | 6212 / 6390 | +178 | 4.07 / 3.58 | −0.49 | −2.03 / −2.07 | −0.04 | 8.7 |
+| HD 142703 | HD142703 | HR Lib | 1 | 7219 / 7285 | +66 | 4.24 / 3.85 | −0.39 | −1.16 / −1.77 | −0.61 | 92.5 |
+| HD 111786 | HD111786 | MO Hya | 1 | 7595 / 7436 | −159 | 4.28 / 4.03 | −0.25 | −1.01 / −1.70 | −0.69 | 47.0 |
+
+Δ is **UVES-POP minus XSL** throughout; the script asserts that sign against an
+injected pair on every run. `ep` is the number of XSL epochs — HD 140283 has
+two (X0687, X0688), a free repeatability check.
+
+The parameter scales behave the same way they do in the NGSL comparison:
+**Teff agrees, gravity and metallicity do not.** Teff runs +66 K median with a
+72 K MAD and a −159 to +249 K range, and the two widest are the two coolest
+stars (ν Vir, Betelgeuse) where both grids are extrapolating. Against that,
+log g disagrees by up to 1.60 dex and [Fe/H] by 0.69 dex.
+
+Two rows should not be used without reading why:
+
+* **HD 140283** is the outlier and the one to check before use. The two
+  libraries agree on Teff to **6 K** and then disagree by **1.60 dex** in
+  gravity — that is subgiant versus giant, not a small-print difference — and
+  by 0.61 dex in [Fe/H]. Something is wrong on one side; the table records both
+  rather than picking one.
+* **Betelgeuse** carries `uves_logg=-0.46_at_grid_edge` in the `notes` column.
+  Like HD206778 in the NGSL table, that value is pinned to a grid edge and is a
+  fit artefact, not a gravity.
+
+The [Fe/H] gaps on HD 142703 and HD 111786 are **not** a scale offset: both are
+λ Boo stars, and their low metallicity is a surface accretion pattern rather
+than a composition — see the sample notes above, where the same two stars are
+discussed for the NGSL overlap.
+
+For four stars UVES-POP's own headers carry a literature value (`LIT_*`) as a
+third opinion, and only two of those have `LIT_LOGG`: on HD099648 XSL is
+nearer (2.18 vs lit 2.17, UVES-POP 1.89) and on HD142703 UVES-POP is
+(3.85 vs lit 3.89, XSL 4.24). **One each way, n = 2** — that settles nothing
+about which scale is better and is recorded here only so the next person does
+not redo it.
+
+**Four of the nine are in all three libraries** — HD099648, HD102212, HD111786
+and HD142703 also appear in `data/uves_ngsl_overlap.csv`. Those are the stars
+where NGSL, XSL and UVES-POP can be put on one plot at three resolutions.
+
+Why this overlap, too, does nothing for the Balmer break: the hottest star in
+it is **7595 K**, below the 9000–11000 K window, and the rest run down to
+Betelgeuse at 3654 K. As with UVES-POP × NGSL, the useful Balmer-window
+overlap remains NGSL ∩ XSL.
+
+#### Comparing the two flux calibrations
+
+`explore/plot_uves_xsl.py` → `figures/explore_libraries/uves_xsl_break.png`,
+`uves_xsl_hepsilon.png` and `data/uves_xsl_compare.csv`. Both libraries are
+absolutely calibrated, so this is a data-to-data comparison with no model in it.
+
+**The smoothing runs UVES-POP → XSL, which is the only possible direction.**
+At the break XSL is R ~ 9800 (σ_v = 13 km/s — XSL quotes σ, not FWHM) while
+UVES-POP delivered is R ~ 18,000 and R = 80,000 native. UVES-POP is the sharper
+by ~1.9×, so smoothing XSL to UVES-POP would be a deconvolution.
+
+The kernel is the quadrature difference and is applied **at constant velocity**,
+because XSL's LSF is (NGSL's is constant in Å — the two need different kernels).
+σ_kernel = √(13² − σ_UVES²) = **12.7 km/s**, where σ_UVES combines the native
+R = 80,000 (1.59 km/s) with the 0.1 Å delivered pixel (2.37 km/s rms). UVES-POP's
+own resolution is therefore a **2.5% correction** to the kernel and nothing here
+rests on it. Taking the 2-pixel figure (16.4 km/s) instead would give a 25.8 km/s
+kernel — but that number is a *sampling* limit, not an LSF, and using it as one
+over-broadens by 2×. The script self-tests the kernel against an injected
+Gaussian and the residual sign against an injected 5% offset.
+
+**Three of the nine XSL spectra are not slit-loss corrected**, which matters
+here more than anywhere else, because slit loss *is* absolute flux. Only the
+plain `_merged.fits` files carry `LOSS_COR = True`; the `_scl` and `_ncl_ncge`
+variants do not, and the loader reads the flag per star rather than assuming:
+
+| star | XSL file | LOSS_COR | XSL/UVES-POP |
+|---|---|---|---|
+| HD099648 | `_scl` | False | 0.59 |
+| HD102212 | `_ncl_ncge` | False | 0.016 |
+| Betelgeuse | `_ncl_ncge` | False | 0.003 |
+
+Those are factors of **1.7, 63 and 340** — not subtle, and not a calibration
+disagreement. They are drawn (shape survives normalisation) but flagged in red
+on the panel and excluded from every summary number.
+
+**For the six that are slit-loss corrected, the grey factor at the break is
+0.853 to 1.279, median 0.992.** Comparable to the XSL/NGSL spread (0.90–1.04)
+and, as there, it should be normalised out rather than read as astrophysical.
+
+**But unlike XSL/NGSL, the difference is not grey.** The residual panels rise
+systematically from 0 at 3500 Å, and the ratio of the two normalisation windows
+(3565 Å → 3972 Å, which straddle the break) is **+6.6% median, −1.5 to +11.2%**
+across the six — carried as `d_blue_red_pct`. Checked over a wider baseline with
+the same smoothing, XSL/UVES-POP peaks ~+7% near 3950–4330 Å, returns to ~1.00
+by 5000–6000 Å and falls to ~−6% by 7600 Å. **With n = 6 and a star-to-star
+spread as large as the trend, that is a characterisation, not a correction** —
+the useful conclusion is only that a single grey factor does not describe these
+two libraries over the break, so normalise locally.
+
+| star | grey (break) | rms % | grey (Hε) | rms % | blue→red % |
+|---|---|---|---|---|---|
+| HD016673 | 1.000 | 12.5 | 1.112 | 7.4 | +11.2 |
+| HD024616 | 1.020 | 6.0 | 1.005 | 4.1 | −1.5 |
+| HD084937 | 0.984 | 5.0 | 1.044 | 1.8 | +6.1 |
+| HD111786 | 1.279 | 3.3 | 1.314 | 2.0 | +2.7 |
+| HD140283 | 0.853 | 6.5 | 0.929 | 1.9 | +9.0 |
+| HD142703 | 0.906 | 5.0 | 0.970 | 1.1 | +7.1 |
+
+**Betelgeuse has no break panel at all.** Its UVES-POP spectrum has a 552 Å
+hole at 3200.9–3753.3 Å, so there is nothing to compare across the break — see
+the UVES-POP gap entry in [CAVEATS.md](CAVEATS.md), which this figure is the
+third project to trip over. The script's `usable` check drops it with a printed
+reason rather than drawing an empty panel.
+
+Two further limits on reading these panels: the RVs run −171 to +101 km/s and
+are removed from UVES-POP (observed frame) but not from XSL (rest frame), and
+four of the nine are catalogued variables observed years apart — Betelgeuse
+(SRC) and ν Vir (SRB) above all, whose panels are noise. A variable's panel is
+not a calibration measurement, and its title is printed in red.
 
 ### Synthetic colours against catalogue photometry
 

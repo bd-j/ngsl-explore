@@ -110,9 +110,15 @@ the colour -- and the colour is the entire constraint. If XP is ever needed, the
 (`data/xp_ngsl_bandratio.csv`), but then XP is no longer independent of NGSL.
 
 ### UVES-POP has real coverage gaps, and they are not where you expect
-The delivered spectra have holes. Blanking them with NaN is mandatory: drawing
-a line across a gap previously produced an apparent flux feature at 8500 A that
-was very nearly investigated as physics.
+**This one has cost time repeatedly — check for holes before using a star, not
+after a panel comes out blank.** The delivered spectra have holes. Blanking
+them with NaN is mandatory: drawing a line across a gap previously produced an
+apparent flux feature at 8500 A that was very nearly investigated as physics.
+
+**Every spectrum has holes.** Surveyed over the 22 files in `data/uves_pop/`:
+13 to 15 separate holes per star, **5.9% to 40% of pixels NaN**, and every
+single star has at least one hole wider than 100 A. A UVES-POP spectrum with
+clean coverage does not exist in this sample.
 
 Three kinds, all visible in the data:
 
@@ -120,11 +126,40 @@ Three kinds, all visible in the data:
 |---|---|---|
 | 5750-5844 A | dichroic / arm split | all stars |
 | 8515-8690 A, then every ~150 A redward | inter-order gaps | all stars, Paschen region |
-| 3859-4779 A (921 A) | a missing spectral setup | HD162678 only |
+| a whole setting, 550-930 A wide | a missing spectral setup | 3 of 22 stars — see below |
 
-The last is not an order gap -- it is 44x the local free spectral range -- and
-it removes 43% of that star's Balmer coverage, which is why HD162678 cannot be
-used for the break despite being the slowest rotator of the sample.
+**THE BLUE IS NOT SAFE, despite what the order-width argument below predicts.**
+A missing setting is not an order gap — it is tens of times the local free
+spectral range — and three of the 22 stars on disk have one landing in the
+Balmer region:
+
+| star | hole | what it destroys |
+|---|---|---|
+| HD162678 | 3858.6-4779.4 A (921 A) | 43% of its Balmer coverage; cannot be used for the break despite being the sample's slowest rotator |
+| HD138716 | 3859.2-4784.1 A (925 A) | H-epsilon entirely |
+| **Betelgeuse** | **3200.9-3753.3 A (552 A)** | **the Balmer break entirely** — no data blueward of 3753 A |
+
+HD162678 and HD138716 are missing the SAME setting; Betelgeuse is missing the
+bluest one instead, plus a second at 4979-6706 A (1727 A, the widest hole in
+the sample), which is how it reaches 40% NaN.
+
+The edges line up with the instrument, not with the stars: `SETTING_JOINS` in
+`explore/plot_uves_ngsl.py` measures the joins at 3733.6-3859.2 A and
+4781.9-4784.1 A, and these holes begin and end exactly there. They are missing
+exposures, so **which** star is affected is arbitrary and cannot be predicted
+from its magnitude, colour or type — it has to be looked up per star.
+
+**Do:** test the wavelengths you actually need, on the star you actually have.
+`explore/plot_uves_xsl.py:usable` is the pattern — it checks for real (not
+gap-filled) points inside the normalisation windows and drops the star from
+that figure with a printed reason. Checking the array endpoints is NOT enough:
+Betelgeuse runs 3200-10250 A like every other star and still has nothing across
+the break. That exact mistake drew an empty panel with `grey = nan`.
+
+Short runs (<2 A) are isolated dropouts and are interpolated across
+(`fill_small_gaps`); anything wider is a real hole and must be blanked back out
+AFTER smoothing, out to the kernel's reach, so no pixel built partly from
+invented flux is ever drawn.
 
 **Order width at the Balmer break.** The regular red-end gaps ARE the
 inter-order gaps, so they measure the free spectral range directly. Order
@@ -137,8 +172,14 @@ Carried to the Balmer break, m ~ 174 and the **free spectral range is ~21 A per
 order**, about 210 pixels of the delivered 0.1 A grid and ~6x narrower than at
 the red end. Since the detector covers a roughly fixed number of pixels per
 order, orders **overlap comfortably in the blue**, which is why the Balmer
-region has 100% coverage in every star while the red end is riddled with holes.
-The same instrument behaves oppositely at the two ends of its range.
+region has **dense order coverage** in every star while the red end is riddled
+with inter-order holes. The same instrument behaves oppositely at the two ends
+of its range.
+
+**That argument covers order gaps only, and an earlier version of this entry
+over-read it as "100% coverage in the blue in every star".** It is not: a
+MISSING SETTING is a different failure, it owes nothing to order spacing, and
+it takes out 550-930 A of the blue in three of the 22 stars (table above).
 
 Caveats on that extrapolation: it assumes one echelle with m*lambda constant
 across arms, and UVES blue and red arms share the echelle but use different

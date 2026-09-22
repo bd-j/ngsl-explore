@@ -83,6 +83,8 @@ python3 explore/extract_docs.py          # PDF text (parameters live in the read
 python3 explore/build_catalog.py         # merge headers + params + magnitudes
 python3 explore/measure_snr.py           # empirical S/N, two estimators
 python3 explore/crossmatch_libraries.py  # vs MILES and MaStar
+python3 explore/uves_ngsl_overlap.py     # UVES-POP n NGSL: 13 stars
+python3 explore/uves_xsl_overlap.py      # UVES-POP n XSL: 9 stars
 python3 explore/candidate_table.py       # candidate selection + reddening cut
 python3 explore/reddening.py             # E(B-V): map, photometric, fitted
 python3 explore/uves_pop_astars.py       # select A stars from UVES-POP
@@ -97,6 +99,7 @@ python3 grid/pack_grid.py                # collapse it into models/grid.npz
 
 python3 explore/plot_ngsl_vs_model.py    # NGSL comparison figures
 python3 explore/plot_uves_vs_model.py    # UVES-POP comparison figures (superseded)
+python3 explore/plot_uves_xsl.py         # UVES-POP vs XSL: two flux calibrations
 ```
 
 The instrument profile — measured against XSL, no model involved, see

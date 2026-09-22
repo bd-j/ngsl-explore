@@ -67,6 +67,37 @@ the sample and concluded the NLTE question was re-opened. Eight stars say it is
 not. This is the specific failure of publishing a one-star result as a sample
 conclusion.
 
+### UVES-POP's coverage gaps were attributed to XSL
+
+DATA.md's XSL entry listed "a dichroic gap at 5750-5844 A, inter-order gaps
+every ~150 A redward of 8515 A, and one star (HD162678) missing 3859-4779 A
+outright" as **XSL's** coverage gaps, and said CAVEATS.md explained "why the
+blue has no gaps and the red does" for XSL.
+
+All three belong to UVES-POP. XSL has 486 points in 5750-5844 A and 610 in
+8515-8690 A, and HD162678 is not in XSL at all — it is a UVES-POP star. The
+echelle order-width argument in CAVEATS.md is about UVES-POP's spectrograph
+and says nothing about X-shooter.
+
+Replaced by a checked statement of XSL's actual coverage in
+[DATA.md](DATA.md) and the UVES-POP gap survey in [CAVEATS.md](CAVEATS.md).
+
+### The blue of a UVES-POP spectrum has 100% coverage in every star
+
+CAVEATS.md's echelle order-width entry concluded that because orders overlap
+in the blue, "the Balmer region has 100% coverage in every star while the red
+end is riddled with holes."
+
+True of ORDER gaps, and false as written. A missing spectral SETTING is a
+different failure that owes nothing to order spacing, and three of the 22
+UVES-POP spectra on disk have one in the blue: HD162678 (3859-4779 A),
+HD138716 (3859-4784 A) and **Betelgeuse (3201-3753 A, which removes the
+Balmer break outright)**. The same entry's own table already listed
+HD162678's hole, so the document contradicted itself.
+
+Replaced by the survey in [CAVEATS.md](CAVEATS.md): every spectrum has holes,
+13-15 of them, 5.9-40% of pixels NaN.
+
 ### `HB*` is a peculiarity type
 Horizontal-branch stars were originally rejected as chemically peculiar,
 conflating two different problems. A field HB star at 9000–11000 K sits *below*
